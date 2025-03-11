@@ -1,26 +1,29 @@
 import {
   AnchorProvider,
-  Instruction,
+  BN,
+  IdlAccounts,
   Program,
   Wallet,
   web3,
-  workspace,
 } from "@coral-xyz/anchor";
 import {
   AccountLayout,
-  ASSOCIATED_TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   createCloseAccountInstruction,
-  createMint,
   getAssociatedTokenAddressSync,
   MintLayout,
-  mintTo,
   NATIVE_MINT,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 import { VirtualCurve } from "../../target/types/virtual_curve";
 import VirtualCurveIDL from "../../target/idl/virtual_curve.json";
+
+import VaultIDL from "../../idls/dynamic_vault.json";
+import { Vault } from "./idl/dynamic-vault";
+
+import AmmIDL from "../../idls/dynamic_amm.json";
+import { Amm as Damm } from "./idl/dynamic-amm";
 
 import { VirtualCurveProgram } from "./types";
 import {
@@ -29,11 +32,21 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { VIRTUAL_CURVE_PROGRAM_ID } from "./constants";
+import {
+  DAMM_PROGRAM_ID,
+  VAULT_PROGRAM_ID,
+  VIRTUAL_CURVE_PROGRAM_ID,
+} from "./constants";
 import { BanksClient } from "solana-bankrun";
+
+export type DynamicVault = IdlAccounts<Vault>["vault"];
+const BASE_ADDRESS = new PublicKey(
+  "HWzXGcGHy4tcpYfaRDCyLNzXqBTv3E6BttpCH2vJxArv"
+);
 
 export function createVirtualCurveProgram(): VirtualCurveProgram {
   const wallet = new Wallet(Keypair.generate());
@@ -48,6 +61,33 @@ export function createVirtualCurveProgram(): VirtualCurveProgram {
     VIRTUAL_CURVE_PROGRAM_ID,
     provider
   );
+  return program;
+}
+
+export function createVaultProgram(): Program<Vault> {
+  const wallet = new Wallet(Keypair.generate());
+  const provider = new AnchorProvider(
+    new Connection(clusterApiUrl("devnet")),
+    wallet,
+    {}
+  );
+
+  const program = new Program<Vault>(
+    VaultIDL as Vault,
+    VAULT_PROGRAM_ID,
+    provider
+  );
+  return program;
+}
+
+export function createDammProgram() {
+  const wallet = new Wallet(Keypair.generate());
+  const provider = new AnchorProvider(
+    new Connection(clusterApiUrl("devnet")),
+    wallet,
+    {}
+  );
+  const program = new Program<Damm>(AmmIDL as Damm, DAMM_PROGRAM_ID, provider);
   return program;
 }
 
@@ -156,3 +196,130 @@ export const SET_COMPUTE_UNIT_LIMIT_IX =
   web3.ComputeBudgetProgram.setComputeUnitLimit({
     units: 1_400_000,
   });
+
+export async function createInitializePermissionlessDynamicVaultIx(
+  mint: PublicKey,
+  payer: PublicKey
+): Promise<{
+  vaultKey: PublicKey;
+  tokenVaultKey: PublicKey;
+  lpMintKey: PublicKey;
+  instruction: TransactionInstruction;
+}> {
+  const program = createVaultProgram();
+  const vaultKey = PublicKey.findProgramAddressSync(
+    [Buffer.from("vault"), mint.toBuffer(), BASE_ADDRESS.toBuffer()],
+    program.programId
+  )[0];
+
+  const tokenVaultKey = PublicKey.findProgramAddressSync(
+    [Buffer.from("token_vault"), vaultKey.toBuffer()],
+    program.programId
+  )[0];
+
+  const lpMintKey = PublicKey.findProgramAddressSync(
+    [Buffer.from("lp_mint"), vaultKey.toBuffer()],
+    program.programId
+  )[0];
+
+  const ix = await program.methods
+    .initialize()
+    .accounts({
+      vault: vaultKey,
+      tokenVault: tokenVaultKey,
+      tokenMint: mint,
+      lpMint: lpMintKey,
+      payer,
+      rent: SYSVAR_RENT_PUBKEY,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
+    })
+    .instruction();
+
+  return {
+    instruction: ix,
+    vaultKey,
+    tokenVaultKey,
+    lpMintKey,
+  };
+}
+
+export async function createVaultIfNotExists(
+  mint: PublicKey,
+  banksClient: BanksClient,
+  payer: Keypair
+): Promise<{
+  vaultPda: PublicKey;
+  tokenVaultPda: PublicKey;
+  lpMintPda: PublicKey;
+}> {
+  const vaultIx = await createInitializePermissionlessDynamicVaultIx(
+    mint,
+    payer.publicKey
+  );
+
+  const vaultAccount = await banksClient.getAccount(vaultIx.vaultKey);
+
+  if (!vaultAccount) {
+    let tx = new Transaction();
+    const [recentBlockhash] = await banksClient.getLatestBlockhash();
+    tx.recentBlockhash = recentBlockhash;
+    tx.add(vaultIx.instruction);
+    tx.sign(payer);
+    await banksClient.processTransaction(tx);
+  }
+
+  return {
+    vaultPda: vaultIx.vaultKey,
+    tokenVaultPda: vaultIx.tokenVaultKey,
+    lpMintPda: vaultIx.lpMintKey,
+  };
+}
+
+export async function getDynamicVault(
+  banksClient: BanksClient,
+  vault: PublicKey
+): Promise<DynamicVault> {
+  const program = createVaultProgram();
+  const account = await banksClient.getAccount(vault);
+  return program.coder.accounts.decode("Vault", Buffer.from(account.data));
+}
+
+export async function createDammConfig(
+  banksClient: BanksClient,
+  payer: Keypair
+): Promise<PublicKey> {
+  const program = createDammProgram();
+  const params = {
+    tradeFeeNumerator: new BN(250),
+    protocolTradeFeeNumerator: new BN(10),
+    activationDuration: new BN(29),
+    vaultConfigKey: PublicKey.default,
+    poolCreatorAuthority: PublicKey.default,
+    activationType: 1, //timestamp
+    index: new BN(1),
+  };
+  const [config] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config"), params.index.toBuffer("le", 8)],
+    DAMM_PROGRAM_ID
+  );
+  const transaction = await program.methods
+    .createConfig(params)
+    .accounts({
+      config,
+      admin: payer.publicKey,
+    })
+    .transaction();
+
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.sign(payer);
+  await banksClient.processTransaction(transaction);
+  const account = await banksClient.getAccount(config);
+  const con = program.coder.accounts.decode(
+    "Config",
+    Buffer.from(account.data)
+  );
+  console.log("duraction", con.activationDuration.toString());
+  return config;
+}

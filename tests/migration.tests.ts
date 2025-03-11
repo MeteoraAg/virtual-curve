@@ -1,16 +1,14 @@
 import { BN } from "bn.js";
 import * as anchor from "@coral-xyz/anchor";
-import { ProgramTestContext } from "solana-bankrun";
+import { BanksClient, Clock, ProgramTestContext } from "solana-bankrun";
 import {
   BaseFee,
-  claimProtocolFee,
-  ClaimTradeFeeParams,
-  claimTradingFee,
   ConfigParameters,
-  createClaimFeeOperator,
   createConfig,
   CreateConfigParams,
   createPoolWithSplToken,
+  MigrateMeteoraParams,
+  migrateToMeteoraDamm,
   swap,
   SwapParams,
 } from "./instructions";
@@ -18,39 +16,27 @@ import { VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { startTest } from "./utils/setup";
 import {
+  createDammConfig,
   createVirtualCurveProgram,
-  getPool,
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
   U64_MAX,
 } from "./utils";
+import { getConfig, getPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 
-describe("Trading on curve full flow", () => {
+describe.only("Swap pool", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let program: VirtualCurveProgram;
   let config: PublicKey;
   let pool: PublicKey;
-  let baseMint: PublicKey;
-  let quoteMint: PublicKey;
-  let claimFeeOperator: PublicKey;
 
   beforeEach(async () => {
     context = await startTest();
     admin = context.payer;
-    program = createVirtualCurveProgram();
-  });
 
-  it("Full flow", async () => {
-    claimFeeOperator = await createClaimFeeOperator(
-      context.banksClient,
-      program,
-      {
-        admin,
-        operator: admin.publicKey,
-      }
-    );
+    program = createVirtualCurveProgram();
 
     const baseFee: BaseFee = {
       cliffFeeNumerator: new BN(2_500_000),
@@ -61,10 +47,11 @@ describe("Trading on curve full flow", () => {
     };
 
     const curves = [];
-    for (let i = 0; i <= 2; i++) {
+
+    for (let i = 1; i <= 20; i++) {
       curves.push({
-        sqrtPrice: MAX_SQRT_PRICE.muln(i + 1),
-        liquidity: new BN(U64_MAX).muln(100),
+        sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+        liquidity: U64_MAX.shln(30 + i),
       });
     }
 
@@ -73,13 +60,13 @@ describe("Trading on curve full flow", () => {
         baseFee,
         dynamicFee: null,
       },
-      activationType: 0,
+      activationType: 1,
       collectFeeMode: 0,
       migrationOption: 0,
       tokenType: 0, // spl_token
       tokenDecimal: 6,
       migrationQuoteThreshold: new BN(500_000_000_000),
-      sqrtStartPrice: MIN_SQRT_PRICE,
+      sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
       padding: [],
       curve: curves,
     };
@@ -102,33 +89,42 @@ describe("Trading on curve full flow", () => {
         uri: "abc.com",
       },
     });
-    const poolState = await getPool(context.banksClient, program, pool);
-    baseMint = poolState.baseMint;
+  });
 
-    const swapParams: SwapParams = {
+  it("Migration", async () => {
+    let poolState = await getPool(context.banksClient, program, pool);
+    const configState = await getConfig(context.banksClient, program, config);
+    const params: SwapParams = {
       config,
       payer: admin,
       pool,
       inputTokenMint: NATIVE_MINT,
-      outputTokenMint: baseMint,
-      amountIn: new BN(LAMPORTS_PER_SOL),
+      outputTokenMint: poolState.baseMint,
+      amountIn: new BN(LAMPORTS_PER_SOL * 500),
       minimumAmountOut: new BN(0),
       referralTokenAccount: null,
     };
+    // while (true) {
+    await swap(context.banksClient, program, params);
+    poolState = await getPool(context.banksClient, program, pool);
+    console.log("base reserve: ", poolState.baseReserve.toString());
+    console.log("quote reserve: ", poolState.quoteReserve.toString());
+    // if (
+    //   poolState.quoteReserve.toNumber() >=
+    //   configState.migrationQuoteThreshold.toNumber()
+    // ) {
+    //   break;
+    // }
+    // }
 
-    await swap(context.banksClient, program, swapParams);
+    const dammConfig = await createDammConfig(context.banksClient, admin);
 
-    const claimTradingFeeParams: ClaimTradeFeeParams = {
-      feeClaimer: admin,
-      pool,
-      maxBaseAmount: new BN(U64_MAX),
-      maxQuoteAmount: new BN(U64_MAX),
+    const migrationParams: MigrateMeteoraParams = {
+      payer: admin,
+      virtualPool: pool,
+      dammConfig,
     };
-    claimTradingFee(context.banksClient, program, claimTradingFeeParams);
 
-    claimProtocolFee(context.banksClient, program, {
-      pool,
-      operator: admin,
-    });
+    await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
   });
 });

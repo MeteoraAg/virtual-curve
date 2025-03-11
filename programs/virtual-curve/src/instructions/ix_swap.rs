@@ -146,8 +146,6 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         current_point,
     )?;
 
-    msg!("Swap result: {:?}", swap_result);
-
     require!(
         swap_result.output_amount >= minimum_amount_out,
         PoolError::ExceededSlippage

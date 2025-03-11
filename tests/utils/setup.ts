@@ -21,6 +21,8 @@ export const LOCAL_ADMIN_KEYPAIR = Keypair.fromSecretKey(
   ])
 );
 
+export const VAULT_BASE_KEY = LOCAL_ADMIN_KEYPAIR.publicKey;
+
 export async function startTest() {
   // Program name need to match fixtures program name
   return startAnchor(

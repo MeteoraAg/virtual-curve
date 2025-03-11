@@ -26,6 +26,7 @@ pub struct MigrateMeteoraDammCtx<'info> {
 
     /// CHECK: pool authority
     #[account(
+        mut,
             seeds = [
                 POOL_AUTHORITY_PREFIX.as_ref(),
             ],
@@ -170,7 +171,8 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
                 self.system_program.to_account_info(),
             ],
         )?;
-
+        msg!(" initial_base_amount: {:?}", initial_base_amount);
+        msg!(" initial_quote_amount: {:?}", initial_quote_amount);
         // Vault authority create pool
         msg!("create pool");
         dynamic_amm::cpi::initialize_permissionless_constant_product_pool_with_config2(
@@ -231,6 +233,7 @@ pub fn handle_migrate_meteora_damm<'info>(
     let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
 
     let config = ctx.accounts.config.load()?;
+
     require!(
         virtual_pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::PoolIsIncompleted

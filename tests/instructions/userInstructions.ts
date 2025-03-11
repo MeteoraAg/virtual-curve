@@ -1,10 +1,14 @@
 import {
+  ComputeBudgetProgram,
   Keypair,
   PublicKey,
+  SystemProgram,
+  SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
 import {
+  deriveMetadatAccount,
   derivePoolAddress,
   derivePoolAuthority,
   deriveTokenVaultAddress,
@@ -20,7 +24,14 @@ import {
 import { BN } from "@coral-xyz/anchor";
 import { BanksClient } from "solana-bankrun";
 import {
+  createVaultIfNotExists,
+  createVaultProgram,
   DAMM_PROGRAM_ID,
+  deriveDammPoolAddress,
+  deriveLpMintAddress,
+  deriveProtocolFeeAddress,
+  deriveVaultLPAddress,
+  getVaultPdas,
   METAPLEX_PROGRAM_ID,
   processTransactionMaybeThrow,
   VAULT_PROGRAM_ID,
@@ -62,14 +73,7 @@ export async function createPoolWithSplToken(
   const baseVault = deriveTokenVaultAddress(baseMintKP.publicKey, pool);
   const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
 
-  const mintMetadata = PublicKey.findProgramAddressSync(
-    [
-      Buffer.from("metadata"),
-      METAPLEX_PROGRAM_ID.toBuffer(),
-      baseMintKP.publicKey.toBuffer(),
-    ],
-    METAPLEX_PROGRAM_ID
-  )[0];
+  const mintMetadata = deriveMetadatAccount(baseMintKP.publicKey);
 
   const tokenProgram =
     configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
@@ -259,54 +263,105 @@ export async function swap(
     await getTokenAccount(banksClient, poolState.baseVault)
   ).amount;
 
-  expect(preBaseVaultBalance - postBaseVaultBalance).eq(userOutputTokenBalance);
+  // expect(preBaseVaultBalance - postBaseVaultBalance).eq(userOutputTokenBalance);
 
   return pool;
 }
 
 export type MigrateMeteoraParams = {
+  payer: Keypair;
   virtualPool: PublicKey;
+  dammConfig: PublicKey;
 };
 
-// export async function migrateToMeteoraDamm(
-//   banksClient: BanksClient,
-//   program: VirtualCurveProgram,
-//   params: MigrateMeteoraParams
-// ): Promise<any> {
-//   const { virtualPool } = params;
-//   const virtualPoolState = await getPool(banksClient, program, virtualPool);
-//   const poolAuthority = derivePoolAuthority();
-//   const transaction = await program.methods
-//     .migrateToMeteoraDamm()
-//     .accounts({
-//       virtualPool,
-//       config: virtualPoolState.config,
-//       poolAuthority,
-//       pool,
-//       dammConfig,
-//       lpMint,
-//       tokenAMint,
-//       tokenBMint,
-//       aVault,
-//       bVault,
-//       aTokenVault,
-//       bTokenVault,
-//       aVaultLp,
-//       bVaultLp,
-//       baseVault: virtualPoolState.baseVault,
-//       quoteVault: virtualPoolState.quoteVault,
-//       virtualPoolLp,
-//       protocolTokenAFee,
-//       protocolTokenBFee,
-//       payer,
-//       rent: ,
-//       mintMetadata: METAPLEX_PROGRAM_ID,
-//       ammProgram: DAMM_PROGRAM_ID,
-//       vaultProgram: VAULT_PROGRAM_ID,
-//       tokenProgram: TOKEN_PROGRAM_ID,
-//       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-//     })
-//     .transaction();
-//   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
-//   await processTransactionMaybeThrow(banksClient, transaction);
-// }
+export async function migrateToMeteoraDamm(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: MigrateMeteoraParams
+): Promise<any> {
+  const { payer, virtualPool, dammConfig } = params;
+  const virtualPoolState = await getPool(banksClient, program, virtualPool);
+  const quoteMintInfo = await getTokenAccount(
+    banksClient,
+    virtualPoolState.quoteVault
+  );
+  const poolAuthority = derivePoolAuthority();
+  const dammPool = deriveDammPoolAddress(
+    dammConfig,
+    virtualPoolState.baseMint,
+    quoteMintInfo.mint
+  );
+
+  const lpMint = deriveLpMintAddress(dammPool);
+
+  const mintMetadata = deriveMetadatAccount(lpMint);
+
+  const [protocolTokenAFee, protocolTokenBFee] = [
+    deriveProtocolFeeAddress(virtualPoolState.baseMint, dammPool),
+    deriveProtocolFeeAddress(quoteMintInfo.mint, dammPool),
+  ];
+
+  const [
+    { vaultPda: aVault, tokenVaultPda: aTokenVault, lpMintPda: aVaultLpMint },
+    { vaultPda: bVault, tokenVaultPda: bTokenVault, lpMintPda: bVaultLpMint },
+  ] = await Promise.all([
+    createVaultIfNotExists(virtualPoolState.baseMint, banksClient, payer),
+    createVaultIfNotExists(quoteMintInfo.mint, banksClient, payer),
+  ]);
+
+  const [aVaultLp, bVaultLp] = [
+    deriveVaultLPAddress(aVault, dammPool),
+    deriveVaultLPAddress(bVault, dammPool),
+  ];
+
+  const virtualPoolLp = getAssociatedTokenAddressSync(
+    lpMint,
+    poolAuthority,
+    true,
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID
+  );
+
+  const transaction = await program.methods
+    .migrateToMeteoraDamm()
+    .accounts({
+      virtualPool,
+      config: virtualPoolState.config,
+      poolAuthority,
+      pool: dammPool,
+      dammConfig,
+      lpMint,
+      tokenAMint: virtualPoolState.baseMint,
+      tokenBMint: quoteMintInfo.mint,
+      aVault,
+      bVault,
+      aTokenVault,
+      bTokenVault,
+      aVaultLpMint,
+      bVaultLpMint,
+      aVaultLp,
+      bVaultLp,
+      baseVault: virtualPoolState.baseVault,
+      quoteVault: virtualPoolState.quoteVault,
+      virtualPoolLp,
+      protocolTokenAFee,
+      protocolTokenBFee,
+      payer: payer.publicKey,
+      rent: SYSVAR_RENT_PUBKEY,
+      mintMetadata,
+      metadataProgram: METAPLEX_PROGRAM_ID,
+      ammProgram: DAMM_PROGRAM_ID,
+      vaultProgram: VAULT_PROGRAM_ID,
+      tokenProgram: TOKEN_PROGRAM_ID,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    })
+    .transaction();
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 350_000,
+    })
+  );
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}

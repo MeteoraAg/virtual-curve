@@ -373,6 +373,7 @@ impl VirtualPool {
                 }
             }
         }
+
         require!(amount_left == 0, PoolError::NotEnoughLiquidity);
 
         if is_skip_fee {
@@ -455,10 +456,6 @@ impl VirtualPool {
             amount_in
         };
 
-        msg!("base_reserve {:?}", self.base_reserve);
-        msg!("quote_reserve: {:?}", self.quote_reserve);
-        msg!("actual_amount_in_reserve: {:?}", actual_amount_in_reserve);
-        msg!("output_amount: {:?}", output_amount);
         if trade_direction == TradeDirection::BasetoQuote {
             self.base_reserve = self.base_reserve.safe_add(actual_amount_in_reserve)?;
             self.quote_reserve = self.quote_reserve.safe_sub(output_amount)?;
