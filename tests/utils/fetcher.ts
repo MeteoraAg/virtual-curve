@@ -2,13 +2,16 @@ import { PublicKey } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
 import { Config, Pool, VirtualCurveProgram } from "./types";
 
-export async function getPool(
+export async function getVirtualPool(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   pool: PublicKey
 ): Promise<Pool> {
   const account = await banksClient.getAccount(pool);
-  return program.coder.accounts.decode("Pool", Buffer.from(account.data));
+  return program.coder.accounts.decode(
+    "VirtualPool",
+    Buffer.from(account.data)
+  );
 }
 
 export async function getConfig(

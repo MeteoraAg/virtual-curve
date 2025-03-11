@@ -259,7 +259,6 @@ export async function createVaultIfNotExists(
   );
 
   const vaultAccount = await banksClient.getAccount(vaultIx.vaultKey);
-
   if (!vaultAccount) {
     let tx = new Transaction();
     const [recentBlockhash] = await banksClient.getLatestBlockhash();
@@ -315,11 +314,36 @@ export async function createDammConfig(
   transaction.recentBlockhash = recentBlockhash;
   transaction.sign(payer);
   await banksClient.processTransaction(transaction);
-  const account = await banksClient.getAccount(config);
-  const con = program.coder.accounts.decode(
-    "Config",
-    Buffer.from(account.data)
-  );
-  console.log("duraction", con.activationDuration.toString());
+
   return config;
+}
+
+export async function createLockEscrowIx(
+  banksClient: BanksClient,
+  payer: Keypair,
+  pool: PublicKey,
+  lpMint: PublicKey,
+  escrowOwner: PublicKey,
+  lockEscrowKey: PublicKey
+): Promise<PublicKey> {
+  const program = createDammProgram();
+
+  const transaction = await program.methods
+    .createLockEscrow()
+    .accounts({
+      pool,
+      lpMint,
+      owner: escrowOwner,
+      lockEscrow: lockEscrowKey,
+      systemProgram: SystemProgram.programId,
+      payer: payer.publicKey,
+    })
+    .transaction();
+
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.sign(payer);
+  await banksClient.processTransaction(transaction);
+
+  return lockEscrowKey;
 }

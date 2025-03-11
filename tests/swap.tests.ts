@@ -19,7 +19,7 @@ import {
   MIN_SQRT_PRICE,
   U64_MAX,
 } from "./utils";
-import { getPool } from "./utils/fetcher";
+import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 describe("Swap pool", () => {
@@ -88,7 +88,7 @@ describe("Swap pool", () => {
   });
 
   it("Execute swap", async () => {
-    const poolState = await getPool(context.banksClient, program, pool);
+    const poolState = await getVirtualPool(context.banksClient, program, pool);
     const params: SwapParams = {
       config,
       payer: admin,

@@ -9,7 +9,7 @@ import {
   unwrapSOLInstruction,
   getTokenAccount,
 } from "../utils";
-import { getConfig, getPool } from "../utils/fetcher";
+import { getConfig, getVirtualPool } from "../utils/fetcher";
 import { expect } from "chai";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
@@ -103,7 +103,7 @@ export async function claimTradingFee(
   params: ClaimTradeFeeParams
 ): Promise<any> {
   const { feeClaimer, pool, maxBaseAmount, maxQuoteAmount } = params;
-  const poolState = await getPool(banksClient, program, pool);
+  const poolState = await getVirtualPool(banksClient, program, pool);
   const poolAuthority = derivePoolAuthority();
 
   const quoteMintInfo = await getTokenAccount(

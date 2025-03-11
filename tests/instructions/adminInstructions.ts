@@ -7,7 +7,7 @@ import {
 import { VirtualCurveProgram } from "../utils/types";
 import {
   getOrCreateAssociatedTokenAccount,
-  getPool,
+  getVirtualPool,
   getTokenAccount,
   processTransactionMaybeThrow,
   TREASURY,
@@ -74,7 +74,7 @@ export async function claimProtocolFee(
   params: ClaimProtocolFeeParams
 ): Promise<any> {
   const { operator, pool } = params;
-  const poolState = await getPool(banksClient, program, pool);
+  const poolState = await getVirtualPool(banksClient, program, pool);
   const poolAuthority = derivePoolAuthority();
   const claimFeeOperator = deriveClaimFeeOperatorAddress(operator.publicKey);
   const quoteMintInfo = await getTokenAccount(

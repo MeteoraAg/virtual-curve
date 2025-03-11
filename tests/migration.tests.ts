@@ -7,8 +7,6 @@ import {
   createConfig,
   CreateConfigParams,
   createPoolWithSplToken,
-  MigrateMeteoraParams,
-  migrateToMeteoraDamm,
   swap,
   SwapParams,
 } from "./instructions";
@@ -22,15 +20,21 @@ import {
   MIN_SQRT_PRICE,
   U64_MAX,
 } from "./utils";
-import { getConfig, getPool } from "./utils/fetcher";
+import { getConfig, getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
+import {
+  createMeteoraMetadata,
+  lockLpDamm,
+  MigrateMeteoraParams,
+  migrateToMeteoraDamm,
+} from "./instructions/meteoraMigration";
 
-describe.only("Swap pool", () => {
+describe("Swap pool", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let program: VirtualCurveProgram;
   let config: PublicKey;
-  let pool: PublicKey;
+  let virtualPool: PublicKey;
 
   beforeEach(async () => {
     context = await startTest();
@@ -48,7 +52,7 @@ describe.only("Swap pool", () => {
 
     const curves = [];
 
-    for (let i = 1; i <= 20; i++) {
+    for (let i = 1; i <= 5; i++) {
       curves.push({
         sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
         liquidity: U64_MAX.shln(30 + i),
@@ -79,7 +83,7 @@ describe.only("Swap pool", () => {
     };
     config = await createConfig(context.banksClient, program, params);
 
-    pool = await createPoolWithSplToken(context.banksClient, program, {
+    virtualPool = await createPoolWithSplToken(context.banksClient, program, {
       payer: admin,
       quoteMint: NATIVE_MINT,
       config,
@@ -92,39 +96,46 @@ describe.only("Swap pool", () => {
   });
 
   it("Migration", async () => {
-    let poolState = await getPool(context.banksClient, program, pool);
-    const configState = await getConfig(context.banksClient, program, config);
+    let poolState = await getVirtualPool(
+      context.banksClient,
+      program,
+      virtualPool
+    );
     const params: SwapParams = {
       config,
       payer: admin,
-      pool,
+      pool: virtualPool,
       inputTokenMint: NATIVE_MINT,
       outputTokenMint: poolState.baseMint,
-      amountIn: new BN(LAMPORTS_PER_SOL * 500),
+      amountIn: new BN(LAMPORTS_PER_SOL),
       minimumAmountOut: new BN(0),
       referralTokenAccount: null,
     };
-    // while (true) {
     await swap(context.banksClient, program, params);
-    poolState = await getPool(context.banksClient, program, pool);
-    console.log("base reserve: ", poolState.baseReserve.toString());
-    console.log("quote reserve: ", poolState.quoteReserve.toString());
-    // if (
-    //   poolState.quoteReserve.toNumber() >=
-    //   configState.migrationQuoteThreshold.toNumber()
-    // ) {
-    //   break;
-    // }
-    // }
+
+    console.log("Create metadata");
+    await createMeteoraMetadata(context.banksClient, program, {
+      payer: admin,
+      virtualPool,
+    });
 
     const dammConfig = await createDammConfig(context.banksClient, admin);
 
+    console.log("Create damm pool");
     const migrationParams: MigrateMeteoraParams = {
       payer: admin,
-      virtualPool: pool,
+      virtualPool,
       dammConfig,
     };
 
     await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
+
+    console.log("Lock LP");
+
+    await lockLpDamm(context.banksClient, program, {
+      payer: admin,
+      dammConfig,
+      virtualPool,
+    });
   });
 });

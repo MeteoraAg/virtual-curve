@@ -19,7 +19,7 @@ import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { startTest } from "./utils/setup";
 import {
   createVirtualCurveProgram,
-  getPool,
+  getVirtualPool,
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
   U64_MAX,
@@ -102,7 +102,7 @@ describe("Trading on curve full flow", () => {
         uri: "abc.com",
       },
     });
-    const poolState = await getPool(context.banksClient, program, pool);
+    const poolState = await getVirtualPool(context.banksClient, program, pool);
     baseMint = poolState.baseMint;
 
     const swapParams: SwapParams = {

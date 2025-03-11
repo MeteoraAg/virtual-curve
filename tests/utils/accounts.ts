@@ -143,3 +143,12 @@ export function deriveVaultLPAddress(
     DAMM_PROGRAM_ID
   )[0];
 }
+
+export function deriveMigrationMetadataAddress(
+  virtual_pool: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("meteora"), virtual_pool.toBuffer()],
+    VIRTUAL_CURVE_PROGRAM_ID
+  )[0];
+}

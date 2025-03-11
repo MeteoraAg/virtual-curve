@@ -1,7 +1,7 @@
 use std::u64;
 
 use anchor_spl::token::{Token, TokenAccount};
-use dynamic_amm::{ LockEscrow};
+use dynamic_amm::LockEscrow;
 use crate::{constants::seeds::POOL_AUTHORITY_PREFIX, state::{MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress}, *};
 
 /// create lock escrow must be before that transaction
@@ -13,6 +13,7 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
 
     /// CHECK: presale authority
     #[account(
+        mut,
         seeds = [
             POOL_AUTHORITY_PREFIX.as_ref(),
         ],
@@ -40,7 +41,7 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// CHECK:
     #[account(
         mut,
-        associated_token::mint = migration_medata.load()?.lp_mint,
+        associated_token::mint = migration_metadata.load()?.lp_mint,
         associated_token::authority = pool_authority.key()
     )]
     pub source_tokens: Box<Account<'info, TokenAccount>>,
@@ -48,9 +49,6 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// CHECK:
     #[account(mut)]
     pub escrow_vault: UncheckedAccount<'info>,
-
-    /// token_program
-    pub token_program: Program<'info, Token>,
 
     /// CHECK: amm_program
     #[account(address = dynamic_amm::ID)]
@@ -68,6 +66,9 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     pub a_vault_lp_mint: UncheckedAccount<'info>,
     /// CHECK: LP token mint of vault b
     pub b_vault_lp_mint: UncheckedAccount<'info>,
+
+    /// token_program
+    pub token_program: Program<'info, Token>,
 }
 
 impl<'info> MigrateMeteoraDammLockLpTokenCtx<'info> {

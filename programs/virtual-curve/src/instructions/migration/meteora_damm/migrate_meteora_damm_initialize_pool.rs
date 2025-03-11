@@ -171,8 +171,6 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
                 self.system_program.to_account_info(),
             ],
         )?;
-        msg!(" initial_base_amount: {:?}", initial_base_amount);
-        msg!(" initial_quote_amount: {:?}", initial_quote_amount);
         // Vault authority create pool
         msg!("create pool");
         dynamic_amm::cpi::initialize_permissionless_constant_product_pool_with_config2(
@@ -234,6 +232,8 @@ pub fn handle_migrate_meteora_damm<'info>(
 
     let config = ctx.accounts.config.load()?;
 
+    // just for test
+    #[cfg(not(feature = "local"))]
     require!(
         virtual_pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::PoolIsIncompleted
@@ -245,9 +245,13 @@ pub fn handle_migrate_meteora_damm<'info>(
         migration_option == MigrationOption::MeteoraDamm,
         PoolError::InvalidMigrationOption
     );
-
     let base_reserve = config.migration_base_threshold;
     let quote_reserve = config.migration_quote_threshold;
+
+    #[cfg(feature = "local")]
+    let base_reserve = virtual_pool.base_reserve;
+    #[cfg(feature = "local")]
+    let quote_reserve = virtual_pool.quote_reserve;
 
     ctx.accounts.create_pool(
         base_reserve,
