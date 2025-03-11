@@ -25,6 +25,18 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
     #[account(has_one = quote_mint)]
     pub config: AccountLoader<'info, Config>,
 
+    /// CHECK: pool authority
+    #[account(
+        seeds = [
+            POOL_AUTHORITY_PREFIX.as_ref(),
+        ],
+        bump,
+    )]
+    pub pool_authority: UncheckedAccount<'info>,
+
+    /// CHECK: Pool creator
+    pub creator: UncheckedAccount<'info>,
+
     /// Unique token mint address, initialize in contract
     #[account(mut)]
     pub base_mint: Signer<'info>,
@@ -48,22 +60,6 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
         space = 8 + VirtualPool::INIT_SPACE
     )]
     pub pool: AccountLoader<'info, VirtualPool>,
-
-    /// CHECK: Pool creator
-    pub creator: UncheckedAccount<'info>,
-
-    /// Address paying to create the pool. Can be anyone
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    /// CHECK: pool authority
-    #[account(
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
-    )]
-    pub pool_authority: UncheckedAccount<'info>,
 
     /// CHECK: Token base vault for the pool
     #[account(
@@ -93,11 +89,14 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
     )]
     pub quote_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
+    /// Address paying to create the pool. Can be anyone
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
     /// Program to create mint account and mint tokens
     pub token_quote_program: Interface<'info, TokenInterface>,
 
     pub token_program: Program<'info, Token2022>,
-
     // Sysvar for program account
     pub system_program: Program<'info, System>,
 }
@@ -192,6 +191,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         config.sqrt_start_price,
         PoolType::Token2022.into(),
         activation_point,
+        config.get_initial_base_supply()?,
     );
 
     emit_cpi!(EvtInitializePool {

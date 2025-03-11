@@ -29,6 +29,18 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
     #[account(has_one = quote_mint)]
     pub config: AccountLoader<'info, Config>,
 
+    /// CHECK: pool authority
+    #[account(
+        seeds = [
+            POOL_AUTHORITY_PREFIX.as_ref(),
+        ],
+        bump,
+    )]
+    pub pool_authority: UncheckedAccount<'info>,
+
+    /// CHECK: Pool creator
+    pub creator: UncheckedAccount<'info>,
+
     #[account(
         init,
         payer = payer,
@@ -57,22 +69,6 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
         space = 8 + VirtualPool::INIT_SPACE
     )]
     pub pool: AccountLoader<'info, VirtualPool>,
-
-    /// CHECK: Pool creator
-    pub creator: UncheckedAccount<'info>,
-
-    /// Address paying to create the pool. Can be anyone
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    /// CHECK: pool authority
-    #[account(
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
-    )]
-    pub pool_authority: UncheckedAccount<'info>,
 
     /// Token a vault for the pool
     #[account(
@@ -106,11 +102,6 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
     )]
     pub quote_vault: Box<InterfaceAccount<'info, TokenAccountInterface>>,
 
-    /// Program to create mint account and mint tokens
-    pub token_quote_program: Interface<'info, TokenInterface>,
-
-    pub token_program: Program<'info, Token>,
-
     /// CHECK: mint_metadata
     #[account(mut)]
     pub mint_metadata: UncheckedAccount<'info>,
@@ -118,6 +109,15 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
     /// CHECK: Metadata program
     #[account(address = mpl_token_metadata::ID)]
     pub metadata_program: UncheckedAccount<'info>,
+
+    /// Address paying to create the pool. Can be anyone
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    /// Program to create mint account and mint tokens
+    pub token_quote_program: Interface<'info, TokenInterface>,
+
+    pub token_program: Program<'info, Token>,
 
     // Sysvar for program account
     pub system_program: Program<'info, System>,
@@ -181,6 +181,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         config.sqrt_start_price,
         PoolType::SplToken.into(),
         activation_point,
+        config.get_initial_base_supply()?,
     );
 
     emit_cpi!(EvtInitializePool {

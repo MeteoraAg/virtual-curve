@@ -143,6 +143,7 @@ impl VirtualPool {
         sqrt_price: u128,
         pool_type: u8,
         activation_point: u64,
+        base_reverse: u64,
     ) {
         self.pool_fees = pool_fees;
         self.config = config;
@@ -153,6 +154,7 @@ impl VirtualPool {
         self.sqrt_price = sqrt_price;
         self.pool_type = pool_type;
         self.activation_point = activation_point;
+        self.base_reserve = base_reverse;
     }
 
     pub fn get_swap_result(
@@ -439,6 +441,7 @@ impl VirtualPool {
             self.metrics
                 .accumulate_fee(protocol_fee, trading_fee, true)?;
         }
+
         // update reserve
         // fee is in input token
         let actual_amount_in_reserve = if collect_fee_mode == CollectFeeMode::OnlyB
@@ -451,6 +454,11 @@ impl VirtualPool {
         } else {
             amount_in
         };
+
+        msg!("base_reserve {:?}", self.base_reserve);
+        msg!("quote_reserve: {:?}", self.quote_reserve);
+        msg!("actual_amount_in_reserve: {:?}", actual_amount_in_reserve);
+        msg!("output_amount: {:?}", output_amount);
         if trade_direction == TradeDirection::BasetoQuote {
             self.base_reserve = self.base_reserve.safe_add(actual_amount_in_reserve)?;
             self.quote_reserve = self.quote_reserve.safe_sub(output_amount)?;
@@ -458,6 +466,7 @@ impl VirtualPool {
             self.quote_reserve = self.quote_reserve.safe_add(actual_amount_in_reserve)?;
             self.base_reserve = self.base_reserve.safe_sub(output_amount)?;
         }
+
         self.update_post_swap(old_sqrt_price, current_timestamp)?;
         Ok(())
     }

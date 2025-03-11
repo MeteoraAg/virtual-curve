@@ -1,10 +1,9 @@
-name: CP-AMM
+name: VIRTUAL_CURVE
 
 on:
   pull_request:
     branches:
       - main
-      - staging
 
 env:
   SOLANA_CLI_VERSION: 1.16.1
@@ -25,7 +24,7 @@ jobs:
         uses: tj-actions/changed-files@v18.6
         with:
           files: |
-            programs/cp-amm
+            programs/virtual-curve
 
   anchor_build:
     runs-on: ubuntu-latest
@@ -47,24 +46,7 @@ jobs:
         with:
           path: ~/.anchor
           key: anchor-${{ runner.os }}-${{ hashFiles('Anchor.toml') }}
-      - run: anchor build
-        shell: bash
-
-  cli_build:
-    runs-on: ubuntu-latest
-    needs: program_changed_files
-    if: needs.program_changed_files.outputs.program == 'true'
-    steps:
-      - uses: actions/checkout@v4
-      # Install rust + toolchain
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: 1.76.0
-          components: clippy
-      - run: rustup target add x86_64-unknown-linux-gnu
-      # Cache rust, cargo
-      - uses: Swatinem/rust-cache@v1
-      - run: cargo build -p cli --target=x86_64-unknown-linux-gnu
+      - run: anchor build -p virtual_curve
         shell: bash
 
   cargo_test:
@@ -80,10 +62,10 @@ jobs:
       - run: rustup target add x86_64-unknown-linux-gnu
       # Cache rust, cargo
       - uses: Swatinem/rust-cache@v1
-      - run: cargo test --package cp-amm --target=x86_64-unknown-linux-gnu
+      - run: cargo test --package virtual-curve --target=x86_64-unknown-linux-gnu
         shell: bash
 
-  program_test:
+  integration_test:
     runs-on: ubuntu-latest
     needs: program_changed_files
     if: needs.program_changed_files.outputs.program == 'true'
