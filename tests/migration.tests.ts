@@ -29,7 +29,7 @@ import {
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
 
-describe.only("Swap pool", () => {
+describe("Swap pool", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let program: VirtualCurveProgram;

@@ -156,7 +156,7 @@ export async function swap(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: SwapParams
-): Promise<PublicKey> {
+): Promise<{ pool: PublicKey; computeUnitsConsumed: string }> {
   const {
     config,
     payer,
@@ -252,18 +252,11 @@ export async function swap(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer);
 
+  const simu = await banksClient.simulateTransaction(transaction);
   await processTransactionMaybeThrow(banksClient, transaction);
 
-  //
-  const userOutputTokenBalance = (
-    await getTokenAccount(banksClient, outputTokenAccount)
-  ).amount;
-
-  const postBaseVaultBalance = (
-    await getTokenAccount(banksClient, poolState.baseVault)
-  ).amount;
-
-  // expect(preBaseVaultBalance - postBaseVaultBalance).eq(userOutputTokenBalance);
-
-  return pool;
+  return {
+    pool,
+    computeUnitsConsumed: simu.meta.computeUnitsConsumed.toString(),
+  };
 }
