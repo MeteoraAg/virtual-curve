@@ -2,12 +2,14 @@ use std::u64;
 
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
     constants::MAX_CURVE_POINT,
     curve::{
-        get_delta_amount_base_unsigned, get_delta_amount_quote_unsigned,
+        get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
+        get_delta_amount_quote_unsigned, get_delta_amount_quote_unsigned_256,
         get_next_sqrt_price_from_input,
     },
     params::swap::TradeDirection,
@@ -233,13 +235,13 @@ impl VirtualPool {
         let mut amount_left = amount_in;
         for i in (0..MAX_CURVE_POINT - 1).rev() {
             if config.curve[i].sqrt_price < current_sqrt_price {
-                let max_amount_in = get_delta_amount_base_unsigned(
-                    current_sqrt_price,
+                let max_amount_in = get_delta_amount_base_unsigned_256(
                     config.curve[i].sqrt_price,
+                    current_sqrt_price,
                     config.curve[i + 1].liquidity,
                     Rounding::Up, // TODO check whether we should use round down or round up
                 )?;
-                if amount_left < max_amount_in {
+                if U256::from(amount_left) < max_amount_in {
                     let next_sqrt_price = get_next_sqrt_price_from_input(
                         current_sqrt_price,
                         config.curve[i + 1].liquidity,
@@ -267,7 +269,11 @@ impl VirtualPool {
                     )?;
                     total_output_amount = total_output_amount.safe_add(output_amount)?;
                     current_sqrt_price = next_sqrt_price;
-                    amount_left = amount_left.safe_sub(max_amount_in)?;
+                    amount_left = amount_left.safe_sub(
+                        max_amount_in
+                            .try_into()
+                            .map_err(|_| PoolError::TypeCastFailed)?,
+                    )?;
                 }
             }
         }
@@ -323,13 +329,13 @@ impl VirtualPool {
         let mut amount_left = amount_in;
         for i in 0..MAX_CURVE_POINT {
             if config.curve[i].sqrt_price > current_sqrt_price {
-                let max_amount_in = get_delta_amount_base_unsigned(
+                let max_amount_in = get_delta_amount_quote_unsigned_256(
                     current_sqrt_price,
                     config.curve[i].sqrt_price,
                     config.curve[i].liquidity,
                     Rounding::Up, // TODO check whether we should use round down or round up
                 )?;
-                if amount_left < max_amount_in {
+                if U256::from(amount_left) < max_amount_in {
                     let next_sqrt_price = get_next_sqrt_price_from_input(
                         current_sqrt_price,
                         config.curve[i].liquidity,
@@ -340,7 +346,7 @@ impl VirtualPool {
                     let output_amount = get_delta_amount_base_unsigned(
                         current_sqrt_price,
                         next_sqrt_price,
-                        config.curve[i + 1].liquidity,
+                        config.curve[i].liquidity,
                         Rounding::Down,
                     )?;
                     total_output_amount = total_output_amount.safe_add(output_amount)?;
@@ -357,7 +363,11 @@ impl VirtualPool {
                     )?;
                     total_output_amount = total_output_amount.safe_add(output_amount)?;
                     current_sqrt_price = next_sqrt_price;
-                    amount_left = amount_left.safe_sub(max_amount_in)?;
+                    amount_left = amount_left.safe_sub(
+                        max_amount_in
+                            .try_into()
+                            .map_err(|_| PoolError::TypeCastFailed)?,
+                    )?;
                 }
             }
         }

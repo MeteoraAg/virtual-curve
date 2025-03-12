@@ -190,7 +190,7 @@ pub enum TokenType {
 }
 
 #[account(zero_copy)]
-#[derive(InitSpace, Debug)]
+#[derive(InitSpace, Debug, Default)]
 pub struct Config {
     /// quote mint
     pub quote_mint: Pubkey,
@@ -231,7 +231,7 @@ pub struct Config {
 const_assert_eq!(Config::INIT_SPACE, 1008);
 
 #[zero_copy]
-#[derive(InitSpace, Debug)]
+#[derive(InitSpace, Debug, Default)]
 pub struct LiquidityDistributionConfig {
     pub sqrt_price: u128,
     pub liquidity: u128,

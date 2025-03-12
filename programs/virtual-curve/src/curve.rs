@@ -36,14 +36,25 @@ pub fn get_delta_amount_base_unsigned(
     liquidity: u128,
     round: Rounding,
 ) -> Result<u64> {
+    let result =
+        get_delta_amount_base_unsigned_256(lower_sqrt_price, upper_sqrt_price, liquidity, round)?;
+    require!(result <= U256::from(u64::MAX), PoolError::MathOverflow);
+    return Ok(result.try_into().map_err(|_| PoolError::TypeCastFailed)?);
+}
+
+pub fn get_delta_amount_base_unsigned_256(
+    lower_sqrt_price: u128,
+    upper_sqrt_price: u128,
+    liquidity: u128,
+    round: Rounding,
+) -> Result<U256> {
     let result = get_delta_amount_base_unsigned_unchecked(
         lower_sqrt_price,
         upper_sqrt_price,
         liquidity,
         round,
     )?;
-    require!(result <= U256::from(u64::MAX), PoolError::MathOverflow);
-    return Ok(result.try_into().map_err(|_| PoolError::TypeCastFailed)?);
+    return Ok(result);
 }
 
 /// * i.e. `L * (√P_upper - √P_lower) / (√P_upper * √P_lower)`
