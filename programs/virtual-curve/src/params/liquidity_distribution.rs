@@ -1,3 +1,5 @@
+use std::u64;
+
 use anchor_lang::prelude::*;
 use ruint::aliases::U256;
 
@@ -31,14 +33,14 @@ pub fn get_max_delta_quote_token(
     sqrt_start_price: u128,
     curve: &Vec<LiquidityDistributionParameters>,
 ) -> Result<u64> {
-    let mut total_amount = get_delta_amount_quote_unsigned(
+    let mut total_amount = get_delta_amount_quote_unsigned_256(
         sqrt_start_price,
         curve[0].sqrt_price,
         curve[0].liquidity,
         Rounding::Up, // TODO check whether we should use round down or round up
     )?;
     for i in 1..curve.len() {
-        let delta_amount = get_delta_amount_quote_unsigned(
+        let delta_amount = get_delta_amount_quote_unsigned_256(
             curve[i - 1].sqrt_price,
             curve[i].sqrt_price,
             curve[i].liquidity,
@@ -46,7 +48,13 @@ pub fn get_max_delta_quote_token(
         )?;
         total_amount = total_amount.safe_add(delta_amount)?;
     }
-    Ok(total_amount)
+    if total_amount > U256::from(u64::MAX) {
+        Ok(u64::MAX)
+    } else {
+        Ok(total_amount
+            .try_into()
+            .map_err(|_| PoolError::TypeCastFailed)?)
+    }
 }
 
 pub fn get_minimum_base_token_for_curve(
@@ -151,6 +159,7 @@ fn get_migration_threshold_price(
                     amount_left,
                     false,
                 )?;
+                amount_left = 0;
                 break;
             } else {
                 amount_left = amount_left.safe_sub(
@@ -161,6 +170,7 @@ fn get_migration_threshold_price(
                 next_sqrt_price = curve[i].sqrt_price
             }
         }
+        require!(amount_left == 0, PoolError::NotEnoughLiquidity);
     }
     Ok(next_sqrt_price)
 }
