@@ -160,6 +160,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     ))?;
 
     let config = ctx.accounts.config.load()?;
+    let initial_base_supply = config.get_initial_base_supply()?;
 
     // mint token
     let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
@@ -173,7 +174,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             },
             &[&seeds[..]],
         ),
-        config.get_initial_base_supply()?,
+        initial_base_supply,
     )?;
 
     // init pool
@@ -191,7 +192,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         config.sqrt_start_price,
         PoolType::Token2022.into(),
         activation_point,
-        config.get_initial_base_supply()?,
+        initial_base_supply,
     );
 
     emit_cpi!(EvtInitializePool {

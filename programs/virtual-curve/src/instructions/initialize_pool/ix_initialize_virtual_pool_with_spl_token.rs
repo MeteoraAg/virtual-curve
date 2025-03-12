@@ -128,6 +128,8 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
     params: InitializePoolParameters,
 ) -> Result<()> {
     let config = ctx.accounts.config.load()?;
+    let initial_base_supply = config.get_initial_base_supply()?;
+
     let token_type_value =
         TokenType::try_from(config.token_type).map_err(|_| PoolError::InvalidTokenType)?;
     require!(
@@ -163,7 +165,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
             },
             &[&seeds[..]],
         ),
-        config.get_initial_base_supply()?,
+        initial_base_supply,
     )?;
 
     // init pool
@@ -181,7 +183,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         config.sqrt_start_price,
         PoolType::SplToken.into(),
         activation_point,
-        config.get_initial_base_supply()?,
+        initial_base_supply,
     );
 
     emit_cpi!(EvtInitializePool {
