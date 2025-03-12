@@ -67,7 +67,6 @@ export async function migrateToMeteoraDamm(
   program: VirtualCurveProgram,
   params: MigrateMeteoraParams
 ): Promise<any> {
-  console.log(params);
   const { payer, virtualPool, dammConfig } = params;
   const virtualPoolState = await getVirtualPool(
     banksClient,

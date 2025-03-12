@@ -52,7 +52,7 @@ describe.only("Swap pool", () => {
 
     const curves = [];
 
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= 20; i++) {
       curves.push({
         sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
         liquidity: U64_MAX.shln(30 + i),
