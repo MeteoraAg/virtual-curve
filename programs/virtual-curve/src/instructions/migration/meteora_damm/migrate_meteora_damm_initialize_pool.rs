@@ -46,6 +46,7 @@ pub struct MigrateMeteoraDammCtx<'info> {
     pub lp_mint: UncheckedAccount<'info>,
 
     /// CHECK: base token mint
+    #[account(mut)]
     pub token_a_mint: UncheckedAccount<'info>, // match with vault.base_mint
     /// CHECK: quote token mint
     pub token_b_mint: UncheckedAccount<'info>, // match with vault.quote_mint

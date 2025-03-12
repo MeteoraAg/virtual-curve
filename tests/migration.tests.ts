@@ -29,7 +29,7 @@ import {
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
 
-describe("Swap pool", () => {
+describe.only("Swap pool", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let program: VirtualCurveProgram;
@@ -69,7 +69,7 @@ describe("Swap pool", () => {
       migrationOption: 0,
       tokenType: 0, // spl_token
       tokenDecimal: 6,
-      migrationQuoteThreshold: new BN(500_000_000_000),
+      migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
       sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
       padding: [],
       curve: curves,
@@ -107,7 +107,7 @@ describe("Swap pool", () => {
       pool: virtualPool,
       inputTokenMint: NATIVE_MINT,
       outputTokenMint: poolState.baseMint,
-      amountIn: new BN(LAMPORTS_PER_SOL),
+      amountIn: new BN(LAMPORTS_PER_SOL * 5.5),
       minimumAmountOut: new BN(0),
       referralTokenAccount: null,
     };

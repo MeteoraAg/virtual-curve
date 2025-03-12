@@ -67,6 +67,7 @@ export async function migrateToMeteoraDamm(
   program: VirtualCurveProgram,
   params: MigrateMeteoraParams
 ): Promise<any> {
+  console.log(params);
   const { payer, virtualPool, dammConfig } = params;
   const virtualPoolState = await getVirtualPool(
     banksClient,
@@ -153,7 +154,7 @@ export async function migrateToMeteoraDamm(
     .transaction();
   transaction.add(
     ComputeBudgetProgram.setComputeUnitLimit({
-      units: 350_000,
+      units: 400_000,
     })
   );
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];

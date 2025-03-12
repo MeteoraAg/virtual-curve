@@ -126,4 +126,4 @@ pub const DEFAULT_QUOTE_MINTS: [Pubkey; 2] = [SOL, USDC];
 pub const DEFAULT_QUOTE_THRESHOLD: [u64; 2] = [500_000_000_000, 50_000_000_000]; // 500 SOL and 50k USDC
 
 #[cfg(feature = "local")]
-pub const DEFAULT_QUOTE_THRESHOLD: [u64; 2] = [500_000_000, 50_000_000_000]; // 5 SOL and 50k USDC
+pub const DEFAULT_QUOTE_THRESHOLD: [u64; 2] = [5_000_000_000, 50_000_000_000]; // 5 SOL and 50k USDC
