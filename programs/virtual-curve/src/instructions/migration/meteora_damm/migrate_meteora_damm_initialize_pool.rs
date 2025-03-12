@@ -231,17 +231,6 @@ pub fn handle_migrate_meteora_damm<'info>(
     let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
 
     let config = ctx.accounts.config.load()?;
-    msg!("quote reverse: {:?}", virtual_pool.quote_reserve);
-    msg!("threshold: {:?}", config.migration_quote_threshold);
-    msg!(
-        "config.migration_base_threshold: {:?}",
-        config.migration_base_threshold
-    );
-    msg!("base reverse: {:?}", virtual_pool.base_reserve);
-    msg!("quote reverse: {:?}", virtual_pool.quote_reserve);
-
-    msg!("real base reverse: {:?}", ctx.accounts.base_vault.amount);
-    msg!("real quote reverse: {:?}", ctx.accounts.quote_vault.amount);
     require!(
         virtual_pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::PoolIsIncompleted
