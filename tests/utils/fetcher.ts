@@ -1,6 +1,6 @@
 import { PublicKey } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
-import { Config, Pool, VirtualCurveProgram } from "./types";
+import { ClaimFeeOperator, Config, Pool, VirtualCurveProgram } from "./types";
 
 export async function getVirtualPool(
   banksClient: BanksClient,
@@ -21,4 +21,16 @@ export async function getConfig(
 ): Promise<Config> {
   const account = await banksClient.getAccount(config);
   return program.coder.accounts.decode("Config", Buffer.from(account.data));
+}
+
+export async function getClaimFeeOperator(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  claimFeeOperator: PublicKey
+): Promise<ClaimFeeOperator> {
+  const account = await banksClient.getAccount(claimFeeOperator);
+  return program.coder.accounts.decode(
+    "ClaimFeeOperator",
+    Buffer.from(account.data)
+  );
 }

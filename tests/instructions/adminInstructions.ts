@@ -11,8 +11,10 @@ import {
   getTokenAccount,
   processTransactionMaybeThrow,
   TREASURY,
+  getClaimFeeOperator,
 } from "../utils";
 import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { expect } from "chai";
 
 export type CreateClaimfeeOperatorParams = {
   admin: Keypair;
@@ -39,6 +41,13 @@ export async function createClaimFeeOperator(
   transaction.sign(admin);
 
   await processTransactionMaybeThrow(banksClient, transaction);
+
+  const claimFeeOperatorState = await getClaimFeeOperator(
+    banksClient,
+    program,
+    claimFeeOperator
+  );
+  expect(claimFeeOperatorState.operator.toString()).eq(operator.toString());
 
   return claimFeeOperator;
 }
