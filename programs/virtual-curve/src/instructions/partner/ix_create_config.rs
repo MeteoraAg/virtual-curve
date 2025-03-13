@@ -23,6 +23,7 @@ pub struct ConfigParameters {
     pub activation_type: u8,
     pub token_type: u8,
     pub token_decimal: u8,
+    pub creator_post_migration_fee_percentage: u8,
     pub migration_quote_threshold: u64,
     pub sqrt_start_price: u128,
     /// padding for future use
@@ -63,6 +64,11 @@ impl ConfigParameters {
         require!(
             self.token_decimal >= 6 && self.token_decimal <= 9,
             PoolError::InvalidTokenDecimals
+        );
+
+        require!(
+            self.creator_post_migration_fee_percentage <= 100,
+            PoolError::InvalidFeePercentage
         );
 
         // validate total_supply/migration_quote_threshold and curve and quote_mint
@@ -149,6 +155,7 @@ pub fn handle_create_config(
         activation_type,
         token_type,
         token_decimal,
+        creator_post_migration_fee_percentage,
         migration_quote_threshold,
         sqrt_start_price,
         curve,
@@ -169,6 +176,7 @@ pub fn handle_create_config(
         activation_type,
         token_decimal,
         token_type,
+        creator_post_migration_fee_percentage,
         swap_base_amount,
         migration_quote_threshold,
         migration_base_amount,

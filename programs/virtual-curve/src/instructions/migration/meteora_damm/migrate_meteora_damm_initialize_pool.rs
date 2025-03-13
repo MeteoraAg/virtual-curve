@@ -9,6 +9,7 @@ use crate::{
         Config, MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption,
         VirtualPool,
     },
+    utils_math::safe_mul_div_cast_u64,
     *,
 };
 
@@ -246,7 +247,17 @@ pub fn handle_migrate_meteora_damm<'info>(
 
     let lp_minted_amount = anchor_spl::token::accessor::amount(&ctx.accounts.virtual_pool_lp)?;
 
-    migration_metadata.set_lp_minted(ctx.accounts.lp_mint.key(), lp_minted_amount);
+    let lp_minted_amount_for_creator = safe_mul_div_cast_u64(
+        lp_minted_amount,
+        config.creator_post_migration_fee_percentage.into(),
+        100,
+    )?;
+    let lp_minted_amount_for_partner = lp_minted_amount.safe_sub(lp_minted_amount_for_creator)?;
+    migration_metadata.set_lp_minted(
+        ctx.accounts.lp_mint.key(),
+        lp_minted_amount_for_creator,
+        lp_minted_amount_for_partner,
+    );
     migration_metadata.set_progress(MigrationMeteoraDammProgress::CreatedPool.into());
 
     // TODO emit event

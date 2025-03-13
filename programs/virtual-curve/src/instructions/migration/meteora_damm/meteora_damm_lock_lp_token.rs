@@ -8,7 +8,7 @@ use crate::{constants::seeds::POOL_AUTHORITY_PREFIX, state::{MeteoraDammMigratio
 #[derive(Accounts)]
 pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// presale
-    #[account(mut, has_one = lp_mint, has_one = owner)]
+    #[account(mut, has_one = lp_mint)]
     pub migration_medata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
     /// CHECK: presale authority
@@ -71,10 +71,9 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
 }
 
 impl<'info> MigrateMeteoraDammLockLpTokenCtx<'info> {
-    fn lock(&self, bump: u8) -> Result<()> {
+    fn lock(&self, bump: u8, max_amount: u64,) -> Result<()> {
         let pool_authority_seeds = pool_authority_seeds!(bump);
 
-        msg!("lock");
         dynamic_amm::cpi::lock(
             CpiContext::new_with_signer(
                 self.amm_program.to_account_info(),
@@ -95,16 +94,41 @@ impl<'info> MigrateMeteoraDammLockLpTokenCtx<'info> {
                 },
                 &[&pool_authority_seeds[..]],
             ),
-            u64::MAX,
+            max_amount,
         )?;
 
         Ok(())
     }
 }
-pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
+pub fn handle_migrate_meteora_damm_lock_lp_token_for_partner<'info>(
     ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
 ) -> Result<()> {
     let mut migration_medata = ctx.accounts.migration_medata.load_mut()?;
+    require!(!migration_medata.is_partner_lp_locked(),   PoolError::NotPermitToDoThisAction);
+    // check partner address
+    require!(migration_medata.partner.eq(ctx.accounts.owner.key), PoolError::InvalidPartnerAccount);
+
+    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_medata.progress)
+        .map_err(|_| PoolError::TypeCastFailed)?;
+ 
+    require!(
+        migration_progress == MigrationMeteoraDammProgress::CreatedPool,
+        PoolError::NotPermitToDoThisAction
+    );
+    migration_medata.set_partner_lock_status();
+    ctx.accounts.lock(ctx.bumps.pool_authority, migration_medata.lp_minted_amount_for_partner)?;
+    Ok(())
+}
+
+
+pub fn handle_migrate_meteora_damm_lock_lp_token_for_creator<'info>(
+    ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
+) -> Result<()> {
+    let mut migration_medata = ctx.accounts.migration_medata.load_mut()?;
+    require!(!migration_medata.is_creator_lp_locked(),   PoolError::NotPermitToDoThisAction);
+    // check partner address
+    require!(migration_medata.owner.eq(ctx.accounts.owner.key), PoolError::InvalidOwnerAccount);
+
     let migration_progress = MigrationMeteoraDammProgress::try_from(migration_medata.progress)
         .map_err(|_| PoolError::TypeCastFailed)?;
 
@@ -113,9 +137,8 @@ pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
         PoolError::NotPermitToDoThisAction
     );
 
-    migration_medata.set_progress(MigrationMeteoraDammProgress::LockLp.into());
+    migration_medata.set_creator_lock_status();
 
-
-    ctx.accounts.lock(ctx.bumps.pool_authority)?;
+    ctx.accounts.lock(ctx.bumps.pool_authority, migration_medata.lp_minted_amount_for_creator)?;
     Ok(())
 }

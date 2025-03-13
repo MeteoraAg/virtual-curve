@@ -210,8 +210,10 @@ pub struct Config {
     pub token_decimal: u8,
     /// token type
     pub token_type: u8,
+    /// creator post migration fee percentage
+    pub creator_post_migration_fee_percentage: u8,
     /// padding 0
-    pub _padding_0: [u8; 3],
+    pub _padding_0: [u8; 2],
     /// swap base amount
     pub swap_base_amount: u64,
     /// migration quote threshold (in quote token)
@@ -249,6 +251,7 @@ impl Config {
         activation_type: u8,
         token_decimal: u8,
         token_type: u8,
+        creator_post_migration_fee_percentage: u8,
         swap_base_amount: u64,
         migration_quote_threshold: u64,
         migration_base_threshold: u64,
@@ -268,6 +271,7 @@ impl Config {
         self.migration_base_threshold = migration_base_threshold;
         self.sqrt_start_price = sqrt_start_price;
         self.token_type = token_type;
+        self.creator_post_migration_fee_percentage = creator_post_migration_fee_percentage;
 
         let curve_length = curve.len();
         for i in 0..MAX_CURVE_POINT {

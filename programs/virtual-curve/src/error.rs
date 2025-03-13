@@ -326,6 +326,9 @@ pub enum PoolError {
     #[msg("Invalid token type")]
     InvalidTokenType,
 
+    #[msg("Invalid fee percentage")]
+    InvalidFeePercentage,
+
     #[msg("Invalid quote threshold")]
     InvalidQuoteThreshold,
 
@@ -334,4 +337,10 @@ pub enum PoolError {
 
     #[msg("Not permit to do this action")]
     NotPermitToDoThisAction,
+
+    #[msg("Invalid partner account")]
+    InvalidPartnerAccount,
+
+    #[msg("Invalid owner account")]
+    InvalidOwnerAccount,
 }

@@ -90,10 +90,16 @@ pub mod virtual_curve {
         instructions::handle_migrate_meteora_damm(ctx)
     }
 
-    pub fn migrate_meteora_damm_lock_lp_token<'c: 'info, 'info>(
+    pub fn migrate_meteora_damm_lock_lp_token_for_creator<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
     ) -> Result<()> {
-        instructions::handle_migrate_meteora_damm_lock_lp_token(ctx)
+        instructions::handle_migrate_meteora_damm_lock_lp_token_for_creator(ctx)
+    }
+
+    pub fn migrate_meteora_damm_lock_lp_token_for_partner<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_meteora_damm_lock_lp_token_for_partner(ctx)
     }
 
     // TODO impl endpoint to claim surplus
