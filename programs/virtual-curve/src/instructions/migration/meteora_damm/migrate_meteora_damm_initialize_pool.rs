@@ -127,7 +127,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             PoolError::InvalidConfigAccount
         );
         require!(
-            self.damm_config.activation_type == 0,
+            self.damm_config.activation_type == self.config.load()?.activation_type,
             PoolError::InvalidConfigAccount
         );
         require!(
