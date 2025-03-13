@@ -26,10 +26,10 @@ Virtual curve program allows any partner can set up a robust bonding curve, then
 
 Partner can specify those parameters when they create a config key:
 - pool_fees: include `base_fee` and `dynamic_fee` (optional). partner can add fee scheduler in `base_fee` to or just fixed fee. pool_fees defines the trading fee for any pool that is created from that config key
-- collect_fee_mode: 0 | 1. 0 means the virtual pool only collect fee in quote token, 1 means virtual pool will collect fee in both tokens. 
+- collect_fee_mode: `0 | 1` 0 means the virtual pool only collect fee in quote token, 1 means virtual pool will collect fee in both tokens. 
 - migration_option: right now we only support migrate to dynamic-amm, so partner must send the value as 0 for this field
-- activation_type: 0 | 1. 0 means slot, 1 means timestamp, that field indicate time unit that pool will work with, mostly in calculating fee scheduler and dynamic fee
-- token_type: 0 | 1. 0 means spl-token, 1 means token2022
+- activation_type: `0 | 1` 0 means slot, 1 means timestamp, that field indicate time unit that pool will work with, mostly in calculating fee scheduler and dynamic fee
+- token_type: `0 | 1` 0 means spl-token, 1 means token2022
 - token_decimal: the token decimals that the token will be created when user create virtual pool with that config, we only support token decimals from 6 to 9 now
 - creator_post_migration_fee_percentage: the percentage of locked LP that partner will share with creator after token is migrated
 - migration_quote_threshold: the threhold for quote token, that after virtual pool reserve get such quote token, the token will be migrated 
@@ -42,10 +42,11 @@ Partner can specify those parameters when they create a config key:
 ## 4. Bonding curve
 
 A simple constant product `x * y = virtual_base_reserve * virtual_curve_reserve` can be presented as `x * y = liquidity * liquidity`, while `liquidity = sqrt(virtual_base_reserve * virtual_curve_reserve)`. With a contraints on `migration_quote_threshold`, it can be presented as a function of `liquidity`, `min_price`, `max_price`. We denote `liquidity = l`, `min_price = pa`, `max_price = pb`. So we have:
-<p style="text-align:center;">`bonding_curve_constant_product = function(l, pa, pb)`</p>   
+
+`bonding_curve_constant_product = function(l, pa, pb)`
 
 On our virtual curve protocol:
-<p style="text-align:center;">`bonding_curve = function([l_i, pa_i, pb_i])`</p>
+`bonding_curve = function([l_i, pa_i, pb_i])`
                 
 
 That means partner can config a bonding curve with any liquidity distribution up on their strategy. 
