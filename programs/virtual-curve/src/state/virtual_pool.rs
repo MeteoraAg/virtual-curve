@@ -87,12 +87,14 @@ pub struct VirtualPool {
     pub activation_point: u64,
     /// pool type, spl token or token2022
     pub pool_type: u8,
+    /// is migrated
+    pub is_migrated: u8,
     /// is partner withdraw surplus
     pub is_partner_withdraw_surplus: u8,
     /// is protocol withdraw surplus
     pub is_procotol_withdraw_surplus: u8,
     /// padding
-    pub _padding_0: [u8; 5],
+    pub _padding_0: [u8; 4],
     /// pool metrics
     pub metrics: PoolMetrics,
     /// Padding for further use
@@ -518,6 +520,10 @@ impl VirtualPool {
 
     pub fn is_curve_complete(&self, migration_threshold: u64) -> bool {
         self.quote_reserve >= migration_threshold
+    }
+
+    pub fn update_after_create_pool(&mut self) {
+        self.is_migrated = 1;
     }
 
     pub fn get_total_surplus(&self, migration_threshold: u64) -> Result<u64> {
