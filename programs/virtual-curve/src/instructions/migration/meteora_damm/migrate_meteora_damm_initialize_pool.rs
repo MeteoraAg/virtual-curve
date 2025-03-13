@@ -16,7 +16,7 @@ use crate::{
 #[derive(Accounts)]
 pub struct MigrateMeteoraDammCtx<'info> {
     /// virtual pool
-    #[account(mut, has_one = base_vault, has_one = quote_vault, has_one = config)]
+    #[account(has_one = base_vault, has_one = quote_vault, has_one = config)]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
     #[account(mut, has_one = virtual_pool)]
@@ -230,7 +230,7 @@ pub fn handle_migrate_meteora_damm<'info>(
         PoolError::NotPermitToDoThisAction
     );
 
-    let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
+    let virtual_pool = ctx.accounts.virtual_pool.load()?;
 
     let config = ctx.accounts.config.load()?;
     require!(
@@ -253,8 +253,6 @@ pub fn handle_migrate_meteora_damm<'info>(
         Some(get_current_point(config.activation_type)?),
         ctx.bumps.pool_authority,
     )?;
-
-    virtual_pool.update_after_create_pool();
 
     // burn the rest of token in pool authority
     let left_base_token = ctx.accounts.base_vault.amount.safe_sub(base_reserve)?;

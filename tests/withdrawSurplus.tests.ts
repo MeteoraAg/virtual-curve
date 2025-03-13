@@ -33,7 +33,7 @@ import {
 } from "./instructions/meteoraMigration";
 import { assert, expect } from "chai";
 
-describe.only("Withdraw surplus", () => {
+describe("Withdraw surplus", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let program: VirtualCurveProgram;

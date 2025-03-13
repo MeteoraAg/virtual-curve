@@ -87,14 +87,12 @@ pub struct VirtualPool {
     pub activation_point: u64,
     /// pool type, spl token or token2022
     pub pool_type: u8,
-    /// is migrated
-    pub is_migrated: u8,
     /// is partner withdraw surplus
     pub is_partner_withdraw_surplus: u8,
     /// is protocol withdraw surplus
     pub is_procotol_withdraw_surplus: u8,
     /// padding
-    pub _padding_0: [u8; 4],
+    pub _padding_0: [u8; 5],
     /// pool metrics
     pub metrics: PoolMetrics,
     /// Padding for further use
@@ -522,18 +520,12 @@ impl VirtualPool {
         self.quote_reserve >= migration_threshold
     }
 
-    pub fn update_after_create_pool(&mut self) {
-        self.is_migrated = 1;
-    }
-
-    fn get_total_surplus(&self, migration_threshold: u64) -> Result<u64> {
+    pub fn get_total_surplus(&self, migration_threshold: u64) -> Result<u64> {
         Ok(self.quote_reserve.safe_sub(migration_threshold)?)
     }
 
-    pub fn get_partner_surplus(&self, migration_threshold: u64) -> Result<u64> {
-        let total_surplus: u128 = self.get_total_surplus(migration_threshold)?.into();
-
-        let partner_surplus: u128 = total_surplus
+    pub fn get_partner_surplus(&self, total_surplus: u64) -> Result<u64> {
+        let partner_surplus: u128 = u128::from(total_surplus)
             .safe_mul(PARTNER_SURPLUS_SHARE.into())?
             .safe_div(100u128)?;
 
@@ -542,7 +534,8 @@ impl VirtualPool {
 
     pub fn get_protocol_surplus(&self, migration_threshold: u64) -> Result<u64> {
         let total_surplus: u64 = self.get_total_surplus(migration_threshold)?;
-        let partner_surplus_amount = self.get_partner_surplus(migration_threshold)?;
+        let partner_surplus_amount = self.get_partner_surplus(total_surplus)?;
+
         Ok(total_surplus.safe_sub(partner_surplus_amount)?)
     }
 

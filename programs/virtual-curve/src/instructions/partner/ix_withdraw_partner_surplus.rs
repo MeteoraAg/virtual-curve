@@ -55,11 +55,11 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
 
     // Ensure the partner has never been withdrawn
     require!(
-        pool.is_procotol_withdraw_surplus == 0,
+        pool.is_partner_withdraw_surplus == 0,
         PoolError::SurplusHasBeenWithdraw
     );
-
-    let partner_surplus_amount = pool.get_partner_surplus(config.migration_quote_threshold)?;
+    let total_surplus = pool.get_total_surplus(config.migration_quote_threshold)?;
+    let partner_surplus_amount = pool.get_partner_surplus(total_surplus)?;
 
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),

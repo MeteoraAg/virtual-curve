@@ -158,8 +158,6 @@ export async function protocolWithdrawSurplus(
     poolState.quoteVault
   );
 
-  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
-
   const preInstructions: TransactionInstruction[] = [];
   const { ata: tokenQuoteAccount, ix: createQuoteTokenAccountIx } =
     await getOrCreateAssociatedTokenAccount(
@@ -176,13 +174,10 @@ export async function protocolWithdrawSurplus(
     .accounts({
       poolAuthority,
       config: poolState.config,
-      migrationMetadata,
       virtualPool,
       quoteVault: poolState.quoteVault,
       quoteMint: quoteMintInfo.mint,
       tokenQuoteAccount,
-      claimFeeOperator,
-      operator: operator.publicKey,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
     })
     .preInstructions(preInstructions)
