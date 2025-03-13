@@ -3,21 +3,18 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     constants::seeds::POOL_AUTHORITY_PREFIX,
-    state::{Config, MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, VirtualPool},
+    state::{Config, VirtualPool},
     token::transfer_from_pool,
     EvtPartnerWithdrawSurplus, PoolError,
 };
 
-/// Accounts for partner to claim fees
+/// Accounts for partner withdraw surplus
 #[event_cpi]
 #[derive(Accounts)]
 pub struct PartnerWithdrawSurplusCtx<'info> {
     /// CHECK: pool authority
     #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
     pub pool_authority: UncheckedAccount<'info>,
-
-    #[account(has_one = virtual_pool)]
-    pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
     #[account(has_one = quote_mint, has_one=fee_claimer)]
     pub config: AccountLoader<'info, Config>,
@@ -47,16 +44,12 @@ pub struct PartnerWithdrawSurplusCtx<'info> {
 }
 
 pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) -> Result<()> {
-    let migration_metadata = ctx.accounts.migration_metadata.load()?;
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.virtual_pool.load_mut()?;
 
-    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_metadata.progress)
-        .map_err(|_| PoolError::TypeCastFailed)?;
-
-    // Make sure migrate pool has been created
+    // Make sure pool has been completed
     require!(
-        migration_progress == MigrationMeteoraDammProgress::CreatedPool,
+        pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::NotPermitToDoThisAction
     );
 
@@ -77,6 +70,9 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
         partner_surplus_amount,
         ctx.bumps.pool_authority,
     )?;
+
+    // update partner withdraw surplus
+    pool.update_partner_withdraw_surplus();
 
     emit_cpi!(EvtPartnerWithdrawSurplus {
         pool: ctx.accounts.virtual_pool.key(),

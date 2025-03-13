@@ -4,7 +4,7 @@ use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
-    constants::{MAX_CURVE_POINT, PARTNER_SURPLUS_SHARE, PROTOCOL_SURPLUS_SHARE},
+    constants::{MAX_CURVE_POINT, PARTNER_SURPLUS_SHARE},
     curve::{
         get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
         get_delta_amount_quote_unsigned, get_delta_amount_quote_unsigned_256,
@@ -530,30 +530,28 @@ impl VirtualPool {
         Ok(self.quote_reserve.safe_sub(migration_threshold)?)
     }
 
-    pub fn get_partner_surplus(&mut self, migration_threshold: u64) -> Result<u64> {
+    pub fn get_partner_surplus(&self, migration_threshold: u64) -> Result<u64> {
         let total_surplus: u128 = self.get_total_surplus(migration_threshold)?.into();
 
         let partner_surplus: u128 = total_surplus
             .safe_mul(PARTNER_SURPLUS_SHARE.into())?
             .safe_div(100u128)?;
 
-        // update protocol withdraw
-        self.is_partner_withdraw_surplus = 1;
-
         Ok(u64::try_from(partner_surplus).map_err(|_| PoolError::MathOverflow)?)
     }
 
-    pub fn get_protocol_surplus(&mut self, migration_threshold: u64) -> Result<u64> {
-        let total_surplus: u128 = self.get_total_surplus(migration_threshold)?.into();
+    pub fn get_protocol_surplus(&self, migration_threshold: u64) -> Result<u64> {
+        let total_surplus: u64 = self.get_total_surplus(migration_threshold)?;
+        let partner_surplus_amount = self.get_partner_surplus(migration_threshold)?;
+        Ok(total_surplus.safe_sub(partner_surplus_amount)?)
+    }
 
-        let protocol_surplus: u128 = total_surplus
-            .safe_mul(PROTOCOL_SURPLUS_SHARE.into())?
-            .safe_div(100u128)?;
+    pub fn update_partner_withdraw_surplus(&mut self) {
+        self.is_partner_withdraw_surplus = 1;
+    }
 
-        // update protocol withdraw
+    pub fn update_protocol_withdraw_surplus(&mut self) {
         self.is_procotol_withdraw_surplus = 1;
-
-        Ok(u64::try_from(protocol_surplus).map_err(|_| PoolError::MathOverflow)?)
     }
 }
 

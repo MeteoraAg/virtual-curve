@@ -16,9 +16,7 @@ pub const MAX_CURVE_POINT: usize = 20;
 
 pub const MAX_TOKEN_SUPPLY: u64 = 10_000_000_000; // 10 billion
 
-pub const PARTNER_SURPLUS_SHARE: u128 = 50; // 50 %
-
-pub const PROTOCOL_SURPLUS_SHARE: u128 = 50; // 50 %
+pub const PARTNER_SURPLUS_SHARE: u8 = 90; // 90 %
 
 pub mod activation {
     #[cfg(not(feature = "local"))]

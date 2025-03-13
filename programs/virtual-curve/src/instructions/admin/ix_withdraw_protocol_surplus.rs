@@ -3,10 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     constants::{seeds::POOL_AUTHORITY_PREFIX, treasury},
-    state::{
-        ClaimFeeOperator, Config, MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress,
-        VirtualPool,
-    },
+    state::{Config, VirtualPool},
     token::transfer_from_pool,
     EvtProtocolWithdrawSurplus, PoolError,
 };
@@ -18,9 +15,6 @@ pub struct ProtocolWithdrawSurplusCtx<'info> {
     /// CHECK: pool authority
     #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
     pub pool_authority: UncheckedAccount<'info>,
-
-    #[account(has_one = virtual_pool)]
-    pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
     #[account(has_one = quote_mint)]
     pub config: AccountLoader<'info, Config>,
@@ -48,28 +42,16 @@ pub struct ProtocolWithdrawSurplusCtx<'info> {
     /// The mint of of token
     pub quote_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    /// Claim fee operator
-    #[account(has_one = operator)]
-    pub claim_fee_operator: AccountLoader<'info, ClaimFeeOperator>,
-
-    /// Operator
-    pub operator: Signer<'info>,
-
     /// Token b program
     pub token_quote_program: Interface<'info, TokenInterface>,
 }
 
 pub fn handle_protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>) -> Result<()> {
-    let migration_metadata = ctx.accounts.migration_metadata.load()?;
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.virtual_pool.load_mut()?;
-
-    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_metadata.progress)
-        .map_err(|_| PoolError::TypeCastFailed)?;
-
-    // Make sure migrate pool has been created
+    // Make sure pool has been completed
     require!(
-        migration_progress == MigrationMeteoraDammProgress::CreatedPool,
+        pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::NotPermitToDoThisAction
     );
 
@@ -90,6 +72,9 @@ pub fn handle_protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>
         protocol_surplus_amount,
         ctx.bumps.pool_authority,
     )?;
+
+    // Update protocol withdraw surplus
+    pool.update_protocol_withdraw_surplus();
 
     emit_cpi!(EvtProtocolWithdrawSurplus {
         pool: ctx.accounts.virtual_pool.key(),
