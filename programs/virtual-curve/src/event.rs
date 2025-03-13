@@ -90,3 +90,15 @@ pub struct EvtClaimTradingFee {
 pub struct EvtCreateMeteoraMigrationMetadata {
     pub virtual_pool: Pubkey,
 }
+
+#[event]
+pub struct EvtProtocolWithdrawSurplus {
+    pub pool: Pubkey,
+    pub surplus_amount: u64,
+}
+
+#[event]
+pub struct EvtPartnerWithdrawSurplus {
+    pub pool: Pubkey,
+    pub surplus_amount: u64,
+}

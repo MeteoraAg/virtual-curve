@@ -346,4 +346,7 @@ pub enum PoolError {
 
     #[msg("Invalid config account")]
     InvalidConfigAccount,
+
+    #[msg("Surplus has been withdraw")]
+    SurplusHasBeenWithdraw,
 }

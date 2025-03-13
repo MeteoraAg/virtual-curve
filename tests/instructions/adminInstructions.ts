@@ -2,6 +2,7 @@ import { Keypair, PublicKey, TransactionInstruction } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
 import {
   deriveClaimFeeOperatorAddress,
+  deriveMigrationMetadataAddress,
   derivePoolAuthority,
 } from "../utils/accounts";
 import { VirtualCurveProgram } from "../utils/types";
@@ -129,6 +130,59 @@ export async function claimProtocolFee(
       claimFeeOperator,
       operator: operator.publicKey,
       tokenBaseProgram: TOKEN_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions(preInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(operator);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export type ProtocolWithdrawSurplusParams = {
+  operator: Keypair;
+  virtualPool: PublicKey;
+};
+export async function protocolWithdrawSurplus(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: ProtocolWithdrawSurplusParams
+): Promise<any> {
+  const { operator, virtualPool } = params;
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const poolAuthority = derivePoolAuthority();
+  const claimFeeOperator = deriveClaimFeeOperatorAddress(operator.publicKey);
+  const quoteMintInfo = await getTokenAccount(
+    banksClient,
+    poolState.quoteVault
+  );
+
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const { ata: tokenQuoteAccount, ix: createQuoteTokenAccountIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      operator,
+      quoteMintInfo.mint,
+      TREASURY,
+      TOKEN_PROGRAM_ID
+    );
+  createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
+
+  const transaction = await program.methods
+    .protocolWithdrawSurplus()
+    .accounts({
+      poolAuthority,
+      config: poolState.config,
+      migrationMetadata,
+      virtualPool,
+      quoteVault: poolState.quoteVault,
+      quoteMint: quoteMintInfo.mint,
+      tokenQuoteAccount,
+      claimFeeOperator,
+      operator: operator.publicKey,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
     })
     .preInstructions(preInstructions)

@@ -1,12 +1,10 @@
-use std::u64;
-
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
-    constants::MAX_CURVE_POINT,
+    constants::{MAX_CURVE_POINT, PARTNER_SURPLUS_SHARE, PROTOCOL_SURPLUS_SHARE},
     curve::{
         get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
         get_delta_amount_quote_unsigned, get_delta_amount_quote_unsigned_256,
@@ -91,8 +89,12 @@ pub struct VirtualPool {
     pub pool_type: u8,
     /// is migrated
     pub is_migrated: u8,
+    /// is partner withdraw surplus
+    pub is_partner_withdraw_surplus: u8,
+    /// is protocol withdraw surplus
+    pub is_procotol_withdraw_surplus: u8,
     /// padding
-    pub _padding_0: [u8; 6],
+    pub _padding_0: [u8; 4],
     /// pool metrics
     pub metrics: PoolMetrics,
     /// Padding for further use
@@ -522,6 +524,36 @@ impl VirtualPool {
 
     pub fn update_after_create_pool(&mut self) {
         self.is_migrated = 1;
+    }
+
+    fn get_total_surplus(&self, migration_threshold: u64) -> Result<u64> {
+        Ok(self.quote_reserve.safe_sub(migration_threshold)?)
+    }
+
+    pub fn get_partner_surplus(&mut self, migration_threshold: u64) -> Result<u64> {
+        let total_surplus: u128 = self.get_total_surplus(migration_threshold)?.into();
+
+        let partner_surplus: u128 = total_surplus
+            .safe_mul(PARTNER_SURPLUS_SHARE.into())?
+            .safe_div(100u128)?;
+
+        // update protocol withdraw
+        self.is_partner_withdraw_surplus = 1;
+
+        Ok(u64::try_from(partner_surplus).map_err(|_| PoolError::MathOverflow)?)
+    }
+
+    pub fn get_protocol_surplus(&mut self, migration_threshold: u64) -> Result<u64> {
+        let total_surplus: u128 = self.get_total_surplus(migration_threshold)?.into();
+
+        let protocol_surplus: u128 = total_surplus
+            .safe_mul(PROTOCOL_SURPLUS_SHARE.into())?
+            .safe_div(100u128)?;
+
+        // update protocol withdraw
+        self.is_procotol_withdraw_surplus = 1;
+
+        Ok(u64::try_from(protocol_surplus).map_err(|_| PoolError::MathOverflow)?)
     }
 }
 

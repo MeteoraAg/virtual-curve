@@ -43,6 +43,10 @@ pub mod virtual_curve {
         instructions::handle_claim_protocol_fee(ctx)
     }
 
+    pub fn protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>) -> Result<()> {
+        instructions::handle_protocol_withdraw_surplus(ctx)
+    }
+
     /// PARTNER FUNCTIONS ////
     pub fn create_config(
         ctx: Context<CreateConfigCtx>,
@@ -56,6 +60,10 @@ pub mod virtual_curve {
         max_amount_b: u64,
     ) -> Result<()> {
         instructions::handle_claim_trading_fee(ctx, max_amount_a, max_amount_b)
+    }
+
+    pub fn partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) -> Result<()> {
+        instructions::handle_partner_withdraw_surplus(ctx)
     }
 
     /// USER FUNCTIONS ////
@@ -101,6 +109,4 @@ pub mod virtual_curve {
     ) -> Result<()> {
         instructions::handle_migrate_meteora_damm_lock_lp_token_for_partner(ctx)
     }
-
-    // TODO impl endpoint to claim surplus
 }

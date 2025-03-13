@@ -8,6 +8,7 @@ import {
   getOrCreateAssociatedTokenAccount,
   unwrapSOLInstruction,
   getTokenAccount,
+  deriveMigrationMetadataAddress,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
 import { expect } from "chai";
@@ -153,6 +154,64 @@ export async function claimTradingFee(
       quoteMint: quoteMintInfo.mint,
       feeClaimer: feeClaimer.publicKey,
       tokenBaseProgram: TOKEN_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions(preInstructions)
+    .postInstructions(postInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(feeClaimer);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export type PartnerWithdrawSurplusParams = {
+  feeClaimer: Keypair;
+  virtualPool: PublicKey;
+};
+export async function partnerWithdrawSurplus(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: PartnerWithdrawSurplusParams
+): Promise<any> {
+  const { feeClaimer, virtualPool } = params;
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const poolAuthority = derivePoolAuthority();
+
+  const quoteMintInfo = await getTokenAccount(
+    banksClient,
+    poolState.quoteVault
+  );
+
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const postInstructions: TransactionInstruction[] = [];
+  const { ata: tokenQuoteAccount, ix: createQuoteTokenAccountIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      feeClaimer,
+      quoteMintInfo.mint,
+      feeClaimer.publicKey,
+      TOKEN_PROGRAM_ID
+    );
+
+  createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
+
+  const unrapSOLIx = unwrapSOLInstruction(feeClaimer.publicKey);
+
+  unrapSOLIx && postInstructions.push(unrapSOLIx);
+  const transaction = await program.methods
+    .partnerWithdrawSurplus()
+    .accounts({
+      poolAuthority,
+      config: poolState.config,
+      migrationMetadata,
+      virtualPool,
+      tokenQuoteAccount,
+      quoteVault: poolState.quoteVault,
+      quoteMint: quoteMintInfo.mint,
+      feeClaimer: feeClaimer.publicKey,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
     })
     .preInstructions(preInstructions)
