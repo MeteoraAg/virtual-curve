@@ -359,7 +359,7 @@ export async function lockLpForPartnerDamm(
     true
   );
   const transaction = await program.methods
-    .migrateMeteoraDammLockLpTokenForCreator()
+    .migrateMeteoraDammLockLpTokenForPartner()
     .accounts({
       migrationMetadata,
       poolAuthority,

@@ -10,6 +10,7 @@ import {
   AccountLayout,
   createAssociatedTokenAccountInstruction,
   createCloseAccountInstruction,
+  createTransferInstruction,
   getAssociatedTokenAddressSync,
   MintLayout,
   NATIVE_MINT,
@@ -30,6 +31,7 @@ import {
   clusterApiUrl,
   Connection,
   Keypair,
+  LAMPORTS_PER_SOL,
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
@@ -42,6 +44,7 @@ import {
   VIRTUAL_CURVE_PROGRAM_ID,
 } from "./constants";
 import { BanksClient } from "solana-bankrun";
+import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
 export type DynamicVault = IdlAccounts<Vault>["vault"];
 const BASE_ADDRESS = new PublicKey(
@@ -348,4 +351,84 @@ export async function createLockEscrowIx(
   await banksClient.processTransaction(transaction);
 
   return lockEscrowKey;
+}
+
+export async function fundSol(
+  banksClient: BanksClient,
+  from: Keypair,
+  receivers: PublicKey[]
+) {
+  const instructions: TransactionInstruction[] = [];
+  for (const receiver of receivers) {
+    instructions.push(
+      SystemProgram.transfer({
+        fromPubkey: from.publicKey,
+        toPubkey: receiver,
+        lamports: BigInt(10 * LAMPORTS_PER_SOL),
+      })
+    );
+  }
+
+  let transaction = new Transaction();
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.add(...instructions);
+  transaction.sign(from);
+
+  await banksClient.processTransaction(transaction);
+}
+
+export async function getOrCreateAta(
+  banksClient: BanksClient,
+  payer: Keypair,
+  mint: PublicKey,
+  owner: PublicKey
+) {
+  const ataKey = getAssociatedTokenAddressSync(mint, owner, true);
+
+  const account = await banksClient.getAccount(ataKey);
+  if (account === null) {
+    const createAtaIx = createAssociatedTokenAccountInstruction(
+      payer.publicKey,
+      ataKey,
+      owner,
+      mint
+    );
+    let transaction = new Transaction();
+    const [recentBlockhash] = await banksClient.getLatestBlockhash();
+    transaction.recentBlockhash = recentBlockhash;
+    transaction.add(createAtaIx);
+    transaction.sign(payer);
+    await banksClient.processTransaction(transaction);
+  }
+
+  return ataKey;
+}
+
+export async function fundUsdc(
+  banksClient: BanksClient,
+  receivers: PublicKey[]
+) {
+  const getOrCreatePromise = receivers.map((acc: PublicKey) =>
+    getOrCreateAta(banksClient, LOCAL_ADMIN_KEYPAIR, USDC, acc)
+  );
+
+  const atas = await Promise.all(getOrCreatePromise);
+
+  const instructions: TransactionInstruction[] = atas.map((ata: PublicKey) =>
+    createTransferInstruction(
+      ADMIN_USDC_ATA,
+      ata,
+      LOCAL_ADMIN_KEYPAIR.publicKey,
+      BigInt(100_00 * 10 ** 6)
+    )
+  );
+
+  let transaction = new Transaction();
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.add(...instructions);
+  transaction.sign(LOCAL_ADMIN_KEYPAIR);
+
+  await banksClient.processTransaction(transaction);
 }

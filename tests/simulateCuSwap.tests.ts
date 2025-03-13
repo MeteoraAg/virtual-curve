@@ -12,7 +12,7 @@ import {
 } from "./instructions";
 import { VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { startTest } from "./utils/setup";
+import { startTest } from "./utils";
 import {
   createVirtualCurveProgram,
   MAX_SQRT_PRICE,

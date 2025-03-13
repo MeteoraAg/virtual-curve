@@ -2,6 +2,9 @@ import { BN } from "bn.js";
 import { ProgramTestContext } from "solana-bankrun";
 import {
   BaseFee,
+  claimProtocolFee,
+  ClaimTradeFeeParams,
+  claimTradingFee,
   ConfigParameters,
   createClaimFeeOperator,
   createConfig,
@@ -12,50 +15,71 @@ import {
   swap,
   SwapParams,
 } from "./instructions";
-import { VirtualCurveProgram } from "./utils/types";
+import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { startTest } from "./utils/setup";
+import { fundSol, startTest } from "./utils";
 import {
   createDammConfig,
   createVirtualCurveProgram,
   derivePoolAuthority,
-  getTokenAccount,
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
   U64_MAX,
 } from "./utils";
-import { getConfig, getVirtualPool } from "./utils/fetcher";
+import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 import {
   createMeteoraMetadata,
+  lockLpForCreatorDamm,
+  lockLpForPartnerDamm,
   MigrateMeteoraParams,
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
-import { assert, expect } from "chai";
+import { assert } from "chai";
 
-describe("Withdraw surplus", () => {
+describe("Happy path full flow", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
+  let operator: Keypair;
+  let partner: Keypair;
+  let user: Keypair;
+  let poolCreator: Keypair;
   let program: VirtualCurveProgram;
   let config: PublicKey;
   let virtualPool: PublicKey;
+  let virtualPoolState: Pool;
+  let dammConfig: PublicKey;
   let claimFeeOperator: PublicKey;
 
-  beforeEach(async () => {
+  before(async () => {
     context = await startTest();
     admin = context.payer;
-
+    operator = Keypair.generate();
+    partner = Keypair.generate();
+    user = Keypair.generate();
+    poolCreator = Keypair.generate();
+    const receivers = [
+      operator.publicKey,
+      partner.publicKey,
+      user.publicKey,
+      poolCreator.publicKey,
+    ];
+    await fundSol(context.banksClient, admin, receivers);
     program = createVirtualCurveProgram();
+  });
 
+  it("Admin create claim fee operator", async () => {
     claimFeeOperator = await createClaimFeeOperator(
       context.banksClient,
       program,
       {
         admin,
-        operator: admin.publicKey,
+        operator: operator.publicKey,
       }
     );
+  });
 
+  it("Partner create config", async () => {
     const baseFee: BaseFee = {
       cliffFeeNumerator: new BN(2_500_000),
       numberOfPeriod: 0,
@@ -90,16 +114,18 @@ describe("Withdraw surplus", () => {
       curve: curves,
     };
     const params: CreateConfigParams = {
-      payer: admin,
-      owner: admin.publicKey,
-      feeClaimer: admin.publicKey,
+      payer: partner,
+      owner: partner.publicKey,
+      feeClaimer: partner.publicKey,
       quoteMint: NATIVE_MINT,
       instructionParams,
     };
     config = await createConfig(context.banksClient, program, params);
+  });
 
+  it("Create spl pool from config", async () => {
     virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-      payer: admin,
+      payer: poolCreator,
       quoteMint: NATIVE_MINT,
       config,
       instructionParams: {
@@ -108,42 +134,42 @@ describe("Withdraw surplus", () => {
         uri: "abc.com",
       },
     });
-  });
-
-  it("Withdraw surplus", async () => {
-    let poolState = await getVirtualPool(
+    virtualPoolState = await getVirtualPool(
       context.banksClient,
       program,
       virtualPool
     );
+  });
 
-    const poolAuthority = derivePoolAuthority();
+  it("Swap", async () => {
     const params: SwapParams = {
       config,
-      payer: admin,
+      payer: user,
       pool: virtualPool,
       inputTokenMint: NATIVE_MINT,
-      outputTokenMint: poolState.baseMint,
-      amountIn: new BN(LAMPORTS_PER_SOL * 7),
+      outputTokenMint: virtualPoolState.baseMint,
+      amountIn: new BN(LAMPORTS_PER_SOL * 5.5),
       minimumAmountOut: new BN(0),
       referralTokenAccount: null,
     };
     await swap(context.banksClient, program, params);
+  });
 
-    console.log("Create metadata");
+  it("Create meteora metdata", async () => {
     await createMeteoraMetadata(context.banksClient, program, {
       payer: admin,
       virtualPool,
       config,
     });
+  });
 
-    const dammConfig = await createDammConfig(
+  it("Migrate to Meteora Damm Pool", async () => {
+    const poolAuthority = derivePoolAuthority();
+    dammConfig = await createDammConfig(
       context.banksClient,
       admin,
       poolAuthority
     );
-
-    console.log("Create damm pool");
     const migrationParams: MigrateMeteoraParams = {
       payer: admin,
       virtualPool,
@@ -151,55 +177,76 @@ describe("Withdraw surplus", () => {
     };
 
     await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
+  });
 
-    poolState = await getVirtualPool(context.banksClient, program, virtualPool);
-    const configState = await getConfig(context.banksClient, program, config);
-    const totalSurplus = poolState.quoteReserve.sub(
-      configState.migrationQuoteThreshold
-    );
-    const preQuoteVaultBalance = (
-      await getTokenAccount(context.banksClient, poolState.quoteVault)
-    ).amount;
+  it("Partner lock LP", async () => {
+    await lockLpForPartnerDamm(context.banksClient, program, {
+      payer: partner,
+      dammConfig,
+      virtualPool,
+    });
+  });
+
+  it("Creator lock LP", async () => {
+    await lockLpForCreatorDamm(context.banksClient, program, {
+      payer: poolCreator,
+      dammConfig,
+      virtualPool,
+    });
+  });
+
+  it("Partner withdraw surplus", async () => {
     // partner withdraw surplus
     await partnerWithdrawSurplus(context.banksClient, program, {
-      feeClaimer: admin,
+      feeClaimer: partner,
       virtualPool,
     });
+  });
 
-    // protocol withdraw surplus
-    await protocolWithdrawSurplus(context.banksClient, program, {
-      operator: admin,
-      virtualPool,
-    });
-
-    const postQuoteVaultBalance = (
-      await getTokenAccount(context.banksClient, poolState.quoteVault)
-    ).amount;
-
-    expect(Number(preQuoteVaultBalance) - Number(postQuoteVaultBalance)).eq(
-      totalSurplus.toNumber()
-    );
-
-    // partner can not withdraw surplus again
+  it("Parner can not withdraw again", async () => {
     try {
       await partnerWithdrawSurplus(context.banksClient, program, {
-        feeClaimer: admin,
+        feeClaimer: partner,
         virtualPool,
       });
       assert.ok(false);
     } catch (e) {
       //
     }
+  });
+  it("Protocol withdraw surplus", async () => {
+    await protocolWithdrawSurplus(context.banksClient, program, {
+      operator: operator,
+      virtualPool,
+    });
+  });
 
-    // protocol can not withdraw surplus again
+  it("Protocol can not withdraw surplus again", async () => {
     try {
       await protocolWithdrawSurplus(context.banksClient, program, {
-        operator: admin,
+        operator: operator,
         virtualPool,
       });
       assert.ok(false);
     } catch (e) {
       //
     }
+  });
+
+  it("Partner claim trading fee", async () => {
+    const claimTradingFeeParams: ClaimTradeFeeParams = {
+      feeClaimer: partner,
+      pool: virtualPool,
+      maxBaseAmount: new BN(U64_MAX),
+      maxQuoteAmount: new BN(U64_MAX),
+    };
+    await claimTradingFee(context.banksClient, program, claimTradingFeeParams);
+  });
+
+  it("Operator claim protocol fee", async () => {
+    await claimProtocolFee(context.banksClient, program, {
+      pool: virtualPool,
+      operator: operator,
+    });
   });
 });

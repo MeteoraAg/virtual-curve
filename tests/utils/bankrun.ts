@@ -11,6 +11,12 @@ import {
   VIRTUAL_CURVE_PROGRAM_ID,
 } from "./constants";
 import { METAPLEX_PROGRAM_ID } from ".";
+import {
+  ACCOUNT_SIZE,
+  AccountLayout,
+  getAssociatedTokenAddressSync,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 export const LOCAL_ADMIN_KEYPAIR = Keypair.fromSecretKey(
   Uint8Array.from([
@@ -22,6 +28,33 @@ export const LOCAL_ADMIN_KEYPAIR = Keypair.fromSecretKey(
 );
 
 export const VAULT_BASE_KEY = LOCAL_ADMIN_KEYPAIR.publicKey;
+
+export const USDC = new PublicKey(
+  "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+);
+export const ADMIN_USDC_ATA = getAssociatedTokenAddressSync(
+  USDC,
+  LOCAL_ADMIN_KEYPAIR.publicKey,
+  true
+);
+const usdcToOwn = 1_000_000_000_000;
+const tokenAccData = Buffer.alloc(ACCOUNT_SIZE);
+AccountLayout.encode(
+  {
+    mint: USDC,
+    owner: LOCAL_ADMIN_KEYPAIR.publicKey,
+    amount: BigInt(usdcToOwn),
+    delegateOption: 0,
+    delegate: PublicKey.default,
+    delegatedAmount: BigInt(0),
+    state: 1,
+    isNativeOption: 0,
+    isNative: BigInt(0),
+    closeAuthorityOption: 0,
+    closeAuthority: PublicKey.default,
+  },
+  tokenAccData
+);
 
 export async function startTest() {
   // Program name need to match fixtures program name
@@ -53,6 +86,15 @@ export async function startTest() {
           owner: SystemProgram.programId,
           lamports: LAMPORTS_PER_SOL * 100,
           data: new Uint8Array(),
+        },
+      },
+      {
+        address: ADMIN_USDC_ATA,
+        info: {
+          lamports: 1_000_000_000,
+          data: tokenAccData,
+          owner: TOKEN_PROGRAM_ID,
+          executable: false,
         },
       },
     ]

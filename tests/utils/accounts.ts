@@ -7,7 +7,7 @@ import {
   VAULT_PROGRAM_ID,
   VIRTUAL_CURVE_PROGRAM_ID,
 } from "./constants";
-import { VAULT_BASE_KEY } from "./setup";
+import { VAULT_BASE_KEY } from "./";
 
 export function getSecondKey(key1: PublicKey, key2: PublicKey) {
   const buf1 = key1.toBuffer();

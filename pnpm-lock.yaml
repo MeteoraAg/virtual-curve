@@ -11,9 +11,6 @@ importers:
       '@coral-xyz/anchor':
         specifier: ^0.29.0
         version: 0.29.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
-      solana-bankrun:
-        specifier: ^0.4.0
-        version: 0.4.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
     devDependencies:
       '@coral-xyz/anchor-errors':
         specifier: ^0.30.1
@@ -42,6 +39,9 @@ importers:
       prettier:
         specifier: ^2.6.2
         version: 2.8.8
+      solana-bankrun:
+        specifier: ^0.4.0
+        version: 0.4.0(bufferutil@4.0.9)(utf-8-validate@5.0.10)
       ts-mocha:
         specifier: ^10.0.0
         version: 10.1.0(mocha@9.2.2)
