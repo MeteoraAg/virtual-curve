@@ -35,7 +35,7 @@ Partner can specify those parameters when they create a config key:
 - migration_quote_threshold: the threhold for quote token, that after virtual pool reserve get such quote token, the token will be migrated 
 - fee_claimer: the address of partner that can claim trading of virtual pool as well as claim fee on locked LP.
 - owner: owner of that config key 
-- quote_mint: the quote mint address that virtual pool will support
+- quote_mint: the quote mint address that virtual pool will support 
 - sqrt_start_price: square root of min price in bonding curve
 - curve: an array of square price and liquidity, that defines liquidity distribution in virtual pool
 
@@ -46,6 +46,7 @@ A simple constant product `x * y = virtual_base_reserve * virtual_curve_reserve`
 `bonding_curve_constant_product = function(l, pa, pb)`
 
 On our virtual curve protocol:
+
 `bonding_curve = function([l_i, pa_i, pb_i])`
                 
 
