@@ -60,6 +60,7 @@ describe.skip("Partner Pool", () => {
       tokenType: 1, // token 2022
       tokenDecimal: 6,
       migrationQuoteThreshold: new BN(500_000_000_000),
+      creatorPostMigrationFeePercentage: 5,
       sqrtStartPrice: MIN_SQRT_PRICE,
       padding: [],
       curve: curves,

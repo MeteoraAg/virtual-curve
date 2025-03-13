@@ -24,7 +24,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 import {
   createMeteoraMetadata,
-  lockLpDamm,
+  lockLpForCreatorDamm,
   MigrateMeteoraParams,
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
@@ -70,6 +70,7 @@ describe("Swap pool", () => {
       tokenType: 0, // spl_token
       tokenDecimal: 6,
       migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
+      creatorPostMigrationFeePercentage: 5,
       sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
       padding: [],
       curve: curves,
@@ -117,6 +118,7 @@ describe("Swap pool", () => {
     await createMeteoraMetadata(context.banksClient, program, {
       payer: admin,
       virtualPool,
+      config,
     });
 
     const dammConfig = await createDammConfig(context.banksClient, admin);
@@ -132,7 +134,7 @@ describe("Swap pool", () => {
 
     console.log("Lock LP");
 
-    await lockLpDamm(context.banksClient, program, {
+    await lockLpForCreatorDamm(context.banksClient, program, {
       payer: admin,
       dammConfig,
       virtualPool,

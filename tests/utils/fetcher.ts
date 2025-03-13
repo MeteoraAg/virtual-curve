@@ -1,6 +1,12 @@
 import { PublicKey } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
-import { ClaimFeeOperator, Config, Pool, VirtualCurveProgram } from "./types";
+import {
+  ClaimFeeOperator,
+  Config,
+  MeteoraDammMigrationMetadata,
+  Pool,
+  VirtualCurveProgram,
+} from "./types";
 
 export async function getVirtualPool(
   banksClient: BanksClient,
@@ -31,6 +37,18 @@ export async function getClaimFeeOperator(
   const account = await banksClient.getAccount(claimFeeOperator);
   return program.coder.accounts.decode(
     "ClaimFeeOperator",
+    Buffer.from(account.data)
+  );
+}
+
+export async function getMeteoraDammMigrationMetadata(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  migrationMetadata: PublicKey
+): Promise<MeteoraDammMigrationMetadata> {
+  const account = await banksClient.getAccount(migrationMetadata);
+  return program.coder.accounts.decode(
+    "MeteoraDammMigrationMetadata",
     Buffer.from(account.data)
   );
 }

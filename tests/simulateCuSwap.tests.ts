@@ -67,6 +67,7 @@ describe("Simulate CU swap", () => {
           tokenType: 0, // spl_token
           tokenDecimal: 6,
           migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
+          creatorPostMigrationFeePercentage: 5,
           sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
           padding: [],
           curve: curves,

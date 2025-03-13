@@ -47,6 +47,7 @@ export type ConfigParameters = {
   tokenType: number;
   tokenDecimal: number;
   migrationQuoteThreshold: BN;
+  creatorPostMigrationFeePercentage: number;
   sqrtStartPrice: BN;
   padding: [];
   curve: Array<LiquidityDistributionParameters>;

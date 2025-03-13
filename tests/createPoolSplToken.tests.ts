@@ -58,6 +58,7 @@ describe("Partner Create pool", () => {
       tokenType: 0, // spl_token
       tokenDecimal: 6,
       migrationQuoteThreshold: new BN(500_000_000_000),
+      creatorPostMigrationFeePercentage: 5,
       sqrtStartPrice: MIN_SQRT_PRICE,
       padding: [],
       curve: curves,
