@@ -64,6 +64,7 @@ fn test_swap() {
         config.sqrt_start_price,
         0,
         0,
+        config.get_initial_base_supply().unwrap(),
     );
     let amount_in = 1_000_000_000; // 1k
     let result = pool

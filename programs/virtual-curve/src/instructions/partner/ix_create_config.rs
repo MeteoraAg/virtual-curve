@@ -36,6 +36,9 @@ impl ConfigParameters {
         // validate fee
         self.pool_fees.validate()?;
 
+        // validate activation type
+        require!(self.activation_type == 0, PoolError::InvalidConfigAccount);
+
         // validate collect fee mode
         require!(
             CollectFeeMode::try_from(self.collect_fee_mode).is_ok(),
