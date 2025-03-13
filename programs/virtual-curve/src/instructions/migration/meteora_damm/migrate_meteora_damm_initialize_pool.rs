@@ -3,7 +3,7 @@ use solana_program::{program::invoke, system_instruction};
 
 use crate::{
     activation_handler::get_current_point,
-    constants::{meteora_damm_config, seeds::POOL_AUTHORITY_PREFIX},
+    constants::seeds::POOL_AUTHORITY_PREFIX,
     safe_math::SafeMath,
     state::{
         Config, MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption,
@@ -173,6 +173,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             ],
         )?;
         // Vault authority create pool
+        msg!("Activation point: {:?}", activation_point);
         msg!("create pool");
         dynamic_amm::cpi::initialize_permissionless_constant_product_pool_with_config2(
             CpiContext::new_with_signer(

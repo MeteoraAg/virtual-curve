@@ -286,16 +286,18 @@ export async function getDynamicVault(
 
 export async function createDammConfig(
   banksClient: BanksClient,
-  payer: Keypair
+  payer: Keypair,
+  poolCreatorAuthority: PublicKey
 ): Promise<PublicKey> {
   const program = createDammProgram();
   const params = {
-    tradeFeeNumerator: new BN(250),
+    tradeFeeNumerator: new BN(1_000),
     protocolTradeFeeNumerator: new BN(10),
-    activationDuration: new BN(29),
+    activationDuration: new BN(0),
     vaultConfigKey: PublicKey.default,
-    poolCreatorAuthority: PublicKey.default,
-    activationType: 1, //timestamp
+    poolCreatorAuthority: poolCreatorAuthority,
+    partnerFeeNumerator: new BN(0),
+    activationType: 0, //slot
     index: new BN(1),
   };
   const [config] = PublicKey.findProgramAddressSync(

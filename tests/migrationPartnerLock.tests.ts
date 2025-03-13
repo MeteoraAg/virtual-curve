@@ -16,6 +16,7 @@ import { startTest } from "./utils/setup";
 import {
   createDammConfig,
   createVirtualCurveProgram,
+  derivePoolAuthority,
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
   U64_MAX,
@@ -65,7 +66,7 @@ describe("Swap pool", () => {
         baseFee,
         dynamicFee: null,
       },
-      activationType: 1,
+      activationType: 0,
       collectFeeMode: 0,
       migrationOption: 0,
       tokenType: 0, // spl_token
@@ -103,6 +104,7 @@ describe("Swap pool", () => {
       program,
       virtualPool
     );
+    const poolAuthority = derivePoolAuthority();
     const params: SwapParams = {
       config,
       payer: admin,
@@ -122,7 +124,11 @@ describe("Swap pool", () => {
       config,
     });
 
-    const dammConfig = await createDammConfig(context.banksClient, admin);
+    const dammConfig = await createDammConfig(
+      context.banksClient,
+      admin,
+      poolAuthority
+    );
 
     console.log("Create damm pool");
     const migrationParams: MigrateMeteoraParams = {

@@ -104,19 +104,6 @@ pub mod treasury {
     declare_id!("BJQbRiRWhJCyTYZcAuAL3ngDCx3AyFQGKDq8zhiZAKUw");
 }
 
-<<<<<<< HEAD
-=======
-pub mod meteora_damm_config {
-    use anchor_lang::solana_program::declare_id;
-    #[cfg(not(feature = "local"))]
-    // TODO update config key here
-    declare_id!("BJQbRiRWhJCyTYZcAuAL3ngDCx3AyFQGKDq8zhiZAKUw");
-
-    #[cfg(feature = "local")]
-    declare_id!("8aPHoLN8ke6PhWeYA7ELi19fppptVYUCQvqKWR5yP1sn");
-}
-
->>>>>>> 727f949 (fixed base comments)
 // Supported quote mints
 const SOL: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
 const USDC: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
