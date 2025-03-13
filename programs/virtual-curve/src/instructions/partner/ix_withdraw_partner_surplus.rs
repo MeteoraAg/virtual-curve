@@ -37,7 +37,7 @@ pub struct PartnerWithdrawSurplusCtx<'info> {
     #[account(mut, token::token_program = token_quote_program, token::mint = quote_mint)]
     pub quote_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// The mint of of token
+    /// The mint of quote token
     pub quote_mint: Box<InterfaceAccount<'info, Mint>>,
 
     pub fee_claimer: Signer<'info>,
@@ -60,7 +60,7 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
         PoolError::NotPermitToDoThisAction
     );
 
-    // Make sure partner is not withdraw
+    // Ensure the partner has never been withdrawn
     require!(
         pool.is_procotol_withdraw_surplus == 0,
         PoolError::SurplusHasBeenWithdraw

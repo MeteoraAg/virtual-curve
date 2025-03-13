@@ -73,7 +73,7 @@ pub fn handle_protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>
         PoolError::NotPermitToDoThisAction
     );
 
-    // Make sure protocol is not withdraw
+    // Ensure the protocol has never been withdrawn
     require!(
         pool.is_procotol_withdraw_surplus == 0,
         PoolError::SurplusHasBeenWithdraw
