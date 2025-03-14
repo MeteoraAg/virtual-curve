@@ -181,8 +181,16 @@ export async function getTokenAccount(
   key: PublicKey
 ) {
   const account = await banksClient.getAccount(key);
+  if (!account) {
+    return null;
+  }
   const tokenAccountState = AccountLayout.decode(account.data);
   return tokenAccountState;
+}
+
+export async function getBalance(banksClient: BanksClient, wallet: PublicKey) {
+  const account = await banksClient.getAccount(wallet);
+  return account.lamports;
 }
 
 export async function getMint(banksClient: BanksClient, mint: PublicKey) {
