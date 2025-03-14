@@ -131,6 +131,7 @@ fn get_migration_threshold_price(
                     amount_left,
                     false,
                 )?;
+                amount_left = 0;
                 break;
             } else {
                 amount_left = amount_left.safe_sub(
@@ -141,6 +142,7 @@ fn get_migration_threshold_price(
                 next_sqrt_price = curve[i].sqrt_price
             }
         }
+        require!(amount_left == 0, PoolError::NotEnoughLiquidity);
     }
     Ok(next_sqrt_price)
 }
