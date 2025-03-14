@@ -71,6 +71,13 @@ export async function closeClaimFeeOperator(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(admin);
 
+  const claimFeeOperatorState = await getClaimFeeOperator(
+    banksClient,
+    program,
+    claimFeeOperator
+  );
+  expect(claimFeeOperatorState).to.be.null;
+
   await processTransactionMaybeThrow(banksClient, transaction);
 }
 
@@ -85,6 +92,8 @@ export async function claimProtocolFee(
 ): Promise<any> {
   const { operator, pool } = params;
   const poolState = await getVirtualPool(banksClient, program, pool);
+  const totalQuoteProtocolFee = poolState.protocolQuoteFee;
+  const totalBaseProtocolFee = poolState.protocolBaseFee;
   const poolAuthority = derivePoolAuthority();
   const claimFeeOperator = deriveClaimFeeOperatorAddress(operator.publicKey);
   const quoteMintInfo = await getTokenAccount(
@@ -115,6 +124,9 @@ export async function claimProtocolFee(
   createBaseTokenAccountIx && preInstructions.push(createBaseTokenAccountIx);
   createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
 
+  const preQuoteTokenBalance = (
+    await getTokenAccount(banksClient, tokenQuoteAccount)
+  ).amount;
   const transaction = await program.methods
     .claimProtocolFee()
     .accounts({
@@ -138,6 +150,20 @@ export async function claimProtocolFee(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(operator);
   await processTransactionMaybeThrow(banksClient, transaction);
+
+  //
+  const quoteTokenBalance = (
+    await getTokenAccount(banksClient, tokenQuoteAccount)
+  ).amount;
+  const baseTokenBalance = (
+    await getTokenAccount(banksClient, tokenBaseAccount)
+  ).amount;
+  expect(
+    (Number(quoteTokenBalance) - Number(preQuoteTokenBalance)).toString()
+  ).eq(totalQuoteProtocolFee.toString());
+  expect(Number(baseTokenBalance).toString()).eq(
+    totalBaseProtocolFee.toString()
+  );
 }
 
 export type ProtocolWithdrawSurplusParams = {
@@ -152,7 +178,6 @@ export async function protocolWithdrawSurplus(
   const { operator, virtualPool } = params;
   const poolState = await getVirtualPool(banksClient, program, virtualPool);
   const poolAuthority = derivePoolAuthority();
-  const claimFeeOperator = deriveClaimFeeOperatorAddress(operator.publicKey);
   const quoteMintInfo = await getTokenAccount(
     banksClient,
     poolState.quoteVault
