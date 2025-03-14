@@ -286,19 +286,26 @@ impl Config {
         }
     }
 
-    pub fn get_initial_base_supply(&self) -> Result<u64> {
-        let total_amount = self
-            .migration_base_threshold
-            .safe_add(self.swap_base_amount)?;
-        // add 25%
+    pub fn total_amount_with_buffer(
+        swap_base_amount: u64,
+        migration_base_threshold: u64,
+    ) -> Result<u128> {
+        let total_amount: u128 =
+            u128::from(migration_base_threshold).safe_add(swap_base_amount.into())?;
         let max_amount = 5u128.safe_mul(total_amount.into())?.safe_div(4)?;
+        Ok(max_amount)
+    }
 
+    pub fn get_max_supply(token_decimal: u8) -> Result<u128> {
         let max_supply = 10u128
-            .pow(self.token_decimal.into())
+            .pow(token_decimal.into())
             .safe_mul(MAX_TOKEN_SUPPLY.into())?;
+        Ok(max_supply)
+    }
 
-        let min_amount = max_amount.min(max_supply);
-
-        Ok(u64::try_from(min_amount).map_err(|_| PoolError::MathOverflow)?)
+    pub fn get_initial_base_supply(&self) -> Result<u64> {
+        let total_amount =
+            Config::total_amount_with_buffer(self.swap_base_amount, self.migration_base_threshold)?;
+        Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
     }
 }
