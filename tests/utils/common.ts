@@ -169,7 +169,6 @@ export async function getOrCreateAssociatedTokenAccount(
       mint,
       program
     );
-
     return { ata: ataKey, ix: createAtaIx };
   }
 
