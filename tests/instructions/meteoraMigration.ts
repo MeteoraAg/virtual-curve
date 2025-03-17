@@ -98,13 +98,21 @@ export async function migrateToMeteoraDamm(
     deriveProtocolFeeAddress(quoteMintInfo.mint, dammPool),
   ];
 
-  const [
-    { vaultPda: aVault, tokenVaultPda: aTokenVault, lpMintPda: aVaultLpMint },
-    { vaultPda: bVault, tokenVaultPda: bTokenVault, lpMintPda: bVaultLpMint },
-  ] = await Promise.all([
-    createVaultIfNotExists(virtualPoolState.baseMint, banksClient, payer),
-    createVaultIfNotExists(quoteMintInfo.mint, banksClient, payer),
-  ]);
+  const {
+    vaultPda: aVault,
+    tokenVaultPda: aTokenVault,
+    lpMintPda: aVaultLpMint,
+  } = await createVaultIfNotExists(
+    virtualPoolState.baseMint,
+    banksClient,
+    payer
+  );
+
+  const {
+    vaultPda: bVault,
+    tokenVaultPda: bTokenVault,
+    lpMintPda: bVaultLpMint,
+  } = await createVaultIfNotExists(quoteMintInfo.mint, banksClient, payer);
 
   const [aVaultLp, bVaultLp] = [
     deriveVaultLPAddress(aVault, dammPool),
