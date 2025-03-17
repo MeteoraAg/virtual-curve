@@ -110,17 +110,14 @@ describe("Simulate CU swap", () => {
         referralTokenAccount: null,
       };
 
-      const { computeUnitsConsumed, numInstructions, completed } = await swap(
-        context.banksClient,
-        program,
-        params
-      );
+      const { computeUnitsConsumed, numInstructions, completed, message } =
+        await swap(context.banksClient, program, params);
       result.push({
         curveSize: curves.length,
         completed,
-        // message,
         computeUnitsConsumed,
         // numInstructions,
+        // message,
       });
     }
     console.log(result);

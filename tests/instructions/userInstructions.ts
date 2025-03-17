@@ -159,7 +159,7 @@ export async function swap(
 ): Promise<{
   pool: PublicKey;
   computeUnitsConsumed: number;
-  // message: any;
+  message: any;
   numInstructions: number;
   completed: boolean;
 }> {
@@ -258,32 +258,8 @@ export async function swap(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer);
 
-  let consumedCUSwap: number;
-  {
-    const transaction = await program.methods
-      .swap({ amountIn, minimumAmountOut })
-      .accounts({
-        poolAuthority,
-        config,
-        pool,
-        inputTokenAccount,
-        outputTokenAccount,
-        baseVault: poolState.baseVault,
-        quoteVault: poolState.quoteVault,
-        baseMint: poolState.baseMint,
-        quoteMint,
-        payer: payer.publicKey,
-        tokenBaseProgram,
-        tokenQuoteProgram: TOKEN_PROGRAM_ID,
-        referralTokenAccount,
-      })
-      .transaction();
-
-    transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
-    transaction.sign(payer);
-    let simu = await banksClient.simulateTransaction(transaction);
-    consumedCUSwap = Number(simu.meta.computeUnitsConsumed);
-  }
+  let simu = await banksClient.simulateTransaction(transaction);
+  const consumedCUSwap = Number(simu.meta.computeUnitsConsumed);
 
   await processTransactionMaybeThrow(banksClient, transaction);
 
@@ -292,7 +268,7 @@ export async function swap(
   return {
     pool,
     computeUnitsConsumed: consumedCUSwap,
-    // message: simu.meta.logMessages,
+    message: simu.meta.logMessages,
     numInstructions: transaction.instructions.length,
     completed:
       Number(poolState.quoteReserve) >= Number(configs.migrationQuoteThreshold),
