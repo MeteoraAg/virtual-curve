@@ -155,7 +155,7 @@ describe("Happy path full flow", () => {
     await swap(context.banksClient, program, params);
   });
 
-  it("Create meteora metdata", async () => {
+  it("Create meteora metadata", async () => {
     await createMeteoraMetadata(context.banksClient, program, {
       payer: admin,
       virtualPool,
