@@ -22,7 +22,7 @@ import {
 import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 
-describe.only("Simulate CU swap", () => {
+describe("Simulate CU swap", () => {
   let context: ProgramTestContext;
   let user: Keypair;
   let program: VirtualCurveProgram;
