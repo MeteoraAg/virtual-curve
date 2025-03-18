@@ -156,7 +156,13 @@ export async function swap(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: SwapParams
-): Promise<{ pool: PublicKey; computeUnitsConsumed: string }> {
+): Promise<{
+  pool: PublicKey;
+  computeUnitsConsumed: number;
+  message: any;
+  numInstructions: number;
+  completed: boolean;
+}> {
   const {
     config,
     payer,
@@ -169,7 +175,7 @@ export async function swap(
   } = params;
 
   const poolAuthority = derivePoolAuthority();
-  const poolState = await getVirtualPool(banksClient, program, pool);
+  let poolState = await getVirtualPool(banksClient, program, pool);
 
   const configState = await getConfig(banksClient, program, config);
 
@@ -252,11 +258,129 @@ export async function swap(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer);
 
-  const simu = await banksClient.simulateTransaction(transaction);
+  let simu = await banksClient.simulateTransaction(transaction);
+  const consumedCUSwap = Number(simu.meta.computeUnitsConsumed);
+
   await processTransactionMaybeThrow(banksClient, transaction);
 
+  poolState = await getVirtualPool(banksClient, program, pool);
+  const configs = await getConfig(banksClient, program, config);
   return {
     pool,
-    computeUnitsConsumed: simu.meta.computeUnitsConsumed.toString(),
+    computeUnitsConsumed: consumedCUSwap,
+    message: simu.meta.logMessages,
+    numInstructions: transaction.instructions.length,
+    completed:
+      Number(poolState.quoteReserve) >= Number(configs.migrationQuoteThreshold),
+  };
+}
+
+export async function swapSimulate(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: SwapParams
+): Promise<{
+  pool: PublicKey;
+  computeUnitsConsumed: number;
+  message: any;
+  numInstructions: number;
+  completed: boolean;
+}> {
+  const {
+    config,
+    payer,
+    pool,
+    inputTokenMint,
+    outputTokenMint,
+    amountIn,
+    minimumAmountOut,
+    referralTokenAccount,
+  } = params;
+
+  const poolAuthority = derivePoolAuthority();
+  let poolState = await getVirtualPool(banksClient, program, pool);
+
+  const configState = await getConfig(banksClient, program, config);
+
+  const tokenBaseProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const isInputBaseMint = inputTokenMint.equals(poolState.baseMint);
+  const [inputTokenProgram, outputTokenProgram] = isInputBaseMint
+    ? [tokenBaseProgram, TOKEN_PROGRAM_ID]
+    : [TOKEN_PROGRAM_ID, tokenBaseProgram];
+
+  const quoteMint = isInputBaseMint ? outputTokenMint : inputTokenMint;
+
+  const [
+    { ata: inputTokenAccount, ix: createInputTokenXIx },
+    { ata: outputTokenAccount, ix: createOutputTokenYIx },
+  ] = await Promise.all([
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      inputTokenMint,
+      payer.publicKey,
+      inputTokenProgram
+    ),
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      outputTokenMint,
+      payer.publicKey,
+      outputTokenProgram
+    ),
+  ]);
+  const wrapSOLIx = wrapSOLInstruction(
+    payer.publicKey,
+    inputTokenAccount,
+    BigInt(amountIn.toString())
+  );
+  const instructions: TransactionInstruction[] = [];
+  createInputTokenXIx && instructions.push(createInputTokenXIx);
+  createOutputTokenYIx && instructions.push(createOutputTokenYIx);
+  instructions.push(...wrapSOLIx);
+  const wrapSolTx = new Transaction().add(...instructions);
+  wrapSolTx.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  wrapSolTx.sign(payer);
+
+  await processTransactionMaybeThrow(banksClient, wrapSolTx);
+
+  const transaction = await program.methods
+    .swap({ amountIn, minimumAmountOut })
+    .accounts({
+      poolAuthority,
+      config,
+      pool,
+      inputTokenAccount,
+      outputTokenAccount,
+      baseVault: poolState.baseVault,
+      quoteVault: poolState.quoteVault,
+      baseMint: poolState.baseMint,
+      quoteMint,
+      payer: payer.publicKey,
+      tokenBaseProgram,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      referralTokenAccount,
+    })
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer);
+
+  let simu = await banksClient.simulateTransaction(transaction);
+  const consumedCUSwap = Number(simu.meta.computeUnitsConsumed);
+
+  await processTransactionMaybeThrow(banksClient, transaction);
+
+  poolState = await getVirtualPool(banksClient, program, pool);
+  const configs = await getConfig(banksClient, program, config);
+  return {
+    pool,
+    computeUnitsConsumed: consumedCUSwap,
+    message: simu.meta.logMessages,
+    numInstructions: transaction.instructions.length,
+    completed:
+      Number(poolState.quoteReserve) >= Number(configs.migrationQuoteThreshold),
   };
 }
