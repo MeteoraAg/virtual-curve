@@ -17,51 +17,14 @@ use crate::{
 #[derive(Debug, InitSpace, Default)]
 pub struct PoolFeesConfig {
     pub base_fee: BaseFeeConfig,
+    pub dynamic_fee: DynamicFeeConfig,
+    pub padding_0: [u64; 5],
+    pub padding_1: [u8; 6],
     pub protocol_fee_percent: u8,
     pub referral_fee_percent: u8,
-    pub padding_0: [u8; 6],
-    /// dynamic fee
-    pub dynamic_fee: DynamicFeeConfig,
-    pub padding_1: [u64; 2],
 }
 
-const_assert_eq!(PoolFeesConfig::INIT_SPACE, 96);
-
-#[zero_copy]
-#[derive(Debug, InitSpace, Default)]
-pub struct BaseFeeConfig {
-    pub cliff_fee_numerator: u64,
-    pub fee_scheduler_mode: u8,
-    pub padding: [u8; 5],
-    pub number_of_period: u16,
-    pub period_frequency: u64,
-    pub reduction_factor: u64,
-}
-
-const_assert_eq!(BaseFeeConfig::INIT_SPACE, 32);
-
-impl BaseFeeConfig {
-    fn to_base_fee_parameters(&self) -> BaseFeeParameters {
-        BaseFeeParameters {
-            cliff_fee_numerator: self.cliff_fee_numerator,
-            number_of_period: self.number_of_period,
-            period_frequency: self.period_frequency,
-            reduction_factor: self.reduction_factor,
-            fee_scheduler_mode: self.fee_scheduler_mode,
-        }
-    }
-
-    fn to_base_fee_struct(&self) -> BaseFeeStruct {
-        BaseFeeStruct {
-            cliff_fee_numerator: self.cliff_fee_numerator,
-            number_of_period: self.number_of_period,
-            period_frequency: self.period_frequency,
-            reduction_factor: self.reduction_factor,
-            fee_scheduler_mode: self.fee_scheduler_mode,
-            ..Default::default()
-        }
-    }
-}
+const_assert_eq!(PoolFeesConfig::INIT_SPACE, 128);
 
 impl PoolFeesConfig {
     pub fn to_pool_fee_parameters(&self) -> PoolFeeParamters {
@@ -122,6 +85,43 @@ impl PoolFeesConfig {
         }
     }
 }
+
+#[zero_copy]
+#[derive(Debug, InitSpace, Default)]
+pub struct BaseFeeConfig {
+    pub cliff_fee_numerator: u64,
+    pub period_frequency: u64,
+    pub reduction_factor: u64,
+    pub number_of_period: u16,
+    pub fee_scheduler_mode: u8,
+    pub padding_0: [u8; 5],
+}
+
+const_assert_eq!(BaseFeeConfig::INIT_SPACE, 32);
+
+impl BaseFeeConfig {
+    fn to_base_fee_parameters(&self) -> BaseFeeParameters {
+        BaseFeeParameters {
+            cliff_fee_numerator: self.cliff_fee_numerator,
+            number_of_period: self.number_of_period,
+            period_frequency: self.period_frequency,
+            reduction_factor: self.reduction_factor,
+            fee_scheduler_mode: self.fee_scheduler_mode,
+        }
+    }
+
+    fn to_base_fee_struct(&self) -> BaseFeeStruct {
+        BaseFeeStruct {
+            cliff_fee_numerator: self.cliff_fee_numerator,
+            number_of_period: self.number_of_period,
+            period_frequency: self.period_frequency,
+            reduction_factor: self.reduction_factor,
+            fee_scheduler_mode: self.fee_scheduler_mode,
+            ..Default::default()
+        }
+    }
+}
+
 #[zero_copy]
 #[derive(Debug, InitSpace, Default)]
 pub struct DynamicFeeConfig {
@@ -133,10 +133,11 @@ pub struct DynamicFeeConfig {
     pub filter_period: u16,
     pub decay_period: u16,
     pub reduction_factor: u16,
+    pub padding2: [u8; 8], // Add padding for u128 alignment
     pub bin_step_u128: u128,
 }
 
-const_assert_eq!(DynamicFeeConfig::INIT_SPACE, 40);
+const_assert_eq!(DynamicFeeConfig::INIT_SPACE, 48);
 
 impl DynamicFeeConfig {
     fn to_dynamic_fee_struct(&self) -> DynamicFeeStruct {
@@ -191,7 +192,7 @@ pub enum TokenType {
 
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
-pub struct Config {
+pub struct PoolConfig {
     /// quote mint
     pub quote_mint: Pubkey,
     /// Address to get the fee
@@ -230,7 +231,7 @@ pub struct Config {
     pub curve: [LiquidityDistributionConfig; MAX_CURVE_POINT],
 }
 
-const_assert_eq!(Config::INIT_SPACE, 1008);
+const_assert_eq!(PoolConfig::INIT_SPACE, 1040);
 
 #[zero_copy]
 #[derive(InitSpace, Debug, Default)]
@@ -239,7 +240,7 @@ pub struct LiquidityDistributionConfig {
     pub liquidity: u128,
 }
 
-impl Config {
+impl PoolConfig {
     pub fn init(
         &mut self,
         quote_mint: &Pubkey,
@@ -304,8 +305,10 @@ impl Config {
     }
 
     pub fn get_initial_base_supply(&self) -> Result<u64> {
-        let total_amount =
-            Config::total_amount_with_buffer(self.swap_base_amount, self.migration_base_threshold)?;
+        let total_amount = PoolConfig::total_amount_with_buffer(
+            self.swap_base_amount,
+            self.migration_base_threshold,
+        )?;
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
     }
 }

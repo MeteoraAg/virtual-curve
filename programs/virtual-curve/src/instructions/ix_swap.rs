@@ -6,7 +6,7 @@ use crate::{
     activation_handler::get_current_point,
     constants::seeds::POOL_AUTHORITY_PREFIX,
     params::swap::TradeDirection,
-    state::{CollectFeeMode, Config, VirtualPool},
+    state::{CollectFeeMode, PoolConfig, VirtualPool},
     token::{calculate_transfer_fee_excluded_amount, transfer_from_pool, transfer_from_user},
     EvtSwap, PoolError,
 };
@@ -30,7 +30,7 @@ pub struct SwapCtx<'info> {
     pub pool_authority: UncheckedAccount<'info>,
 
     /// config key
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     /// Pool account
     #[account(mut, has_one = base_vault, has_one = quote_vault, has_one = config)]

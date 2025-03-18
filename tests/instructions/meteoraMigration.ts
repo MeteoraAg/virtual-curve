@@ -44,13 +44,11 @@ export async function createMeteoraMetadata(
   params: CreateMeteoraMetadata
 ): Promise<any> {
   const { payer, virtualPool, config } = params;
-  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
   const transaction = await program.methods
     .migrationMeteoraDammCreateMetadata()
     .accounts({
       virtualPool,
       config,
-      migrationMetadata,
       payer: payer.publicKey,
     })
     .transaction();

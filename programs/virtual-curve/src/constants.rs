@@ -1,5 +1,5 @@
 use anchor_lang::prelude::Pubkey;
-use solana_program::pubkey;
+use anchor_lang::solana_program::pubkey;
 
 /// refer raydium clmm
 pub const MIN_SQRT_PRICE: u128 = 4295048016;
@@ -98,12 +98,6 @@ pub mod seeds {
     pub const REWARD_VAULT_PREFIX: &[u8] = b"reward_vault";
     pub const CLAIM_FEE_OPERATOR_PREFIX: &[u8] = b"cf_operator";
     pub const METEORA_METADATA_PREFIX: &[u8] = b"meteora";
-}
-
-pub mod treasury {
-    use anchor_lang::solana_program::declare_id;
-    // https://v3.squads.so/dashboard/RW5xNldRYjJaS1FFdlYzQUhWUTQxaTU3VlZoRHRoQWJ0eU12Wm9SaFo3RQ==
-    declare_id!("BJQbRiRWhJCyTYZcAuAL3ngDCx3AyFQGKDq8zhiZAKUw");
 }
 
 // Supported quote mints

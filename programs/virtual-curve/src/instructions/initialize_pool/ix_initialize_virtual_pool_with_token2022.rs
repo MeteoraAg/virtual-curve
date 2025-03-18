@@ -1,7 +1,7 @@
 use crate::{
     activation_handler::get_current_point,
     constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
-    state::{Config, PoolType, TokenType, VirtualPool},
+    state::{PoolConfig, PoolType, TokenType, VirtualPool},
     token::create_position_base_mint_with_extensions,
     EvtInitializePool, PoolError,
 };
@@ -14,16 +14,16 @@ use anchor_spl::{
     token_2022::{initialize_account3, mint_to, InitializeAccount3, MintTo, Token2022},
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
-use std::cmp::{max, min};
 
 use super::InitializePoolParameters;
+use super::{max_key, min_key};
 
 #[event_cpi]
 #[derive(Accounts)]
 pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
     /// Which config the pool belongs to.
     #[account(has_one = quote_mint)]
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: pool authority
     #[account(
@@ -52,8 +52,8 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
         seeds = [
             POOL_PREFIX.as_ref(),
             config.key().as_ref(),
-            max(base_mint.key(), quote_mint.key()).as_ref(),
-            min(base_mint.key(), quote_mint.key()).as_ref(),
+            &max_key(&base_mint.key(), &quote_mint.key()),
+            &min_key(&base_mint.key(), &quote_mint.key()),
         ],
         bump,
         payer = payer,

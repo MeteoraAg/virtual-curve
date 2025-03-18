@@ -1,12 +1,12 @@
+use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::{Burn, Token, TokenAccount};
-use solana_program::{program::invoke, system_instruction};
 
 use crate::{
     activation_handler::get_current_point,
     constants::seeds::POOL_AUTHORITY_PREFIX,
     safe_math::SafeMath,
     state::{
-        Config, MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption,
+        MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption, PoolConfig,
         VirtualPool,
     },
     utils_math::safe_mul_div_cast_u64,
@@ -22,7 +22,7 @@ pub struct MigrateMeteoraDammCtx<'info> {
     #[account(mut, has_one = virtual_pool)]
     pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: pool authority
     #[account(
@@ -194,7 +194,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
                     b_vault_lp: self.b_vault_lp.to_account_info(),
                     payer_token_a: self.base_vault.to_account_info(),
                     payer_token_b: self.quote_vault.to_account_info(),
-                    payer_pool_lp: self.virtual_pool_lp.to_account_info(), // ? 
+                    payer_pool_lp: self.virtual_pool_lp.to_account_info(), // ?
                     protocol_token_a_fee: self.protocol_token_a_fee.to_account_info(),
                     protocol_token_b_fee: self.protocol_token_b_fee.to_account_info(),
                     payer: self.pool_authority.to_account_info(),

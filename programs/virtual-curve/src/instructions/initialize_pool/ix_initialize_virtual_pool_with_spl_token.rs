@@ -11,7 +11,7 @@ use crate::{
     activation_handler::get_current_point,
     constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
     process_create_token_metadata,
-    state::{Config, PoolType, TokenType, VirtualPool},
+    state::{PoolConfig, PoolType, TokenType, VirtualPool},
     EvtInitializePool, PoolError, ProcessCreateTokenMetadataParams,
 };
 
@@ -22,12 +22,21 @@ pub struct InitializePoolParameters {
     pub uri: String,
 }
 
+// To fix IDL generation: https://github.com/coral-xyz/anchor/issues/3209
+pub fn max_key(left: &Pubkey, right: &Pubkey) -> [u8; 32] {
+    max(left, right).to_bytes()
+}
+
+pub fn min_key(left: &Pubkey, right: &Pubkey) -> [u8; 32] {
+    min(left, right).to_bytes()
+}
+
 #[event_cpi]
 #[derive(Accounts)]
 pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
     /// Which config the pool belongs to.
     #[account(has_one = quote_mint)]
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: pool authority
     #[account(
@@ -61,8 +70,8 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
         seeds = [
             POOL_PREFIX.as_ref(),
             config.key().as_ref(),
-            max(base_mint.key(), quote_mint.key()).as_ref(),
-            min(base_mint.key(), quote_mint.key()).as_ref(),
+            &max_key(&base_mint.key(), &quote_mint.key()),
+            &min_key(&base_mint.key(), &quote_mint.key()),
         ],
         bump,
         payer = payer,

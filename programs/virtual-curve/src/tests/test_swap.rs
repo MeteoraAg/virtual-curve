@@ -8,7 +8,7 @@ use crate::{
         },
         swap::TradeDirection,
     },
-    state::{CollectFeeMode, Config, LiquidityDistributionConfig, VirtualPool},
+    state::{CollectFeeMode, LiquidityDistributionConfig, PoolConfig, VirtualPool},
 };
 
 use super::price_math::get_price_from_id;
@@ -27,7 +27,7 @@ fn test_swap() {
             .unwrap(),
     }];
 
-    let mut config = Config {
+    let mut config = PoolConfig {
         migration_quote_threshold,
         sqrt_start_price,
         collect_fee_mode: CollectFeeMode::BothToken.into(),

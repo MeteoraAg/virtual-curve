@@ -3,7 +3,7 @@ use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
     constants::seeds::POOL_AUTHORITY_PREFIX,
-    state::{Config, VirtualPool},
+    state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
     EvtPartnerWithdrawSurplus, PoolError,
 };
@@ -17,7 +17,7 @@ pub struct PartnerWithdrawSurplusCtx<'info> {
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one = quote_mint, has_one=fee_claimer)]
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     #[account(
         mut,

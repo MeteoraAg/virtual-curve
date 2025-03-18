@@ -20,10 +20,10 @@ import {
 import { VirtualCurve } from "../../target/types/virtual_curve";
 import VirtualCurveIDL from "../../target/idl/virtual_curve.json";
 
-import VaultIDL from "../../idls/dynamic_vault.json";
+import VaultIDL from "../../idls/dynamic_vault_030.json";
 import { Vault } from "./idl/dynamic-vault";
 
-import AmmIDL from "../../idls/dynamic_amm.json";
+import AmmIDL from "../../idls/dynamic_amm_030.json";
 import { Amm as Damm } from "./idl/dynamic-amm";
 
 import { VirtualCurveProgram } from "./types";
@@ -38,11 +38,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import {
-  DAMM_PROGRAM_ID,
-  VAULT_PROGRAM_ID,
-  VIRTUAL_CURVE_PROGRAM_ID,
-} from "./constants";
+import { DAMM_PROGRAM_ID, VAULT_PROGRAM_ID } from "./constants";
 import { BanksClient } from "solana-bankrun";
 import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
@@ -61,7 +57,6 @@ export function createVirtualCurveProgram(): VirtualCurveProgram {
 
   const program = new Program<VirtualCurve>(
     VirtualCurveIDL as VirtualCurve,
-    VIRTUAL_CURVE_PROGRAM_ID,
     provider
   );
   return program;
@@ -75,11 +70,7 @@ export function createVaultProgram(): Program<Vault> {
     {}
   );
 
-  const program = new Program<Vault>(
-    VaultIDL as Vault,
-    VAULT_PROGRAM_ID,
-    provider
-  );
+  const program = new Program<Vault>(VaultIDL, provider);
   return program;
 }
 
@@ -90,7 +81,7 @@ export function createDammProgram() {
     wallet,
     {}
   );
-  const program = new Program<Damm>(AmmIDL as Damm, DAMM_PROGRAM_ID, provider);
+  const program = new Program<Damm>(AmmIDL, provider);
   return program;
 }
 

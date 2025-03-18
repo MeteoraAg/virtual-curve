@@ -1,0 +1,2011 @@
+{
+  "address": "24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi",
+  "metadata": {
+    "name": "dynamic_vault",
+    "version": "0.9.1",
+    "spec": "0.1.0"
+  },
+  "docs": [
+    "Program for vault"
+  ],
+  "instructions": [
+    {
+      "name": "initialize",
+      "docs": [
+        "initialize new vault"
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "This is base account for all vault",
+            "No need base key now because we only allow 1 vault per token now",
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer can be anyone"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "Token vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_mint",
+          "docs": [
+            "Token mint account"
+          ]
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "LP mint account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "rent",
+          "docs": [
+            "rent"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "system_program"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_idle_vault",
+      "docs": [
+        "initialize idle vault the vault that cannot be rebalanced"
+      ],
+      "discriminator": [
+        100,
+        187,
+        43,
+        147,
+        149,
+        180,
+        117,
+        223
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "Payer can be anyone"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "Token vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_mint",
+          "docs": [
+            "Token mint account"
+          ]
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "LP mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "rent",
+          "docs": [
+            "rent"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "system_program"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "enable_vault",
+      "docs": [
+        "enable vault"
+      ],
+      "discriminator": [
+        145,
+        82,
+        241,
+        156,
+        26,
+        154,
+        233,
+        211
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin account"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "set_operator",
+      "docs": [
+        "set new operator"
+      ],
+      "discriminator": [
+        238,
+        153,
+        101,
+        169,
+        243,
+        131,
+        36,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "operator"
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "admin"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_locked_profit_degradation",
+      "docs": [
+        "update locked profit degradation"
+      ],
+      "discriminator": [
+        103,
+        192,
+        9,
+        190,
+        43,
+        209,
+        235,
+        115
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin account"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "locked_profit_degradation",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "get_unlocked_amount",
+      "docs": [
+        "get unlocked amount"
+      ],
+      "discriminator": [
+        22,
+        184,
+        50,
+        213,
+        60,
+        168,
+        181,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_admin",
+      "docs": [
+        "transfer admin"
+      ],
+      "discriminator": [
+        42,
+        242,
+        66,
+        106,
+        228,
+        10,
+        111,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin account"
+          ],
+          "signer": true
+        },
+        {
+          "name": "new_admin",
+          "docs": [
+            "New vault admin"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "transfer_fee_vault",
+      "docs": [
+        "transfer fee account"
+      ],
+      "discriminator": [
+        24,
+        18,
+        129,
+        149,
+        149,
+        32,
+        45,
+        105
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin account"
+          ],
+          "signer": true
+        },
+        {
+          "name": "new_fee_vault",
+          "docs": [
+            "New fee vault account"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_strategy",
+      "docs": [
+        "Initialize a strategy and add strategy to vault.strategies index"
+      ],
+      "discriminator": [
+        208,
+        119,
+        144,
+        145,
+        178,
+        57,
+        105,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "Strategy account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "Collateral vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "collateral_mint",
+          "docs": [
+            "Collateral mint account"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "Admin account"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "docs": [
+            "System program account"
+          ]
+        },
+        {
+          "name": "rent",
+          "docs": [
+            "Rent account"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Token program account"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "bumps",
+          "type": {
+            "defined": {
+              "name": "StrategyBumps"
+            }
+          }
+        },
+        {
+          "name": "strategy_type",
+          "type": {
+            "defined": {
+              "name": "StrategyType"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "remove_strategy",
+      "docs": [
+        "remove a strategy"
+      ],
+      "discriminator": [
+        185,
+        238,
+        33,
+        91,
+        134,
+        210,
+        97,
+        26
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "Strategy account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "Collateral vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_vault",
+          "docs": [
+            "fee_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "admin"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_strategy2",
+      "docs": [
+        "remove a strategy by advance payment"
+      ],
+      "discriminator": [
+        138,
+        104,
+        208,
+        148,
+        126,
+        35,
+        195,
+        14
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "Vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "Strategy account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "Collateral vault account"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_admin_advance_payment",
+          "docs": [
+            "token_advance_payemnt",
+            "the owner of token_advance_payment must be admin"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault_advance_payment",
+          "docs": [
+            "token_vault_advance_payment",
+            "the account must be different from token_vault",
+            "the owner of token_advance_payment must be vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_vault",
+          "docs": [
+            "fee_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "admin"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "max_admin_pay_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "collect_dust",
+      "docs": [
+        "collect token, that someone send wrongly",
+        "also help in case Mango reimbursement"
+      ],
+      "discriminator": [
+        246,
+        149,
+        21,
+        82,
+        160,
+        74,
+        254,
+        240
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ]
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "Token vault, must be different from vault.token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_admin",
+          "docs": [
+            "token admin, enforce owner is admin to avoid mistake"
+          ],
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "admin"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "add_strategy",
+      "docs": [
+        "add a strategy"
+      ],
+      "discriminator": [
+        64,
+        123,
+        127,
+        227,
+        192,
+        234,
+        198,
+        20
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "strategy"
+          ]
+        },
+        {
+          "name": "admin",
+          "docs": [
+            "admin"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "deposit_strategy",
+      "docs": [
+        "deposit liquidity to a strategy"
+      ],
+      "discriminator": [
+        246,
+        82,
+        57,
+        226,
+        131,
+        222,
+        253,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "strategy"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_vault",
+          "docs": [
+            "fee_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "collateral_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "operator",
+          "docs": [
+            "operator"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_strategy",
+      "docs": [
+        "withdraw liquidity from a strategy"
+      ],
+      "discriminator": [
+        31,
+        45,
+        162,
+        5,
+        193,
+        217,
+        134,
+        188
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "strategy"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_vault",
+          "docs": [
+            "fee_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "collateral_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "operator",
+          "docs": [
+            "operator"
+          ],
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim_rewards",
+      "docs": [
+        "claim rewards from a strategy"
+      ],
+      "discriminator": [
+        4,
+        144,
+        132,
+        71,
+        116,
+        23,
+        151,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ]
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "strategy"
+          ]
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        },
+        {
+          "name": "token_reward_acc",
+          "docs": [
+            "token_reward_acc"
+          ],
+          "writable": true
+        },
+        {
+          "name": "operator",
+          "docs": [
+            "operator"
+          ],
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw2",
+      "docs": [
+        "Withdraw v2. Withdraw from token vault if no remaining accounts are available. Else, it will attempt to withdraw from strategy and token vault. This method just proxy between 2 methods. Protocol integration should be using withdraw instead of this function."
+      ],
+      "discriminator": [
+        80,
+        6,
+        111,
+        73,
+        174,
+        211,
+        66,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_token",
+          "docs": [
+            "user_token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_lp",
+          "docs": [
+            "user_lp"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "user"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "unmint_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_out_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit",
+      "docs": [
+        "user deposit liquidity to vault"
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_token",
+          "docs": [
+            "user_token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_lp",
+          "docs": [
+            "user_lp"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "user"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "token_amount",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_lp_token_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw",
+      "docs": [
+        "user withdraw liquidity from vault"
+      ],
+      "discriminator": [
+        183,
+        18,
+        70,
+        156,
+        148,
+        109,
+        161,
+        34
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_token",
+          "docs": [
+            "user_token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_lp",
+          "docs": [
+            "user_lp"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "user"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "unmint_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_out_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "withdraw_directly_from_strategy",
+      "docs": [
+        "user withdraw liquidity from vault, if vault reserve doesn't have enough liquidity, it will withdraw from the strategy firstly"
+      ],
+      "discriminator": [
+        201,
+        141,
+        146,
+        46,
+        173,
+        116,
+        198,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "docs": [
+            "vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "strategy",
+          "docs": [
+            "strategy"
+          ],
+          "writable": true
+        },
+        {
+          "name": "reserve",
+          "writable": true
+        },
+        {
+          "name": "strategy_program"
+        },
+        {
+          "name": "collateral_vault",
+          "docs": [
+            "collateral_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_vault",
+          "docs": [
+            "token_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "lp_mint",
+          "docs": [
+            "lp_mint"
+          ],
+          "writable": true
+        },
+        {
+          "name": "fee_vault",
+          "docs": [
+            "fee_vault"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_token",
+          "docs": [
+            "user_token"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user_lp",
+          "docs": [
+            "user_lp"
+          ],
+          "writable": true
+        },
+        {
+          "name": "user",
+          "docs": [
+            "user"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "token_program"
+          ]
+        }
+      ],
+      "args": [
+        {
+          "name": "unmint_amount",
+          "type": "u64"
+        },
+        {
+          "name": "min_out_amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    },
+    {
+      "name": "Strategy",
+      "discriminator": [
+        174,
+        110,
+        39,
+        119,
+        82,
+        106,
+        169,
+        102
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AddLiquidity",
+      "discriminator": [
+        31,
+        94,
+        125,
+        90,
+        227,
+        52,
+        61,
+        186
+      ]
+    },
+    {
+      "name": "RemoveLiquidity",
+      "discriminator": [
+        116,
+        244,
+        97,
+        232,
+        103,
+        31,
+        152,
+        58
+      ]
+    },
+    {
+      "name": "StrategyDeposit",
+      "discriminator": [
+        205,
+        53,
+        91,
+        239,
+        34,
+        136,
+        73,
+        47
+      ]
+    },
+    {
+      "name": "StrategyWithdraw",
+      "discriminator": [
+        120,
+        76,
+        208,
+        95,
+        221,
+        210,
+        229,
+        189
+      ]
+    },
+    {
+      "name": "ClaimReward",
+      "discriminator": [
+        148,
+        116,
+        134,
+        204,
+        22,
+        171,
+        85,
+        95
+      ]
+    },
+    {
+      "name": "PerformanceFee",
+      "discriminator": [
+        28,
+        70,
+        231,
+        223,
+        81,
+        109,
+        239,
+        167
+      ]
+    },
+    {
+      "name": "ReportLoss",
+      "discriminator": [
+        154,
+        36,
+        158,
+        196,
+        32,
+        163,
+        123,
+        126
+      ]
+    },
+    {
+      "name": "TotalAmount",
+      "discriminator": [
+        92,
+        200,
+        122,
+        145,
+        211,
+        203,
+        49,
+        205
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "VaultIsDisabled",
+      "msg": "Vault is disabled"
+    },
+    {
+      "code": 6001,
+      "name": "ExceededSlippage",
+      "msg": "Exceeded slippage tolerance"
+    },
+    {
+      "code": 6002,
+      "name": "StrategyIsNotExisted",
+      "msg": "Strategy is not existed"
+    },
+    {
+      "code": 6003,
+      "name": "UnAuthorized",
+      "msg": "UnAuthorized"
+    },
+    {
+      "code": 6004,
+      "name": "MathOverflow",
+      "msg": "Math operation overflow"
+    },
+    {
+      "code": 6005,
+      "name": "ProtocolIsNotSupported",
+      "msg": "Protocol is not supported"
+    },
+    {
+      "code": 6006,
+      "name": "UnMatchReserve",
+      "msg": "Reserve does not support token mint"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidLockedProfitDegradation",
+      "msg": "lockedProfitDegradation is invalid"
+    },
+    {
+      "code": 6008,
+      "name": "MaxStrategyReached",
+      "msg": "Maximum number of strategies have been reached"
+    },
+    {
+      "code": 6009,
+      "name": "StrategyExisted",
+      "msg": "Strategy existed"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidUnmintAmount",
+      "msg": "Invalid unmint amount"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidAccountsForStrategy",
+      "msg": "Invalid accounts for strategy"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidBump",
+      "msg": "Invalid bump"
+    },
+    {
+      "code": 6013,
+      "name": "AmountMustGreaterThanZero",
+      "msg": "Amount must be greater than 0"
+    },
+    {
+      "code": 6014,
+      "name": "MangoIsNotSupportedAnymore",
+      "msg": "Mango is not supported anymore"
+    },
+    {
+      "code": 6015,
+      "name": "StrategyIsNotSupported",
+      "msg": "Strategy is not supported"
+    },
+    {
+      "code": 6016,
+      "name": "PayAmountIsExeeced",
+      "msg": "Pay amount is exceeded"
+    },
+    {
+      "code": 6017,
+      "name": "FeeVaultIsNotSet",
+      "msg": "Fee vault is not set"
+    },
+    {
+      "code": 6018,
+      "name": "LendingAssertionViolation",
+      "msg": "deposit amount in lending is not matched"
+    },
+    {
+      "code": 6019,
+      "name": "HaveMoneyInLending",
+      "msg": "Cannot remove strategy becase we have some in lending"
+    }
+  ],
+  "types": [
+    {
+      "name": "LockedProfitTracker",
+      "docs": [
+        "LockedProfitTracker struct"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "last_updated_locked_profit",
+            "docs": [
+              "The total locked profit from the last report"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "last_report",
+            "docs": [
+              "The last timestamp (in seconds) rebalancing"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "locked_profit_degradation",
+            "docs": [
+              "Rate per second of degradation"
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultBumps",
+      "docs": [
+        "Vault bumps struct"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault_bump",
+            "docs": [
+              "vault_bump"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "token_vault_bump",
+            "docs": [
+              "token_vault_bump"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StrategyBumps",
+      "docs": [
+        "Strategy bumps struct"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "strategy_index",
+            "docs": [
+              "strategy_index"
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "other_bumps",
+            "docs": [
+              "Bumps of PDAs for the integrated protocol."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "StrategyType",
+      "docs": [
+        "StrategyType struct"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "PortFinanceWithoutLM"
+          },
+          {
+            "name": "PortFinanceWithLM"
+          },
+          {
+            "name": "SolendWithoutLM"
+          },
+          {
+            "name": "Mango"
+          },
+          {
+            "name": "SolendWithLM"
+          },
+          {
+            "name": "ApricotWithoutLM"
+          },
+          {
+            "name": "Francium"
+          },
+          {
+            "name": "Tulip"
+          },
+          {
+            "name": "Vault"
+          },
+          {
+            "name": "Drift"
+          },
+          {
+            "name": "Frakt"
+          },
+          {
+            "name": "Marginfi"
+          },
+          {
+            "name": "Kamino"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VaultType",
+      "docs": [
+        "Vault type"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "IdleVault"
+          },
+          {
+            "name": "RebalanceVault"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "docs": [
+        "Vault struct"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enabled",
+            "docs": [
+              "The flag, if admin set enable = false, then the user can only withdraw and cannot deposit in the vault."
+            ],
+            "type": "u8"
+          },
+          {
+            "name": "bumps",
+            "docs": [
+              "Vault nonce, to create vault seeds"
+            ],
+            "type": {
+              "defined": {
+                "name": "VaultBumps"
+              }
+            }
+          },
+          {
+            "name": "total_amount",
+            "docs": [
+              "The total liquidity of the vault, including remaining tokens in token_vault and the liquidity in all strategies."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "token_vault",
+            "docs": [
+              "Token account, hold liquidity in vault reserve"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_vault",
+            "docs": [
+              "Hold lp token of vault, each time rebalance crank is called, vault calculate performance fee and mint corresponding lp token amount to fee_vault. fee_vault is owned by treasury address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "docs": [
+              "Token mint that vault supports"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "lp_mint",
+            "docs": [
+              "Lp mint of vault"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "strategies",
+            "docs": [
+              "The list of strategy addresses that vault supports, vault can support up to MAX_STRATEGY strategies at the same time."
+            ],
+            "type": {
+              "array": [
+                "pubkey",
+                30
+              ]
+            }
+          },
+          {
+            "name": "base",
+            "docs": [
+              "The base address to create vault seeds"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "admin",
+            "docs": [
+              "Admin of vault"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "operator",
+            "docs": [
+              "Person who can send the crank. Operator can only send liquidity to strategies that admin defined, and claim reward to account of treasury address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "locked_profit_tracker",
+            "docs": [
+              "Stores information for locked profit."
+            ],
+            "type": {
+              "defined": {
+                "name": "LockedProfitTracker"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Strategy",
+      "docs": [
+        "Strategy struct"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "reserve",
+            "docs": [
+              "Lending pool address, that the strategy will deposit/withdraw balance"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "collateral_vault",
+            "docs": [
+              "The token account, that holds the collateral token"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "strategy_type",
+            "docs": [
+              "Specify type of strategy"
+            ],
+            "type": {
+              "defined": {
+                "name": "StrategyType"
+              }
+            }
+          },
+          {
+            "name": "current_liquidity",
+            "docs": [
+              "The liquidity in strategy at the time vault deposit/withdraw from a lending protocol"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bumps",
+            "docs": [
+              "Hold some bumps, in case the strategy needs to use other seeds to sign a CPI call."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                10
+              ]
+            }
+          },
+          {
+            "name": "vault",
+            "docs": [
+              "Vault address, that the strategy belongs"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "is_disable",
+            "docs": [
+              "If we remove strategy by remove_strategy2 endpoint, this account will be never added again"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AddLiquidity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lp_mint_amount",
+            "type": "u64"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RemoveLiquidity",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lp_unmint_amount",
+            "type": "u64"
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StrategyDeposit",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "strategy_type",
+            "type": {
+              "defined": {
+                "name": "StrategyType"
+              }
+            }
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "StrategyWithdraw",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "strategy_type",
+            "type": {
+              "defined": {
+                "name": "StrategyType"
+              }
+            }
+          },
+          {
+            "name": "collateral_amount",
+            "type": "u64"
+          },
+          {
+            "name": "estimated_token_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimReward",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "strategy_type",
+            "type": {
+              "defined": {
+                "name": "StrategyType"
+              }
+            }
+          },
+          {
+            "name": "token_amount",
+            "type": "u64"
+          },
+          {
+            "name": "mint_account",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PerformanceFee",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "lp_mint_more",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReportLoss",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "strategy",
+            "type": "pubkey"
+          },
+          {
+            "name": "loss",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TotalAmount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "total_amount",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

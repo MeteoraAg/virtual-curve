@@ -10,7 +10,7 @@ use crate::{
             get_minimum_base_token_for_curve, LiquidityDistributionParameters,
         },
     },
-    state::{CollectFeeMode, Config, MigrationOption, TokenType},
+    state::{CollectFeeMode, MigrationOption, PoolConfig, TokenType},
     EvtCreateConfig, PoolError,
 };
 
@@ -123,9 +123,9 @@ pub struct CreateConfigCtx<'info> {
     #[account(
         init,
         payer = payer,
-        space = 8 + Config::INIT_SPACE
+        space = 8 + PoolConfig::INIT_SPACE
     )]
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: fee_claimer
     pub fee_claimer: UncheckedAccount<'info>,
@@ -163,8 +163,8 @@ pub fn handle_create_config(
         get_minimum_base_token_for_curve(migration_quote_threshold, sqrt_start_price, &curve)?;
 
     let total_base_with_buffer =
-        Config::total_amount_with_buffer(swap_base_amount, migration_base_amount)?;
-    let max_supply = Config::get_max_supply(token_decimal)?;
+        PoolConfig::total_amount_with_buffer(swap_base_amount, migration_base_amount)?;
+    let max_supply = PoolConfig::get_max_supply(token_decimal)?;
     require!(
         total_base_with_buffer <= max_supply,
         PoolError::TotalBaseTokenExceedMaxSupply

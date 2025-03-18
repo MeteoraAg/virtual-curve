@@ -15,7 +15,7 @@ export async function getVirtualPool(
 ): Promise<Pool> {
   const account = await banksClient.getAccount(pool);
   return program.coder.accounts.decode(
-    "VirtualPool",
+    "virtualPool",
     Buffer.from(account.data)
   );
 }
@@ -26,7 +26,7 @@ export async function getConfig(
   config: PublicKey
 ): Promise<Config> {
   const account = await banksClient.getAccount(config);
-  return program.coder.accounts.decode("Config", Buffer.from(account.data));
+  return program.coder.accounts.decode("poolConfig", Buffer.from(account.data));
 }
 
 export async function getClaimFeeOperator(
@@ -36,7 +36,7 @@ export async function getClaimFeeOperator(
 ): Promise<ClaimFeeOperator> {
   const account = await banksClient.getAccount(claimFeeOperator);
   return program.coder.accounts.decode(
-    "ClaimFeeOperator",
+    "claimFeeOperator",
     Buffer.from(account.data)
   );
 }
@@ -48,7 +48,7 @@ export async function getMeteoraDammMigrationMetadata(
 ): Promise<MeteoraDammMigrationMetadata> {
   const account = await banksClient.getAccount(migrationMetadata);
   return program.coder.accounts.decode(
-    "MeteoraDammMigrationMetadata",
+    "meteoraDammMigrationMetadata",
     Buffer.from(account.data)
   );
 }

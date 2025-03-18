@@ -13,11 +13,10 @@ use crate::{
     params::swap::TradeDirection,
     safe_math::SafeMath,
     state::fee::{DynamicFeeStruct, FeeOnAmountResult, PoolFeesStruct},
+    state::PoolConfig,
     u128x128_math::Rounding,
     PoolError,
 };
-
-use super::Config;
 
 /// collect fee mode
 #[repr(u8)]
@@ -161,7 +160,7 @@ impl VirtualPool {
 
     pub fn get_swap_result(
         &self,
-        config: &Config,
+        config: &PoolConfig,
         amount_in: u64,
         is_referral: bool,
         trade_direction: TradeDirection,
@@ -228,7 +227,7 @@ impl VirtualPool {
     }
     fn get_swap_result_from_base_to_quote(
         &self,
-        config: &Config,
+        config: &PoolConfig,
         amount_in: u64,
         is_referral: bool,
         current_point: u64,
@@ -321,7 +320,7 @@ impl VirtualPool {
 
     fn get_swap_result_from_quote_to_base(
         &self,
-        config: &Config,
+        config: &PoolConfig,
         amount_in: u64,
         is_referral: bool,
         is_skip_fee: bool,
@@ -410,7 +409,7 @@ impl VirtualPool {
 
     pub fn apply_swap_result(
         &mut self,
-        config: &Config,
+        config: &PoolConfig,
         amount_in: u64,
         swap_result: &SwapResult,
         trade_direction: TradeDirection,

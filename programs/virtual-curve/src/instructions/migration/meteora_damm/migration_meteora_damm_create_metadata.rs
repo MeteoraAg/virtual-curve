@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::{Config, MigrationMeteoraDammProgress};
+use crate::state::{MigrationMeteoraDammProgress, PoolConfig};
 use crate::{
     constants::seeds::METEORA_METADATA_PREFIX,
     state::{MeteoraDammMigrationMetadata, VirtualPool},
@@ -13,7 +13,7 @@ pub struct MigrationMeteoraDammCreateMetadataCtx<'info> {
     #[account(has_one=config)]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     #[account(
         init,

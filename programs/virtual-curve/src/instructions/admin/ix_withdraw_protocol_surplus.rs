@@ -2,10 +2,10 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    constants::{seeds::POOL_AUTHORITY_PREFIX, treasury},
-    state::{Config, VirtualPool},
+    constants::seeds::POOL_AUTHORITY_PREFIX,
+    state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
-    EvtProtocolWithdrawSurplus, PoolError,
+    treasury, EvtProtocolWithdrawSurplus, PoolError,
 };
 
 /// Accounts for protocol withdraw surplus
@@ -17,7 +17,7 @@ pub struct ProtocolWithdrawSurplusCtx<'info> {
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one = quote_mint)]
-    pub config: AccountLoader<'info, Config>,
+    pub config: AccountLoader<'info, PoolConfig>,
 
     #[account(
         mut,
