@@ -1,19 +1,9 @@
 [package]
 name = "dynamic-amm"
-version = "0.5.1"
-description = "Created with Anchor"
+version = "0.0.1"
+authors = [""]
 edition = "2021"
 
-[features]
-cpi = []
-no-entrypoint = []
-localnet = []
-devnet = []
-
-[lib]
-crate-type = ["cdylib", "lib"]
-name = "dynamic_amm"
 
 [dependencies]
 anchor-lang = { workspace = true }
-anchor-gen = "0.3.1"

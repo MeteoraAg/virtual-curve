@@ -39,7 +39,7 @@ pub struct MigrateMeteoraDammCtx<'info> {
     pub pool: UncheckedAccount<'info>,
 
     /// pool config
-    pub damm_config: Box<Account<'info, dynamic_amm::Config>>,
+    pub damm_config: Box<Account<'info, dynamic_amm::accounts::Config>>,
 
     /// CHECK: lp_mint
     #[account(mut)]

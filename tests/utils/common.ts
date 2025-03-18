@@ -20,11 +20,11 @@ import {
 import { VirtualCurve } from "../../target/types/virtual_curve";
 import VirtualCurveIDL from "../../target/idl/virtual_curve.json";
 
-import VaultIDL from "../../idls/dynamic_vault_030.json";
-import { Vault } from "./idl/dynamic-vault";
+import VaultIDL from "../../idls/dynamic_vault.json";
+import { DynamicVault as Vault } from "./idl/dynamic_vault";
 
-import AmmIDL from "../../idls/dynamic_amm_030.json";
-import { Amm as Damm } from "./idl/dynamic-amm";
+import AmmIDL from "../../idls/dynamic_amm.json";
+import { DynamicAmm as Damm } from "./idl/dynamic_amm";
 
 import { VirtualCurveProgram } from "./types";
 import {
@@ -38,7 +38,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { DAMM_PROGRAM_ID, VAULT_PROGRAM_ID } from "./constants";
+import { DAMM_PROGRAM_ID } from "./constants";
 import { BanksClient } from "solana-bankrun";
 import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
