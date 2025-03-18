@@ -2,12 +2,12 @@ use anyhow::{ensure, Context, Result};
 use virtual_curve::{
     activation_handler::ActivationType,
     params::swap::TradeDirection,
-    state::{Config, SwapResult, VirtualPool},
+    state::{PoolConfig, SwapResult, VirtualPool},
 };
 
 pub fn quote_exact_in(
     virtual_pool: &VirtualPool,
-    config: &Config,
+    config: &PoolConfig,
     swap_base_for_quote: bool,
     current_timestamp: u64,
     current_slot: u64,
