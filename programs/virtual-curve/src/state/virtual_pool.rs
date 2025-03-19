@@ -225,6 +225,7 @@ impl VirtualPool {
             },
         }
     }
+
     fn get_swap_result_from_base_to_quote(
         &self,
         config: &PoolConfig,
