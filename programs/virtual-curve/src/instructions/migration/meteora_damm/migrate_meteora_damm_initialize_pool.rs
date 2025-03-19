@@ -89,6 +89,7 @@ pub struct MigrateMeteoraDammCtx<'info> {
     /// CHECK: protocol token a fee
     #[account(mut)]
     pub protocol_token_a_fee: UncheckedAccount<'info>,
+
     /// CHECK: protocol token b fee
     #[account(mut)]
     pub protocol_token_b_fee: UncheckedAccount<'info>,

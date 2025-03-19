@@ -6,9 +6,9 @@ on:
       - main
 
 env:
-  SOLANA_CLI_VERSION: 1.16.1
-  NODE_VERSION: 18.20.6
-  ANCHOR_CLI_VERSION: 0.29.0
+  SOLANA_CLI_VERSION: 2.1.0
+  NODE_VERSION: 20.19.0
+  ANCHOR_CLI_VERSION: 0.31.0
 
 jobs:
   program_changed_files:
@@ -37,6 +37,10 @@ jobs:
       - uses: ./.github/actions/setup-solana
       - uses: ./.github/actions/setup-dep
       - uses: ./.github/actions/setup-anchor
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: 1.79.0
+          components: clippy
        # Cache rust, cargo
       - uses: Swatinem/rust-cache@v2
         with:
@@ -55,14 +59,13 @@ jobs:
     if: needs.program_changed_files.outputs.program == 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.76.0
+          toolchain: 1.79.0
           components: clippy
-      - run: rustup target add x86_64-unknown-linux-gnu
       # Cache rust, cargo
-      - uses: Swatinem/rust-cache@v1
-      - run: cargo test --package virtual-curve --target=x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --package virtual-curve
         shell: bash
 
   integration_test:
@@ -78,19 +81,27 @@ jobs:
       - uses: pnpm/action-setup@v3 # docs https://pnpm.io/continuous-integration#github-actions
         with:
           version: 9.5.0 # Optional: specify a pnpm version
+
+      - uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: 1.79.0
+          components: clippy
       # Install rust + toolchain
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           components: clippy
       # Cache rust, cargo
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+
       # Cache node_modules
       - uses: actions/cache@v4
         id: cache-node-modules
         with:
           path: ./node_modules
           key: ${{ runner.os }}-${{ hashFiles('./package-lock.json') }}
+      - run: which anchor
+        shell: bash
       # Testing
       - run: pnpm install
         shell: bash
