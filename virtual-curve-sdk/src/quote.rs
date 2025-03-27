@@ -32,9 +32,9 @@ pub fn quote_exact_in(
     };
 
     let trade_direction = if swap_base_for_quote {
-        TradeDirection::BasetoQuote
+        TradeDirection::BaseToQuote
     } else {
-        TradeDirection::QuotetoBase
+        TradeDirection::QuoteToBase
     };
     let swap_result = virtual_pool.get_swap_result(
         &config,

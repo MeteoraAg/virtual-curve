@@ -171,13 +171,13 @@ impl VirtualPool {
 
         match collect_fee_mode {
             CollectFeeMode::BothToken => match trade_direction {
-                TradeDirection::BasetoQuote => self.get_swap_result_from_base_to_quote(
+                TradeDirection::BaseToQuote => self.get_swap_result_from_base_to_quote(
                     config,
                     amount_in,
                     is_referral,
                     current_point,
                 ),
-                TradeDirection::QuotetoBase => self.get_swap_result_from_quote_to_base(
+                TradeDirection::QuoteToBase => self.get_swap_result_from_quote_to_base(
                     config,
                     amount_in,
                     is_referral,
@@ -186,13 +186,13 @@ impl VirtualPool {
                 ),
             },
             CollectFeeMode::OnlyB => match trade_direction {
-                TradeDirection::BasetoQuote => self.get_swap_result_from_base_to_quote(
+                TradeDirection::BaseToQuote => self.get_swap_result_from_base_to_quote(
                     config,
                     amount_in,
                     is_referral,
                     current_point,
                 ), // this is fine since we still collect fee in token out
-                TradeDirection::QuotetoBase => {
+                TradeDirection::QuoteToBase => {
                     // fee will be in token b
                     let FeeOnAmountResult {
                         amount,
@@ -431,7 +431,7 @@ impl VirtualPool {
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
 
         if collect_fee_mode == CollectFeeMode::OnlyB
-            || trade_direction == TradeDirection::BasetoQuote
+            || trade_direction == TradeDirection::BaseToQuote
         {
             self.trading_quote_fee = self.trading_quote_fee.safe_add(trading_fee)?;
             self.protocol_quote_fee = self.protocol_quote_fee.safe_add(protocol_fee)?;
@@ -448,7 +448,7 @@ impl VirtualPool {
         // update reserve
         // fee is in input token
         let actual_amount_in_reserve = if collect_fee_mode == CollectFeeMode::OnlyB
-            && trade_direction == TradeDirection::QuotetoBase
+            && trade_direction == TradeDirection::QuoteToBase
         {
             amount_in
                 .safe_sub(swap_result.trading_fee)?
@@ -458,7 +458,7 @@ impl VirtualPool {
             amount_in
         };
 
-        if trade_direction == TradeDirection::BasetoQuote {
+        if trade_direction == TradeDirection::BaseToQuote {
             self.base_reserve = self.base_reserve.safe_add(actual_amount_in_reserve)?;
             self.quote_reserve = self.quote_reserve.safe_sub(output_amount)?;
         } else {

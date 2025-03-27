@@ -68,7 +68,7 @@ fn test_swap() {
     );
     let amount_in = 1_000_000_000; // 1k
     let result = pool
-        .get_swap_result(&config, amount_in, false, TradeDirection::QuotetoBase, 0)
+        .get_swap_result(&config, amount_in, false, TradeDirection::QuoteToBase, 0)
         .unwrap();
     println!("{:?}", result);
 }

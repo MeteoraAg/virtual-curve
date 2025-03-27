@@ -5,7 +5,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[derive(Clone, Copy, Debug, PartialEq, IntoPrimitive, TryFromPrimitive)]
 pub enum TradeDirection {
     /// Input base token, output quote token
-    BasetoQuote,
+    BaseToQuote,
     /// Input base token, output quote token
-    QuotetoBase,
+    QuoteToBase,
 }

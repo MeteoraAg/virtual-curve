@@ -76,9 +76,9 @@ impl<'info> SwapCtx<'info> {
     /// Get the trading direction of the current swap. Eg: USDT -> USDC
     pub fn get_trade_direction(&self) -> TradeDirection {
         if self.input_token_account.mint == self.base_mint.key() {
-            return TradeDirection::BasetoQuote;
+            return TradeDirection::BaseToQuote;
         }
-        TradeDirection::QuotetoBase
+        TradeDirection::QuoteToBase
     }
 }
 
@@ -98,7 +98,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         input_program,
         output_program,
     ) = match trade_direction {
-        TradeDirection::BasetoQuote => (
+        TradeDirection::BaseToQuote => (
             &ctx.accounts.base_mint,
             &ctx.accounts.quote_mint,
             &ctx.accounts.base_vault,
@@ -106,7 +106,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
             &ctx.accounts.token_base_program,
             &ctx.accounts.token_quote_program,
         ),
-        TradeDirection::QuotetoBase => (
+        TradeDirection::QuoteToBase => (
             &ctx.accounts.quote_mint,
             &ctx.accounts.base_mint,
             &ctx.accounts.quote_vault,
@@ -183,7 +183,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         let collect_fee_mode = CollectFeeMode::try_from(config.collect_fee_mode)
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
         if collect_fee_mode == CollectFeeMode::OnlyB
-            || trade_direction == TradeDirection::BasetoQuote
+            || trade_direction == TradeDirection::BaseToQuote
         {
             transfer_from_pool(
                 ctx.accounts.pool_authority.to_account_info(),
