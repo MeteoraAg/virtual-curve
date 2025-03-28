@@ -1,3 +1,5 @@
+> The program is still in the process of being audited.
+
 # Virtual Curve
 
 The Virtual Curve program is a launch pool protocol that allows any launch partners to enable their users to launch tokens with customizable virtual curves directly on their platforms. With direct integration into Jupiter and other trading platforms, traders can trade these launch tokens immediately across all these integrations. The Virtual Cuvre program provides a few benefits:
