@@ -57,7 +57,7 @@ pub struct EvtSwap {
     pub pool: Pubkey,
     pub config: Pubkey,
     pub trade_direction: u8,
-    pub is_referral: bool,
+    pub has_referral: bool,
     pub params: SwapParameters,
     pub swap_result: SwapResult,
     pub transfer_fee_excluded_amount_in: u64,

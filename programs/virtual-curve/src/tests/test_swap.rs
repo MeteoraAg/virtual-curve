@@ -30,7 +30,7 @@ fn test_swap() {
     let mut config = PoolConfig {
         migration_quote_threshold,
         sqrt_start_price,
-        collect_fee_mode: CollectFeeMode::BothToken.into(),
+        collect_fee_mode: CollectFeeMode::OutputToken.into(),
         ..Default::default()
     };
     let curve_length = curve.len();

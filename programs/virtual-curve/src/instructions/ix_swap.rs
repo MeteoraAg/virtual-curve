@@ -121,7 +121,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 
     require!(transfer_fee_excluded_amount_in > 0, PoolError::AmountIsZero);
 
-    let is_referral = ctx.accounts.referral_token_account.is_some();
+    let has_referral = ctx.accounts.referral_token_account.is_some();
 
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.pool.load_mut()?;
@@ -141,7 +141,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let swap_result = pool.get_swap_result(
         &config,
         transfer_fee_excluded_amount_in,
-        is_referral,
+        has_referral,
         trade_direction,
         current_point,
     )?;
@@ -168,6 +168,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         input_program,
         amount_in,
     )?;
+
     // send to user
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),
@@ -178,11 +179,12 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         swap_result.output_amount,
         ctx.bumps.pool_authority,
     )?;
+
     // send to referral
-    if is_referral {
+    if has_referral {
         let collect_fee_mode = CollectFeeMode::try_from(config.collect_fee_mode)
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
-        if collect_fee_mode == CollectFeeMode::OnlyB
+        if collect_fee_mode == CollectFeeMode::QuoteToken
             || trade_direction == TradeDirection::BaseToQuote
         {
             transfer_from_pool(
@@ -213,7 +215,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         trade_direction: trade_direction.into(),
         params,
         swap_result,
-        is_referral,
+        has_referral,
         transfer_fee_excluded_amount_in,
         current_timestamp,
     });

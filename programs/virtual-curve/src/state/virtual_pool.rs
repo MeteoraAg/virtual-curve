@@ -31,10 +31,10 @@ use crate::{
     AnchorSerialize,
 )]
 pub enum CollectFeeMode {
-    /// Only token B, we just need token B, because if user want to collect fee in token A, they just need to flip order of tokens
-    OnlyB,
-    /// Both token, in this mode only out token is collected
-    BothToken,
+    /// Only quote token is being used for fee collection
+    QuoteToken,
+    /// Output token is being used for fee collection
+    OutputToken,
 }
 
 #[repr(u8)]
@@ -162,7 +162,7 @@ impl VirtualPool {
         &self,
         config: &PoolConfig,
         amount_in: u64,
-        is_referral: bool,
+        has_referral: bool,
         trade_direction: TradeDirection,
         current_point: u64,
     ) -> Result<SwapResult> {
@@ -170,11 +170,11 @@ impl VirtualPool {
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
 
         match collect_fee_mode {
-            CollectFeeMode::BothToken => match trade_direction {
+            CollectFeeMode::OutputToken => match trade_direction {
                 TradeDirection::BaseToQuote => self.get_swap_result_from_base_to_quote(
                     config,
                     amount_in,
-                    is_referral,
+                    has_referral,
                     current_point,
                 ),
                 TradeDirection::QuoteToBase => self.get_swap_result_from_quote_to_base(
@@ -185,7 +185,7 @@ impl VirtualPool {
                     current_point,
                 ),
             },
-            CollectFeeMode::OnlyB => match trade_direction {
+            CollectFeeMode::QuoteToken => match trade_direction {
                 TradeDirection::BaseToQuote => self.get_swap_result_from_base_to_quote(
                     config,
                     amount_in,
@@ -230,7 +230,7 @@ impl VirtualPool {
         &self,
         config: &PoolConfig,
         amount_in: u64,
-        is_referral: bool,
+        has_referral: bool,
         current_point: u64,
     ) -> Result<SwapResult> {
         // finding new target price
@@ -323,7 +323,7 @@ impl VirtualPool {
         &self,
         config: &PoolConfig,
         amount_in: u64,
-        is_referral: bool,
+        has_referral: bool,
         is_skip_fee: bool,
         current_point: u64,
     ) -> Result<SwapResult> {
@@ -430,7 +430,7 @@ impl VirtualPool {
         let collect_fee_mode = CollectFeeMode::try_from(config.collect_fee_mode)
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
 
-        if collect_fee_mode == CollectFeeMode::OnlyB
+        if collect_fee_mode == CollectFeeMode::QuoteToken
             || trade_direction == TradeDirection::BaseToQuote
         {
             self.trading_quote_fee = self.trading_quote_fee.safe_add(trading_fee)?;
@@ -447,7 +447,7 @@ impl VirtualPool {
 
         // update reserve
         // fee is in input token
-        let actual_amount_in_reserve = if collect_fee_mode == CollectFeeMode::OnlyB
+        let actual_amount_in_reserve = if collect_fee_mode == CollectFeeMode::QuoteToken
             && trade_direction == TradeDirection::QuoteToBase
         {
             amount_in
