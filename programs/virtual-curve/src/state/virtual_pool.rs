@@ -467,6 +467,10 @@ impl VirtualPool {
         Ok((token_base_amount, token_quote_amount))
     }
 
+    pub fn get_protocol_and_partner_base_fee(&self) -> Result<u64> {
+        Ok(self.trading_base_fee.safe_add(self.protocol_base_fee)?)
+    }
+
     pub fn is_curve_complete(&self, migration_threshold: u64) -> bool {
         self.quote_reserve >= migration_threshold
     }

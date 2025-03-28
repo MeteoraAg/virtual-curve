@@ -1,6 +1,4 @@
-use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-
+use crate::math::safe_math::SafeMath;
 use crate::EvtCurveComplete;
 use crate::{
     activation_handler::get_current_point,
@@ -11,6 +9,8 @@ use crate::{
     token::{calculate_transfer_fee_excluded_amount, transfer_from_pool, transfer_from_user},
     EvtSwap, PoolError,
 };
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct SwapParameters {
@@ -213,6 +213,18 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     });
 
     if pool.is_curve_complete(config.migration_quote_threshold) {
+        // validate if base reserve is enough token for migration
+        let base_vault_balance = ctx.accounts.base_vault.amount;
+
+        let required_base_balance = config
+            .migration_base_threshold
+            .safe_add(pool.get_protocol_and_partner_base_fee()?)?;
+
+        require!(
+            base_vault_balance >= required_base_balance,
+            PoolError::InsufficentLiquidityForMigration
+        );
+
         emit_cpi!(EvtCurveComplete {
             pool: ctx.accounts.pool.key(),
             config: ctx.accounts.config.key(),

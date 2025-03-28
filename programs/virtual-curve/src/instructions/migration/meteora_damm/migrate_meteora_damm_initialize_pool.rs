@@ -257,8 +257,14 @@ pub fn handle_migrate_meteora_damm<'info>(
 
     virtual_pool.update_after_create_pool();
 
-    // burn the rest of token in pool authority
-    let left_base_token = ctx.accounts.base_vault.amount.safe_sub(base_reserve)?;
+    // burn the rest of token in pool authority after migrated amount and fee
+    let left_base_token = ctx
+        .accounts
+        .base_vault
+        .amount
+        .safe_sub(base_reserve)?
+        .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
+
     if left_base_token > 0 {
         let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
         anchor_spl::token::burn(

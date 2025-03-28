@@ -3,7 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     activation_handler::ActivationType,
-    constants::{MAX_SQRT_PRICE, MIN_SQRT_PRICE},
+    constants::{MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     params::{
         fee_parameters::PoolFeeParamters,
         liquidity_distribution::{
@@ -77,7 +77,10 @@ impl ConfigParameters {
             self.sqrt_start_price >= MIN_SQRT_PRICE && self.sqrt_start_price < MAX_SQRT_PRICE,
             PoolError::InvalidCurve
         );
-        require!(self.curve.len() > 0, PoolError::InvalidCurve);
+        require!(
+            self.curve.len() > 0 && self.curve.len() <= MAX_CURVE_POINT,
+            PoolError::InvalidCurve
+        );
         require!(
             self.curve[0].sqrt_price > self.sqrt_start_price
                 && self.curve[0].liquidity > 0

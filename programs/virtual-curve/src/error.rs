@@ -5,31 +5,24 @@ use anchor_lang::prelude::*;
 #[error_code]
 #[derive(PartialEq)]
 pub enum PoolError {
-    /// Mathematic operation results in overflow.
     #[msg("Math operation overflow")]
     MathOverflow,
 
-    /// Invalid fee configuration
     #[msg("Invalid fee setup")]
     InvalidFee,
 
-    /// The operation exceeds slippage defined by the user.
     #[msg("Exceeded slippage tolerance")]
     ExceededSlippage,
 
-    /// Pool fee exceed allowed max fee bps
     #[msg("Exceeded max fee bps")]
     ExceedMaxFeeBps,
 
-    /// Invalid admin
     #[msg("Invalid admin")]
     InvalidAdmin,
 
-    /// Amount is zero
     #[msg("Amount is zero")]
     AmountIsZero,
 
-    /// Type case failed
     #[msg("Type cast error")]
     TypeCastFailed,
 
@@ -39,7 +32,6 @@ pub enum PoolError {
     #[msg("Invalid quote mint")]
     InvalidQuoteMint,
 
-    /// Invalid pool LP mint account.
     #[msg("Invalid parameters")]
     InvalidParameters,
 
@@ -102,4 +94,7 @@ pub enum PoolError {
 
     #[msg("Unsupport native mint token 2022")]
     UnsupportNativeMintToken2022,
+
+    #[msg("Insufficent liquidity for migration")]
+    InsufficentLiquidityForMigration,
 }
