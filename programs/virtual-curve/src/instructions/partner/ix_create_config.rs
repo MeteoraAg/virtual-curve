@@ -7,6 +7,7 @@ use crate::{
     params::{
         fee_parameters::PoolFeeParamters,
         liquidity_distribution::{
+            get_base_token_for_swap, get_migration_threshold_price,
             get_minimum_base_token_for_curve, LiquidityDistributionParameters,
         },
     },
@@ -50,22 +51,24 @@ impl ConfigParameters {
         // validate migration option and token type
         let migration_option_value = MigrationOption::try_from(self.migration_option)
             .map_err(|_| PoolError::InvalidMigrationOption)?;
-        let _token_type_value =
+        let token_type_value =
             TokenType::try_from(self.token_type).map_err(|_| PoolError::InvalidTokenType)?;
 
-        if migration_option_value == MigrationOption::MeteoraDamm {
-            // skip that check to test create pool with token2022 in local
-            #[cfg(not(feature = "local"))]
-            require!(
-                _token_type_value == TokenType::SplToken,
-                PoolError::InvalidTokenType
-            );
-
-            #[cfg(not(feature = "local"))]
-            require!(
-                *quote_mint.to_account_info().owner == anchor_spl::token::Token::id(),
-                PoolError::InvalidQuoteMint
-            );
+        match migration_option_value {
+            MigrationOption::MeteoraDamm => {
+                require!(
+                    token_type_value == TokenType::SplToken,
+                    PoolError::InvalidTokenType
+                );
+                require!(
+                    *quote_mint.to_account_info().owner == anchor_spl::token::Token::id(),
+                    PoolError::InvalidQuoteMint
+                );
+            }
+            MigrationOption::DammV2 => {
+                #[cfg(not(feature = "local"))]
+                return Err(PoolError::InvalidMigrationOption.into());
+            }
         }
 
         // validate activation type
@@ -162,8 +165,12 @@ pub fn handle_create_config(
         ..
     } = config_parameters;
 
-    let (swap_base_amount, migration_base_amount) =
-        get_minimum_base_token_for_curve(migration_quote_threshold, sqrt_start_price, &curve)?;
+    let sqrt_migration_price =
+        get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve)?;
+    let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
+
+    // let (swap_base_amount, migration_base_amount) =
+    //     get_minimum_base_token_for_curve(migration_quote_threshold, sqrt_start_price, &curve)?;
 
     let total_base_with_buffer =
         PoolConfig::total_amount_with_buffer(swap_base_amount, migration_base_amount)?;

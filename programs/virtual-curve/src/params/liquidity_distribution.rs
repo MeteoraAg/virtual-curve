@@ -1,6 +1,8 @@
 use std::u64;
 
 use anchor_lang::prelude::*;
+use damm_v2::MAX_SQRT_PRICE;
+use damm_v2::MIN_SQRT_PRICE;
 use ruint::aliases::U256;
 
 use crate::{
@@ -9,7 +11,7 @@ use crate::{
         get_next_sqrt_price_from_input,
     },
     safe_math::SafeMath,
-    state::LiquidityDistributionConfig,
+    state::{LiquidityDistributionConfig, MigrationOption},
     u128x128_math::Rounding,
     PoolError,
 };
@@ -29,21 +31,21 @@ impl LiquidityDistributionParameters {
     }
 }
 
-pub fn get_minimum_base_token_for_curve(
-    migration_threshold: u64,
-    sqrt_start_price: u128,
-    curve: &[LiquidityDistributionParameters],
-) -> Result<(u64, u64)> {
-    let sqrt_migration_price =
-        get_migration_threshold_price(migration_threshold, sqrt_start_price, curve)?;
-    let migration_base_amount =
-        get_migration_base_token_for_constant_product(migration_threshold, sqrt_migration_price)?;
-    let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, curve)?;
+// pub fn get_minimum_base_token_for_curve(
+//     migration_threshold: u64,
+//     sqrt_start_price: u128,
+//     curve: &[LiquidityDistributionParameters],
+// ) -> Result<(u64, u64)> {
+//     let sqrt_migration_price =
+//         get_migration_threshold_price(migration_threshold, sqrt_start_price, curve)?;
+//     let migration_base_amount =
+//         get_migration_base_token_for_constant_product(migration_threshold, sqrt_migration_price)?;
+//     let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, curve)?;
 
-    Ok((swap_base_amount, migration_base_amount))
-}
+//     Ok((swap_base_amount, migration_base_amount))
+// }
 
-fn get_base_token_for_swap(
+pub fn get_base_token_for_swap(
     sqrt_start_price: u128,
     sqrt_migration_price: u128,
     curve: &[LiquidityDistributionParameters],
@@ -77,21 +79,46 @@ fn get_base_token_for_swap(
     Ok(total_amount)
 }
 
-fn get_migration_base_token_for_constant_product(
+pub fn get_migration_base_token(
     migration_threshold: u64,
     sqrt_migration_price: u128,
+    migration_option: MigrationOption,
 ) -> Result<u64> {
-    let sqrt_migration_price = U256::from(sqrt_migration_price);
-    // price = quote / base for constant-product
-    // base = quote / price
-    let price = sqrt_migration_price.safe_mul(sqrt_migration_price)?;
-    let quote = U256::from(migration_threshold).safe_shl(128)?;
-    let base = quote.safe_div(price)?;
-    require!(base <= U256::from(u64::MAX), PoolError::MathOverflow);
-    return Ok(base.try_into().map_err(|_| PoolError::TypeCastFailed)?);
+    match migration_option {
+        MigrationOption::MeteoraDamm => {
+            // constant product
+            let sqrt_migration_price = U256::from(sqrt_migration_price);
+            // price = quote / base for constant-product
+            // base = quote / price
+            let price = sqrt_migration_price.safe_mul(sqrt_migration_price)?;
+            let quote = U256::from(migration_threshold).safe_shl(128)?;
+            let base = quote.safe_div(price)?;
+            require!(base <= U256::from(u64::MAX), PoolError::MathOverflow);
+            Ok(base.try_into().map_err(|_| PoolError::TypeCastFailed)?)
+        }
+        MigrationOption::DammV2 => {
+            // univ3
+            // calculate to L firsty
+            get
+        }
+    }
 }
 
-fn get_migration_threshold_price(
+// fn get_migration_base_token_for_constant_product(
+//     migration_threshold: u64,
+//     sqrt_migration_price: u128,
+// ) -> Result<u64> {
+//     let sqrt_migration_price = U256::from(sqrt_migration_price);
+//     // price = quote / base for constant-product
+//     // base = quote / price
+//     let price = sqrt_migration_price.safe_mul(sqrt_migration_price)?;
+//     let quote = U256::from(migration_threshold).safe_shl(128)?;
+//     let base = quote.safe_div(price)?;
+//     require!(base <= U256::from(u64::MAX), PoolError::MathOverflow);
+//     return Ok(base.try_into().map_err(|_| PoolError::TypeCastFailed)?);
+// }
+
+pub fn get_migration_threshold_price(
     migration_threshold: u64,
     sqrt_start_price: u128,
     curve: &[LiquidityDistributionParameters],

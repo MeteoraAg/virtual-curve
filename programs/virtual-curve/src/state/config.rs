@@ -172,6 +172,7 @@ impl DynamicFeeConfig {
 )]
 pub enum MigrationOption {
     MeteoraDamm,
+    DammV2,
 }
 
 #[repr(u8)]
@@ -223,8 +224,10 @@ pub struct PoolConfig {
     pub migration_quote_threshold: u64,
     /// migration base threshold (in base token)
     pub migration_base_threshold: u64,
+    /// migration sqrt price
+    pub migration_sqrt_price: u128,
     /// padding 1
-    pub _padding_1: [u128; 8],
+    pub _padding_1: [u128; 7],
     /// minimum price
     pub sqrt_start_price: u128,
     /// curve, only use 20 point firstly, we can extend that latter
@@ -259,6 +262,7 @@ impl PoolConfig {
         swap_base_amount: u64,
         migration_quote_threshold: u64,
         migration_base_threshold: u64,
+        migration_sqrt_price: u128,
         sqrt_start_price: u128,
         curve: &Vec<LiquidityDistributionParameters>,
     ) {
@@ -274,6 +278,7 @@ impl PoolConfig {
         self.swap_base_amount = swap_base_amount;
         self.migration_quote_threshold = migration_quote_threshold;
         self.migration_base_threshold = migration_base_threshold;
+        self.migration_sqrt_price = migration_sqrt_price;
         self.sqrt_start_price = sqrt_start_price;
         self.token_type = token_type;
         self.quote_token_flag = quote_token_flag;
