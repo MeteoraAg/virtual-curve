@@ -225,6 +225,7 @@ impl DynamicFeeStruct {
         };
         Ok(delta_id.safe_mul(2)?) // mul 2 because we are using sqrt price
     }
+
     pub fn update_volatility_accumulator(&mut self, sqrt_price: u128) -> Result<()> {
         let delta_price =
             Self::get_delta_bin_id(self.bin_step_u128, sqrt_price, self.sqrt_price_reference)?;

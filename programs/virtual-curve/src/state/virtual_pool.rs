@@ -180,7 +180,7 @@ impl VirtualPool {
                 TradeDirection::QuoteToBase => self.get_swap_result_from_quote_to_base(
                     config,
                     amount_in,
-                    is_referral,
+                    has_referral,
                     false,
                     current_point,
                 ),
@@ -189,7 +189,7 @@ impl VirtualPool {
                 TradeDirection::BaseToQuote => self.get_swap_result_from_base_to_quote(
                     config,
                     amount_in,
-                    is_referral,
+                    has_referral,
                     current_point,
                 ), // this is fine since we still collect fee in token out
                 TradeDirection::QuoteToBase => {
@@ -201,7 +201,7 @@ impl VirtualPool {
                         referral_fee,
                     } = self.pool_fees.get_fee_on_amount(
                         amount_in,
-                        is_referral,
+                        has_referral,
                         current_point,
                         self.activation_point,
                     )?;
@@ -209,7 +209,7 @@ impl VirtualPool {
                     let swap_result = self.get_swap_result_from_quote_to_base(
                         config,
                         amount,
-                        is_referral,
+                        has_referral,
                         true,
                         current_point,
                     )?;
@@ -306,7 +306,7 @@ impl VirtualPool {
             referral_fee,
         } = self.pool_fees.get_fee_on_amount(
             total_output_amount,
-            is_referral,
+            has_referral,
             current_point,
             self.activation_point,
         )?;
@@ -394,7 +394,7 @@ impl VirtualPool {
                 referral_fee,
             } = self.pool_fees.get_fee_on_amount(
                 total_output_amount,
-                is_referral,
+                has_referral,
                 current_point,
                 self.activation_point,
             )?;
