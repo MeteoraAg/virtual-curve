@@ -211,7 +211,11 @@ const_assert_eq!(DynamicFeeStruct::INIT_SPACE, 96);
 impl DynamicFeeStruct {
     // Px / Py = 1 + b * delta_bin_id
     // detal_bin_id = ((sqrt_price_x/sqrt_price_y) ^ 2 - 1) / b, b fixed = 1
-    pub fn get_delta_bin_id(sqrt_price_a: u128, sqrt_price_b: u128) -> Result<u128> {
+    pub fn get_delta_bin_id(
+        bin_step_u128: u128,
+        sqrt_price_a: u128,
+        sqrt_price_b: u128,
+    ) -> Result<u128> {
         let (max_price, min_price) = if sqrt_price_a > sqrt_price_b {
             (sqrt_price_a, sqrt_price_b)
         } else {
@@ -222,13 +226,16 @@ impl DynamicFeeStruct {
 
         let square_price_ratio: u128 = safe_mul_shr_cast(price_ratio, price_ratio, 64)?;
 
-        let delta_bin_id = square_price_ratio.safe_sub(1u128)?;
+        let delta_bin_id = square_price_ratio
+            .safe_sub(1u128)?
+            .safe_div(bin_step_u128)?;
 
         Ok(delta_bin_id)
     }
 
     pub fn update_volatility_accumulator(&mut self, sqrt_price: u128) -> Result<()> {
-        let delta_price = Self::get_delta_bin_id(sqrt_price, self.sqrt_price_reference)?;
+        let delta_price =
+            Self::get_delta_bin_id(self.bin_step_u128, sqrt_price, self.sqrt_price_reference)?;
 
         let volatility_accumulator = self
             .volatility_reference
