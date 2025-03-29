@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use static_assertions::const_assert_eq;
 
 #[repr(u8)]
 #[derive(
@@ -32,7 +33,7 @@ pub struct MeteoraDammV2Metadata {
     pub _padding: [u8; 125],
 }
 // TODO add assertion
-// const_assert_eq!(MeteoraDammV2Metadata::INIT_SPACE, 272);
+const_assert_eq!(MeteoraDammV2Metadata::INIT_SPACE, 222);
 
 impl MeteoraDammV2Metadata {
     pub fn set_progress(&mut self, progress: u8) {
