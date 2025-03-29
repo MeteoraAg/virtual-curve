@@ -177,32 +177,26 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     )?;
 
     // send to referral
-    if has_referral {
-        let collect_fee_mode = CollectFeeMode::try_from(config.collect_fee_mode)
-            .map_err(|_| PoolError::InvalidCollectFeeMode)?;
-        if collect_fee_mode == CollectFeeMode::QuoteToken
-            || trade_direction == TradeDirection::BaseToQuote
-        {
-            transfer_from_pool(
-                ctx.accounts.pool_authority.to_account_info(),
-                &ctx.accounts.quote_mint,
-                &ctx.accounts.quote_vault,
-                &ctx.accounts.referral_token_account.clone().unwrap(),
-                &ctx.accounts.token_quote_program,
-                swap_result.referral_fee,
-                ctx.bumps.pool_authority,
-            )?;
-        } else {
-            transfer_from_pool(
-                ctx.accounts.pool_authority.to_account_info(),
-                &ctx.accounts.base_mint,
-                &ctx.accounts.base_vault,
-                &ctx.accounts.referral_token_account.clone().unwrap(),
-                &ctx.accounts.token_base_program,
-                swap_result.referral_fee,
-                ctx.bumps.pool_authority,
-            )?;
-        }
+    if has_referral && fee_mode.fees_on_base_token {
+        transfer_from_pool(
+            ctx.accounts.pool_authority.to_account_info(),
+            &ctx.accounts.base_mint,
+            &ctx.accounts.base_vault,
+            &ctx.accounts.referral_token_account.clone().unwrap(),
+            &ctx.accounts.token_base_program,
+            swap_result.referral_fee,
+            ctx.bumps.pool_authority,
+        )?;
+    } else {
+        transfer_from_pool(
+            ctx.accounts.pool_authority.to_account_info(),
+            &ctx.accounts.quote_mint,
+            &ctx.accounts.quote_vault,
+            &ctx.accounts.referral_token_account.clone().unwrap(),
+            &ctx.accounts.token_quote_program,
+            swap_result.referral_fee,
+            ctx.bumps.pool_authority,
+        )?;
     }
 
     emit_cpi!(EvtSwap {
