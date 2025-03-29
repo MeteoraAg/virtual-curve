@@ -45,6 +45,14 @@ pub fn safe_mul_div_cast_u64<T: FromPrimitive>(
 }
 
 #[inline]
+pub fn safe_mul_div_cast_u128(x: u128, y: u128, denominator: u128) -> Result<u128> {
+    let result = U256::from(x)
+        .safe_mul(U256::from(y))?
+        .safe_div(U256::from(denominator))?;
+    Ok(result.try_into().map_err(|_| PoolError::TypeCastFailed)?)
+}
+
+#[inline]
 pub fn safe_shl_div_cast<T: FromPrimitive>(
     x: u128,
     y: u128,

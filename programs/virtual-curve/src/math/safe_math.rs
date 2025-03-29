@@ -104,6 +104,7 @@ macro_rules! checked_impl {
     };
 }
 
+checked_impl!(u8, u32);
 checked_impl!(u16, u32);
 checked_impl!(i32, u32);
 checked_impl!(u32, u32);

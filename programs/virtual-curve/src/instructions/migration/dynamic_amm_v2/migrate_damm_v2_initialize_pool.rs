@@ -1,15 +1,18 @@
+use std::u64;
+
 use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::token::{Burn, Token, TokenAccount};
+use anchor_spl::{
+    token_2022::{set_authority, spl_token_2022::instruction::AuthorityType, SetAuthority},
+    token_interface::{TokenAccount, TokenInterface},
+};
+use damm_v2::types::{AddLiquidityParameters, InitializePoolParameters};
 
 use crate::{
     activation_handler::get_current_point,
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
+    curve::get_initial_liquidity_from_delta_quote,
     safe_math::SafeMath,
-    state::{
-        MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption, PoolConfig,
-        VirtualPool,
-    },
-    utils_math::safe_mul_div_cast_u64,
+    state::{MigrationOption, PoolConfig, VirtualPool},
     *,
 };
 
@@ -19,9 +22,11 @@ pub struct MigrateDammV2Ctx<'info> {
     #[account(mut, has_one = base_vault, has_one = quote_vault, has_one = config)]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
+    /// migration metadata
     #[account(mut, has_one = virtual_pool)]
-    pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
+    pub migration_metadata: AccountLoader<'info, MeteoraDammV2Metadata>,
 
+    /// virtual pool config key
     pub config: AccountLoader<'info, PoolConfig>,
 
     /// CHECK: pool authority
@@ -38,113 +43,107 @@ pub struct MigrateDammV2Ctx<'info> {
     #[account(mut)]
     pub pool: UncheckedAccount<'info>,
 
-    /// pool config
-    pub damm_config: Box<Account<'info, dynamic_amm::accounts::Config>>,
+    // CHECK: damm-v2 config key
+    // pub damm_config: AccountLoader<'info, damm_v2::accounts::Config>,
+    /// CHECK: position nft mint for partner
+    #[account(mut)]
+    pub first_position_nft_mint: UncheckedAccount<'info>,
 
-    /// CHECK: lp_mint
+    /// CHECK: position nft account for partner
     #[account(mut)]
-    pub lp_mint: UncheckedAccount<'info>,
+    pub first_position_nft_account: UncheckedAccount<'info>,
 
-    /// CHECK: base token mint
-    #[account(mut)]
-    pub token_a_mint: UncheckedAccount<'info>, // match with vault.base_mint
-    /// CHECK: quote token mint
-    pub token_b_mint: UncheckedAccount<'info>, // match with vault.quote_mint
-
-    /// CHECK: a vault
-    #[account(mut)]
-    pub a_vault: UncheckedAccount<'info>,
-    /// CHECK: b vault
-    #[account(mut)]
-    pub b_vault: UncheckedAccount<'info>,
-    /// CHECK: a token vault
-    #[account(mut)]
-    pub a_token_vault: UncheckedAccount<'info>,
-    /// CHECK: b token vault
-    #[account(mut)]
-    pub b_token_vault: UncheckedAccount<'info>,
-
-    #[account(mut)]
-    /// CHECK: a vault lp mint
-    pub a_vault_lp_mint: UncheckedAccount<'info>,
-    #[account(mut)]
-    /// CHECK: b vault lp mint
-    pub b_vault_lp_mint: UncheckedAccount<'info>,
-    /// CHECK: a vault lp
-    #[account(mut)]
-    pub a_vault_lp: UncheckedAccount<'info>,
-    /// CHECK: b vault lp
-    #[account(mut)]
-    pub b_vault_lp: UncheckedAccount<'info>,
-    /// CHECK: virtual pool token a
-    #[account(mut)]
-    pub base_vault: Box<Account<'info, TokenAccount>>,
-    /// CHECK: virtual pool token b
-    #[account(mut)]
-    pub quote_vault: Box<Account<'info, TokenAccount>>,
-    /// CHECK: virtual pool lp
-    #[account(mut)]
-    pub virtual_pool_lp: UncheckedAccount<'info>, // TODO check this address and validate
-
-    /// CHECK: protocol token a fee
-    #[account(mut)]
-    pub protocol_token_a_fee: UncheckedAccount<'info>,
-
-    /// CHECK: protocol token b fee
-    #[account(mut)]
-    pub protocol_token_b_fee: UncheckedAccount<'info>,
-    /// CHECK: payer
-    #[account(mut)]
-    pub payer: Signer<'info>,
     /// CHECK:
-    pub rent: UncheckedAccount<'info>,
-    /// CHECK: mint_metadata
     #[account(mut)]
-    pub mint_metadata: UncheckedAccount<'info>,
+    pub first_position: UncheckedAccount<'info>,
 
-    /// CHECK: Metadata program
-    pub metadata_program: UncheckedAccount<'info>,
+    /// CHECK: position nft mint for owner
+    #[account(mut, constraint = first_position_nft_mint.key().ne(&second_position_nft_mint.key()))]
+    pub second_position_nft_mint: Option<UncheckedAccount<'info>>,
 
-    /// CHECK: amm_program
+    /// CHECK: position nft account for owner
+    #[account(mut)]
+    pub second_position_nft_account: Option<UncheckedAccount<'info>>,
+
+    /// CHECK:
+    #[account(mut)]
+    pub second_position: Option<UncheckedAccount<'info>>,
+
+    /// CHECK: damm pool authority
+    pub damm_pool_authority: UncheckedAccount<'info>,
+
+    /// CHECK:
     #[account(address = damm_v2::ID)]
     pub amm_program: UncheckedAccount<'info>,
 
-    /// CHECK: vault_program
-    pub vault_program: UncheckedAccount<'info>,
-
-    /// token_program
-    pub token_program: Program<'info, Token>,
-
-    /// CHECK: Associated token program.
-    pub associated_token_program: UncheckedAccount<'info>,
+    /// CHECK: base token mint
+    #[account(mut)]
+    pub base_mint: UncheckedAccount<'info>,
+    /// CHECK: quote token mint
+    #[account(mut)]
+    pub quote_mint: UncheckedAccount<'info>,
+    /// CHECK:
+    #[account(mut)]
+    pub token_a_vault: UncheckedAccount<'info>,
+    /// CHECK:
+    #[account(mut)]
+    pub token_b_vault: UncheckedAccount<'info>,
+    /// CHECK: base_vault
+    #[account(
+        mut,
+        token::mint = base_mint,
+        token::token_program = token_base_program
+    )]
+    pub base_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    /// CHECK: quote vault
+    #[account(
+        mut,
+        token::mint = quote_mint,
+        token::token_program = token_quote_program
+    )]
+    pub quote_vault: Box<InterfaceAccount<'info, TokenAccount>>,
+    /// CHECK: payer
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: token_program
+    pub token_base_program: Interface<'info, TokenInterface>,
+    /// CHECK: token_program
+    pub token_quote_program: Interface<'info, TokenInterface>,
+    /// CHECK: token_program
+    pub token_2022_program: Interface<'info, TokenInterface>,
+    /// CHECK: damm event authority
+    pub damm_event_auhthority: UncheckedAccount<'info>,
     /// System program.
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> MigrateDammV2Ctx<'info> {
-    fn validate_config_key(&self) -> Result<()> {
+    fn validate_config_key(&self, damm_config: &damm_v2::accounts::Config) -> Result<()> {
         require!(
-            self.damm_config.pool_creator_authority == self.pool_authority.key(),
+            damm_config.pool_creator_authority == self.pool_authority.key(),
             PoolError::InvalidConfigAccount
         );
         require!(
-            self.damm_config.activation_type == self.config.load()?.activation_type,
+            damm_config.activation_type == self.config.load()?.activation_type,
             PoolError::InvalidConfigAccount
         );
         require!(
-            self.damm_config.activation_duration == 0,
+            damm_config.pool_fees.partner_fee_percent == 0,
             PoolError::InvalidConfigAccount
         );
+
         require!(
-            self.damm_config.partner_fee_numerator == 0,
+            damm_config.sqrt_min_price == MIN_SQRT_PRICE,
             PoolError::InvalidConfigAccount
         );
+
         require!(
-            self.damm_config.pool_fees.trade_fee_numerator == 1000, // 1%
+            damm_config.sqrt_max_price == MAX_SQRT_PRICE,
             PoolError::InvalidConfigAccount
         );
+
         require!(
-            self.damm_config.vault_config_key == Pubkey::default(),
+            damm_config.vault_config_key == Pubkey::default(),
             PoolError::InvalidConfigAccount
         );
         Ok(())
@@ -152,8 +151,9 @@ impl<'info> MigrateDammV2Ctx<'info> {
 
     fn create_pool(
         &self,
-        initial_base_amount: u64,
-        initial_quote_amount: u64,
+        pool_config: AccountInfo<'info>,
+        liquidity: u128,
+        sqrt_price: u128,
         activation_point: Option<u64>,
         bump: u8,
     ) -> Result<()> {
@@ -173,61 +173,218 @@ impl<'info> MigrateDammV2Ctx<'info> {
                 self.system_program.to_account_info(),
             ],
         )?;
-        // Vault authority create pool
-        msg!("Activation point: {:?}", activation_point);
-        msg!("create pool");
+
         damm_v2::cpi::initialize_pool(
             CpiContext::new_with_signer(
                 self.amm_program.to_account_info(),
                 damm_v2::cpi::accounts::InitializePool {
+                    creator: self.pool_authority.to_account_info(),
+                    position_nft_mint: self.first_position_nft_mint.to_account_info(),
+                    position_nft_account: self.first_position_nft_account.to_account_info(),
+                    payer: self.pool_authority.to_account_info(),
+                    config: pool_config.to_account_info(),
+                    pool_authority: self.damm_pool_authority.to_account_info(),
                     pool: self.pool.to_account_info(),
-                    config: self.damm_config.to_account_info(),
-                    lp_mint: self.lp_mint.to_account_info(),
-                    token_a_mint: self.token_a_mint.to_account_info(),
-                    token_b_mint: self.token_b_mint.to_account_info(),
-                    a_vault: self.a_vault.to_account_info(),
-                    b_vault: self.b_vault.to_account_info(),
-                    a_token_vault: self.a_token_vault.to_account_info(),
-                    b_token_vault: self.b_token_vault.to_account_info(),
-                    a_vault_lp_mint: self.a_vault_lp_mint.to_account_info(),
-                    b_vault_lp_mint: self.b_vault_lp_mint.to_account_info(),
-                    a_vault_lp: self.a_vault_lp.to_account_info(),
-                    b_vault_lp: self.b_vault_lp.to_account_info(),
+                    position: self.first_position.to_account_info(),
+                    token_a_mint: self.base_mint.to_account_info(),
+                    token_b_mint: self.quote_mint.to_account_info(),
+                    token_a_vault: self.token_a_vault.to_account_info(),
+                    token_b_vault: self.token_b_vault.to_account_info(),
                     payer_token_a: self.base_vault.to_account_info(),
                     payer_token_b: self.quote_vault.to_account_info(),
-                    payer_pool_lp: self.virtual_pool_lp.to_account_info(), // ?
-                    protocol_token_a_fee: self.protocol_token_a_fee.to_account_info(),
-                    protocol_token_b_fee: self.protocol_token_b_fee.to_account_info(),
-                    payer: self.pool_authority.to_account_info(),
-                    rent: self.rent.to_account_info(),
-                    metadata_program: self.metadata_program.to_account_info(),
-                    mint_metadata: self.mint_metadata.to_account_info(),
-                    vault_program: self.vault_program.to_account_info(),
-                    token_program: self.token_program.to_account_info(),
-                    associated_token_program: self.associated_token_program.to_account_info(),
+                    token_a_program: self.token_base_program.to_account_info(),
+                    token_b_program: self.token_quote_program.to_account_info(),
+                    token_2022_program: self.token_2022_program.to_account_info(),
                     system_program: self.system_program.to_account_info(),
+                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    program: self.amm_program.to_account_info(),
                 },
                 &[&pool_authority_seeds[..]],
             ),
-            initial_base_amount,
-            initial_quote_amount,
-            activation_point,
+            InitializePoolParameters {
+                liquidity,
+                sqrt_price,
+                activation_point,
+            },
+        )?;
+
+        Ok(())
+    }
+
+    fn lock_permanent_liquidity_for_first_position(
+        &self,
+        permanent_lock_liquidity: u128,
+        bump: u8,
+    ) -> Result<()> {
+        let pool_authority_seeds = pool_authority_seeds!(bump);
+        damm_v2::cpi::permanent_lock_position(
+            CpiContext::new_with_signer(
+                self.amm_program.to_account_info(),
+                damm_v2::cpi::accounts::PermanentLockPosition {
+                    pool: self.pool.to_account_info(),
+                    position: self.first_position.to_account_info(),
+                    position_nft_account: self.first_position_nft_account.to_account_info(),
+                    owner: self.pool_authority.to_account_info(),
+                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    program: self.amm_program.to_account_info(),
+                },
+                &[&pool_authority_seeds[..]],
+            ),
+            permanent_lock_liquidity,
+        )?;
+        Ok(())
+    }
+
+    fn set_authority_for_first_position(&self, new_authority: Pubkey, bump: u8) -> Result<()> {
+        let pool_authority_seeds = pool_authority_seeds!(bump);
+        set_authority(
+            CpiContext::new_with_signer(
+                self.token_2022_program.to_account_info(),
+                SetAuthority {
+                    current_authority: self.pool_authority.to_account_info(),
+                    account_or_mint: self.first_position_nft_account.to_account_info(),
+                },
+                &[&pool_authority_seeds[..]],
+            ),
+            AuthorityType::AccountOwner,
+            Some(new_authority),
+        )?;
+        Ok(())
+    }
+    fn create_second_position(
+        &self,
+        owner: Pubkey,
+        liquidity: u128,
+        locked_liquidity: u128,
+        bump: u8,
+    ) -> Result<()> {
+        let pool_authority_seeds = pool_authority_seeds!(bump);
+        msg!("create position");
+        damm_v2::cpi::create_position(CpiContext::new_with_signer(
+            self.amm_program.to_account_info(),
+            damm_v2::cpi::accounts::CreatePosition {
+                owner: self.pool_authority.to_account_info(),
+                pool: self.pool.to_account_info(),
+                position_nft_mint: self
+                    .second_position_nft_mint
+                    .clone()
+                    .unwrap()
+                    .to_account_info(),
+                position_nft_account: self
+                    .second_position_nft_account
+                    .clone()
+                    .unwrap()
+                    .to_account_info(),
+                position: self.second_position.clone().unwrap().to_account_info(),
+                pool_authority: self.damm_pool_authority.to_account_info(),
+                payer: self.payer.to_account_info(),
+                token_program: self.token_2022_program.to_account_info(),
+                system_program: self.system_program.to_account_info(),
+                event_authority: self.damm_event_auhthority.to_account_info(),
+                program: self.amm_program.to_account_info(),
+            },
+            &[&pool_authority_seeds[..]],
+        ))?;
+
+        msg!("add liquidity");
+        let total_liquidity = liquidity.safe_add(locked_liquidity)?;
+        damm_v2::cpi::add_liquidity(
+            CpiContext::new_with_signer(
+                self.amm_program.to_account_info(),
+                damm_v2::cpi::accounts::AddLiquidity {
+                    pool: self.pool.to_account_info(),
+                    position: self.second_position.clone().unwrap().to_account_info(),
+                    token_a_account: self.base_vault.to_account_info(),
+                    token_b_account: self.quote_vault.to_account_info(),
+                    token_a_vault: self.token_a_vault.to_account_info(),
+                    token_b_vault: self.token_b_vault.to_account_info(),
+                    token_a_mint: self.base_mint.to_account_info(),
+                    token_b_mint: self.quote_mint.to_account_info(),
+                    position_nft_account: self
+                        .second_position_nft_account
+                        .clone()
+                        .unwrap()
+                        .to_account_info(),
+                    owner: self.pool_authority.to_account_info(),
+                    token_a_program: self.token_base_program.to_account_info(),
+                    token_b_program: self.token_quote_program.to_account_info(),
+                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    program: self.amm_program.to_account_info(),
+                },
+                &[&pool_authority_seeds[..]],
+            ),
+            AddLiquidityParameters {
+                liquidity_delta: total_liquidity,
+                token_a_amount_threshold: u64::MAX, // TODO should we take care for that
+                token_b_amount_threshold: u64::MAX,
+            },
+        )?;
+
+        if locked_liquidity > 0 {
+            msg!("lock liquidity");
+            damm_v2::cpi::permanent_lock_position(
+                CpiContext::new_with_signer(
+                    self.amm_program.to_account_info(),
+                    damm_v2::cpi::accounts::PermanentLockPosition {
+                        pool: self.pool.to_account_info(),
+                        position: self.second_position.clone().unwrap().to_account_info(),
+                        position_nft_account: self
+                            .second_position_nft_account
+                            .clone()
+                            .unwrap()
+                            .to_account_info(),
+                        owner: self.pool_authority.to_account_info(),
+                        event_authority: self.damm_event_auhthority.to_account_info(),
+                        program: self.amm_program.to_account_info(),
+                    },
+                    &[&pool_authority_seeds[..]],
+                ),
+                locked_liquidity,
+            )?;
+        }
+
+        msg!("set authority");
+        set_authority(
+            CpiContext::new_with_signer(
+                self.token_2022_program.to_account_info(),
+                SetAuthority {
+                    current_authority: self.pool_authority.to_account_info(),
+                    account_or_mint: self
+                        .second_position_nft_account
+                        .clone()
+                        .unwrap()
+                        .to_account_info(),
+                },
+                &[&pool_authority_seeds[..]],
+            ),
+            AuthorityType::AccountOwner,
+            Some(owner),
         )?;
 
         Ok(())
     }
 }
 
-pub fn handle_migrate_damm_v2<'info>(
-    ctx: Context<'_, '_, '_, 'info, MigrateDammV2Ctx<'info>>,
+pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
+    ctx: Context<'_, '_, 'c, 'info, MigrateDammV2Ctx<'info>>,
 ) -> Result<()> {
-    ctx.accounts.validate_config_key()?;
+    {
+        require!(
+            ctx.remaining_accounts.len() == 1,
+            PoolError::MissingPoolConfigInRemaningAccount
+        );
+        let damm_config_loader: AccountLoader<'_, damm_v2::accounts::Config> =
+            AccountLoader::try_from(&ctx.remaining_accounts[0])?; // TODO fix damm config in remaning accounts
+        let damm_config = damm_config_loader.load()?;
+        ctx.accounts.validate_config_key(&damm_config)?;
+    }
+
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_metadata.progress)
+    let migration_progress = MeteoraDammV2MetadataProgress::try_from(migration_metadata.progress)
         .map_err(|_| PoolError::TypeCastFailed)?;
 
     require!(
-        migration_progress == MigrationMeteoraDammProgress::Init,
+        migration_progress == MeteoraDammV2MetadataProgress::Init,
         PoolError::NotPermitToDoThisAction
     );
 
@@ -242,36 +399,119 @@ pub fn handle_migrate_damm_v2<'info>(
     let migration_option = MigrationOption::try_from(config.migration_option)
         .map_err(|_| PoolError::InvalidMigrationOption)?;
     require!(
-        migration_option == MigrationOption::MeteoraDamm,
+        migration_option == MigrationOption::DammV2,
         PoolError::InvalidMigrationOption
     );
-    let base_reserve = config.migration_base_threshold;
+    let migration_sqrt_price = config.migration_sqrt_price;
     let quote_reserve = config.migration_quote_threshold;
 
-    ctx.accounts.create_pool(
-        base_reserve,
+    // calculate liquidity
+    let liquidity = get_initial_liquidity_from_delta_quote(
         quote_reserve,
-        Some(get_current_point(config.activation_type)?),
-        ctx.bumps.pool_authority,
+        MIN_SQRT_PRICE,
+        migration_sqrt_price,
     )?;
+
+    let liquidity_distribution = config.get_liquidity_distribution(liquidity)?;
+
+    let partner_liquidity = liquidity_distribution
+        .partner_locked_lp
+        .safe_add(liquidity_distribution.partner_lp)?;
+    let creator_liquidity = liquidity_distribution
+        .creator_lp
+        .safe_add(liquidity_distribution.creator_locked_lp)?;
+
+    if partner_liquidity > creator_liquidity {
+        // create pool
+        msg!("create pool");
+        ctx.accounts.create_pool(
+            ctx.remaining_accounts[0].clone(),
+            partner_liquidity,
+            config.migration_sqrt_price,
+            Some(get_current_point(config.activation_type)?),
+            ctx.bumps.pool_authority,
+        )?;
+
+        // lock permanent liquidity
+        if liquidity_distribution.partner_locked_lp > 0 {
+            msg!("lock permanent liquidity for partner");
+            ctx.accounts.lock_permanent_liquidity_for_first_position(
+                liquidity_distribution.partner_locked_lp,
+                ctx.bumps.pool_authority,
+            )?;
+        }
+
+        // transfer to partner
+        msg!("set position account nft to partner");
+        ctx.accounts.set_authority_for_first_position(
+            migration_metadata.partner,
+            ctx.bumps.pool_authority,
+        )?;
+
+        if creator_liquidity > 0 {
+            msg!("create a new position for creator");
+            ctx.accounts.create_second_position(
+                migration_metadata.pool_creator,
+                liquidity_distribution.creator_lp,
+                liquidity_distribution.creator_locked_lp,
+                ctx.bumps.pool_authority,
+            )?;
+        }
+    } else {
+        // create pool
+        msg!("create pool");
+        ctx.accounts.create_pool(
+            ctx.remaining_accounts[0].clone(),
+            creator_liquidity,
+            config.migration_sqrt_price,
+            Some(get_current_point(config.activation_type)?),
+            ctx.bumps.pool_authority,
+        )?;
+
+        // lock permanent liquidity
+        if liquidity_distribution.creator_locked_lp > 0 {
+            msg!("lock permanent liquidity for creator");
+            ctx.accounts.lock_permanent_liquidity_for_first_position(
+                liquidity_distribution.creator_locked_lp,
+                ctx.bumps.pool_authority,
+            )?;
+        }
+
+        // transfer to partner
+        msg!("set position account nft to creator");
+        ctx.accounts.set_authority_for_first_position(
+            migration_metadata.pool_creator,
+            ctx.bumps.pool_authority,
+        )?;
+
+        if partner_liquidity > 0 {
+            msg!("create a new position for partner");
+            ctx.accounts.create_second_position(
+                migration_metadata.partner,
+                liquidity_distribution.partner_lp,
+                liquidity_distribution.partner_locked_lp,
+                ctx.bumps.pool_authority,
+            )?;
+        }
+    }
 
     virtual_pool.update_after_create_pool();
 
     // burn the rest of token in pool authority after migrated amount and fee
+    ctx.accounts.base_vault.reload()?;
     let left_base_token = ctx
         .accounts
         .base_vault
         .amount
-        .safe_sub(base_reserve)?
         .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
 
     if left_base_token > 0 {
         let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
-        anchor_spl::token::burn(
+        anchor_spl::token_interface::burn(
             CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                Burn {
-                    mint: ctx.accounts.token_a_mint.to_account_info(),
+                ctx.accounts.token_base_program.to_account_info(),
+                anchor_spl::token_interface::Burn {
+                    mint: ctx.accounts.base_mint.to_account_info(),
                     from: ctx.accounts.base_vault.to_account_info(),
                     authority: ctx.accounts.pool_authority.to_account_info(),
                 },
@@ -281,19 +521,6 @@ pub fn handle_migrate_damm_v2<'info>(
         )?;
     }
 
-    let lp_minted_amount = anchor_spl::token::accessor::amount(&ctx.accounts.virtual_pool_lp)?;
-
-    let lp_minted_amount_for_creator = safe_mul_div_cast_u64(
-        lp_minted_amount,
-        config.creator_post_migration_fee_percentage.into(),
-        100,
-    )?;
-    let lp_minted_amount_for_partner = lp_minted_amount.safe_sub(lp_minted_amount_for_creator)?;
-    migration_metadata.set_lp_minted(
-        ctx.accounts.lp_mint.key(),
-        lp_minted_amount_for_creator,
-        lp_minted_amount_for_partner,
-    );
     migration_metadata.set_progress(MigrationMeteoraDammProgress::CreatedPool.into());
 
     // TODO emit event

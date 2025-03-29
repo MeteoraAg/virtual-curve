@@ -102,4 +102,5 @@ pub mod seeds {
     pub const REWARD_VAULT_PREFIX: &[u8] = b"reward_vault";
     pub const CLAIM_FEE_OPERATOR_PREFIX: &[u8] = b"cf_operator";
     pub const METEORA_METADATA_PREFIX: &[u8] = b"meteora";
+    pub const DAMM_V2_METADATA_PREFIX: &[u8] = b"damm_v2";
 }

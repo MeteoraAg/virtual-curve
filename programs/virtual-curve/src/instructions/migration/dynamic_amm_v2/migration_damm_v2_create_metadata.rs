@@ -1,17 +1,18 @@
 use anchor_lang::prelude::*;
 
-use crate::state::{MigrationOption, PoolConfig};
-use crate::{
-    constants::seeds::METEORA_METADATA_PREFIX, state::VirtualPool,
-    EvtCreateMeteoraMigrationMetadata,
-};
-use crate::{MigrationMeteoraDammProgress, PoolError};
+use crate::constants::seeds::DAMM_V2_METADATA_PREFIX;
+use crate::state::MigrationOption;
+use crate::state::PoolConfig;
+use crate::state::VirtualPool;
+use crate::EvtCreateDammV2MigrationMetadata;
+use crate::MeteoraDammV2MetadataProgress;
+use crate::PoolError;
 
-use super::MeteoraDammMigrationMetadata;
+use super::MeteoraDammV2Metadata;
 
 #[event_cpi]
 #[derive(Accounts)]
-pub struct MigrationMeteoraDammCreateMetadataCtx<'info> {
+pub struct MigrationDammV2CreateMetadataCtx<'info> {
     #[account(has_one=config)]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
@@ -21,13 +22,13 @@ pub struct MigrationMeteoraDammCreateMetadataCtx<'info> {
         init,
         payer = payer,
         seeds = [
-            METEORA_METADATA_PREFIX.as_ref(),
+            DAMM_V2_METADATA_PREFIX.as_ref(),
             virtual_pool.key().as_ref(),
         ],
         bump,
-        space = 8 + MeteoraDammMigrationMetadata::INIT_SPACE
+        space = 8 + MeteoraDammV2Metadata::INIT_SPACE
     )]
-    pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
+    pub migration_metadata: AccountLoader<'info, MeteoraDammV2Metadata>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -35,15 +36,15 @@ pub struct MigrationMeteoraDammCreateMetadataCtx<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handle_migration_meteora_damm_create_metadata(
-    ctx: Context<MigrationMeteoraDammCreateMetadataCtx>,
+pub fn handle_migration_damm_v2_create_metadata(
+    ctx: Context<MigrationDammV2CreateMetadataCtx>,
 ) -> Result<()> {
     let virtual_pool = ctx.accounts.virtual_pool.load()?;
     let config = ctx.accounts.config.load()?;
     let migration_option = MigrationOption::try_from(config.migration_option)
         .map_err(|_| PoolError::InvalidMigrationOption)?;
     require!(
-        migration_option == MigrationOption::MeteoraDamm,
+        migration_option == MigrationOption::DammV2,
         PoolError::InvalidMigrationOption
     );
     let mut migration_metadata = ctx.accounts.migration_metadata.load_init()?;
@@ -51,9 +52,9 @@ pub fn handle_migration_meteora_damm_create_metadata(
     migration_metadata.pool_creator = virtual_pool.creator;
     migration_metadata.partner = config.fee_claimer;
 
-    migration_metadata.set_progress(MigrationMeteoraDammProgress::Init.into());
+    migration_metadata.set_progress(MeteoraDammV2MetadataProgress::Init.into());
 
-    emit_cpi!(EvtCreateMeteoraMigrationMetadata {
+    emit_cpi!(EvtCreateDammV2MigrationMetadata {
         virtual_pool: ctx.accounts.virtual_pool.key(),
     });
 

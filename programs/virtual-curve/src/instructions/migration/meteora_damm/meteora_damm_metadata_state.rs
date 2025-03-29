@@ -2,6 +2,8 @@ use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
 
+use crate::state::LpDistribution;
+
 #[repr(u8)]
 #[derive(
     Clone,
@@ -21,26 +23,35 @@ pub enum MigrationMeteoraDammProgress {
 #[account(zero_copy)]
 #[derive(InitSpace, Debug)]
 pub struct MeteoraDammMigrationMetadata {
-    /// operator
+    /// pool
     pub virtual_pool: Pubkey,
-    /// owner
-    pub owner: Pubkey,
+    /// pool creator
+    pub pool_creator: Pubkey,
     /// partner
     pub partner: Pubkey,
     /// lp mint
     pub lp_mint: Pubkey,
-    /// minted lp amount for creator
-    pub lp_minted_amount_for_creator: u64,
-    /// minted lp amount for partner
-    pub lp_minted_amount_for_partner: u64,
+
+    /// partner locked lp
+    pub partner_locked_lp: u64,
+    /// partner lp
+    pub partner_lp: u64,
+    /// creator locked lp
+    pub creator_locked_lp: u64,
+    /// creator lp
+    pub creator_lp: u64,
     /// progress
     pub progress: u8,
     /// flag to check whether lp is locked for creator
     pub creator_locked_status: u8,
     /// flag to check whether lp is locked for partner
     pub partner_locked_status: u8,
+    /// flag to check whether creator has claimed lp token
+    pub creator_claim_status: u8,
+    /// flag to check whether partner has claimed lp token
+    pub partner_claim_status: u8,
     /// Reserve
-    pub _padding: [u8; 125],
+    pub _padding: [u8; 107],
 }
 const_assert_eq!(MeteoraDammMigrationMetadata::INIT_SPACE, 272);
 
@@ -49,15 +60,18 @@ impl MeteoraDammMigrationMetadata {
         self.progress = progress;
     }
 
-    pub fn set_lp_minted(
-        &mut self,
-        lp_mint: Pubkey,
-        lp_minted_amount_for_creator: u64,
-        lp_minted_amount_for_partner: u64,
-    ) {
+    pub fn set_lp_minted(&mut self, lp_mint: Pubkey, lp_distribution: &LpDistribution) {
         self.lp_mint = lp_mint;
-        self.lp_minted_amount_for_creator = lp_minted_amount_for_creator;
-        self.lp_minted_amount_for_partner = lp_minted_amount_for_partner;
+        let &LpDistribution {
+            partner_locked_lp,
+            partner_lp,
+            creator_locked_lp,
+            creator_lp,
+        } = lp_distribution;
+        self.partner_locked_lp = partner_locked_lp;
+        self.partner_lp = partner_lp;
+        self.creator_locked_lp = creator_locked_lp;
+        self.creator_lp = creator_lp;
     }
 
     pub fn set_creator_lock_status(&mut self) {
@@ -68,11 +82,27 @@ impl MeteoraDammMigrationMetadata {
         self.partner_locked_status = 1;
     }
 
+    pub fn set_creator_claim_status(&mut self) {
+        self.creator_claim_status = 1;
+    }
+
+    pub fn set_partner_claim_status(&mut self) {
+        self.partner_claim_status = 1;
+    }
+
     pub fn is_creator_lp_locked(&self) -> bool {
         self.creator_locked_status == 1
     }
 
     pub fn is_partner_lp_locked(&self) -> bool {
         self.partner_locked_status == 1
+    }
+
+    pub fn is_creator_claim_lp(&self) -> bool {
+        self.creator_claim_status == 1
+    }
+
+    pub fn is_partner_claim_lp(&self) -> bool {
+        self.partner_claim_status == 1
     }
 }

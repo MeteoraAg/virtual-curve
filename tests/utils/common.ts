@@ -24,7 +24,12 @@ import VaultIDL from "../../idls/dynamic_vault.json";
 import { DynamicVault as Vault } from "./idl/dynamic_vault";
 
 import AmmIDL from "../../idls/dynamic_amm.json";
+
+import DammV2IDL from "../../idls/damm_v2.json";
+
 import { DynamicAmm as Damm } from "./idl/dynamic_amm";
+
+import { CpAmm as DammV2 } from "./idl/damm_v2";
 
 import { VirtualCurveProgram } from "./types";
 import {
@@ -38,7 +43,7 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { DAMM_PROGRAM_ID } from "./constants";
+import { DAMM_PROGRAM_ID, DAMM_V2_PROGRAM_ID, MAX_SQRT_PRICE, MIN_SQRT_PRICE } from "./constants";
 import { BanksClient } from "solana-bankrun";
 import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
@@ -82,6 +87,17 @@ export function createDammProgram() {
     {}
   );
   const program = new Program<Damm>(AmmIDL, provider);
+  return program;
+}
+
+export function createDammV2Program() {
+  const wallet = new Wallet(Keypair.generate());
+  const provider = new AnchorProvider(
+    new Connection(clusterApiUrl("devnet")),
+    wallet,
+    {}
+  );
+  const program = new Program<DammV2>(DammV2IDL, provider);
   return program;
 }
 
@@ -304,6 +320,55 @@ export async function createDammConfig(
   const [config] = PublicKey.findProgramAddressSync(
     [Buffer.from("config"), params.index.toBuffer("le", 8)],
     DAMM_PROGRAM_ID
+  );
+  const transaction = await program.methods
+    .createConfig(params)
+    .accounts({
+      config,
+      admin: payer.publicKey,
+    })
+    .transaction();
+
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.sign(payer);
+  await banksClient.processTransaction(transaction);
+
+  return config;
+}
+
+
+export async function createDammV2Config(
+  banksClient: BanksClient,
+  payer: Keypair,
+  poolCreatorAuthority: PublicKey
+): Promise<PublicKey> {
+  const program = createDammV2Program();
+  const params = {
+    index: new BN(0),
+    poolFees: {
+      baseFee: {
+        cliffFeeNumerator: new BN(2_500_000),
+        numberOfPeriod: 0,
+        reductionFactor: new BN(0),
+        periodFrequency: new BN(0),
+        feeSchedulerMode: 0,
+      },
+      protocolFeePercent: 10,
+      partnerFeePercent: 0,
+      referralFeePercent: 0,
+      dynamicFee: null,
+    },
+    sqrtMinPrice: new BN(MIN_SQRT_PRICE),
+    sqrtMaxPrice: new BN(MAX_SQRT_PRICE),
+    vaultConfigKey: PublicKey.default,
+    poolCreatorAuthority,
+    activationType: 0,
+    collectFeeMode: 0,
+  };
+  const [config] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config"), params.index.toBuffer("le", 8)],
+    DAMM_V2_PROGRAM_ID
   );
   const transaction = await program.methods
     .createConfig(params)

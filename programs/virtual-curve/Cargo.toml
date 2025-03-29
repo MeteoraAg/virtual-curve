@@ -29,8 +29,8 @@ num_enum = "0.7.0"
 num = "0.4.3"
 mpl-token-metadata = "5.1.0"
 spl-token-metadata-interface = "0.6"
-dynamic-amm = { path = "../../libs/dynamic-amm" }
-damm-v2 = { path = "../../libs/damm-v2" }
+dynamic-amm = { path = "../../libs/dynamic-amm"}
+damm-v2 = { path = "../../libs/damm-v2"}
 
 [dev-dependencies]
 proptest = "1.2.0"

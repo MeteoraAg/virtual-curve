@@ -35,7 +35,10 @@ Partner can specify these parameters when they create a configuration on all the
 - `activation_type` (`0 | 1`): `0` means slot, `1` means timestamp, this field indicates the time unit that pool will work with, mostly in calculating fee scheduler and dynamic fee.
 - `token_type` (`0 | 1`): `0` means SPL Token, `1` means Token2022.
 - `token_decimal`: the token decimals that the token will use when user creates the virtual pool with this configuration, we only support token decimals from 6 to 9.
-- `creator_post_migration_fee_percentage`: the percentage of locked LP that partner will share with the token creator after token is migrated.
+- `partner_lp_percentage`: the percentage of LP that partner can claim after token is migrated.
+- `partner_locked_lp_percentage`: the percentage of LP that partner will locked after token is migrated.
+- `creator_lp_percentage`: the percentage of LP that creator can claim after token is migrated.
+- `creator_locked_lp_percentage`: the percentage of LP that creator will be locked after token is migrated.
 - `migration_quote_threshold`: the threhold for quote token, that after virtual pool reserve get such quote token amount, the token will graduate from the launch pool and will be migrated.
 - `fee_claimer`: the address of partner that can claim trading fees from the virtual pools as well as fees from the locked LPs.
 - `owner`: owner of the configuration.

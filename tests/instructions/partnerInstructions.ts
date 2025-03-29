@@ -48,7 +48,10 @@ export type ConfigParameters = {
   tokenType: number;
   tokenDecimal: number;
   migrationQuoteThreshold: BN;
-  creatorPostMigrationFeePercentage: number;
+  partnerLpPercentage: number;
+  partnerLockedLpPercentage: number;
+  creatorLpPercentage: number;
+  creatorLockedLpPercentage: number;
   sqrtStartPrice: BN;
   padding: [];
   curve: Array<LiquidityDistributionParameters>;
@@ -89,6 +92,10 @@ export async function createConfig(
   const configState = await getConfig(banksClient, program, config.publicKey);
   // TODO add assertion data fields
   expect(configState.quoteMint.toString()).equal(quoteMint.toString());
+  expect(configState.partnerLpPercentage).equal(instructionParams.partnerLpPercentage);
+  expect(configState.partnerLockedLpPercentage).equal(instructionParams.partnerLockedLpPercentage);
+  expect(configState.creatorLpPercentage).equal(instructionParams.creatorLpPercentage);
+  expect(configState.creatorLockedLpPercentage).equal(instructionParams.creatorLockedLpPercentage);
 
   return config.publicKey;
 }

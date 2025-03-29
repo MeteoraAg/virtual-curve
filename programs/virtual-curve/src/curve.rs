@@ -9,20 +9,35 @@ use crate::{
 
 pub const RESOLUTION: u8 = 64;
 
-// pub fn get_initialize_amounts(
-//     sqrt_min_price: u128,
-//     sqrt_max_price: u128,
-//     sqrt_price: u128,
-//     liquidity: u128,
-// ) -> Result<(u64, u64)> {
-//     // BASE TOKEN
-//     let amount_a =
-//         get_delta_amount_a_unsigned(sqrt_price, sqrt_max_price, liquidity, Rounding::Up)?;
-//     // QUOTE TOKEN
-//     let amount_b =
-//         get_delta_amount_b_unsigned(sqrt_min_price, sqrt_price, liquidity, Rounding::Up)?;
-//     Ok((amount_a, amount_b))
-// }
+// TODO move it to local feature
+pub fn get_initialize_amounts(
+    sqrt_min_price: u128,
+    sqrt_max_price: u128,
+    sqrt_price: u128,
+    liquidity: u128,
+) -> Result<(u64, u64)> {
+    // BASE TOKEN
+    let amount_base =
+        get_delta_amount_base_unsigned(sqrt_price, sqrt_max_price, liquidity, Rounding::Up)?;
+    // QUOTE TOKEN
+    let amount_quote =
+        get_delta_amount_quote_unsigned(sqrt_min_price, sqrt_price, liquidity, Rounding::Up)?;
+    Ok((amount_base, amount_quote))
+}
+
+// Δb = L (√P_upper - √P_lower) => L = Δb / (√P_upper - √P_lower)
+pub fn get_initial_liquidity_from_delta_quote(
+    quote_amount: u64,
+    sqrt_min_price: u128,
+    sqrt_price: u128,
+) -> Result<u128> {
+    let price_delta = U256::from(sqrt_price.safe_sub(sqrt_min_price)?);
+    let quote_amount = U256::from(quote_amount).safe_shl(128)?;
+    let liquidity = quote_amount.safe_div(price_delta)?; // round down
+    return Ok(liquidity
+        .try_into()
+        .map_err(|_| PoolError::TypeCastFailed)?);
+}
 
 /// Gets the delta amount_a for given liquidity and price range
 ///

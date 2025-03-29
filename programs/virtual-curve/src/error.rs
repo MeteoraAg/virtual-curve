@@ -97,4 +97,7 @@ pub enum PoolError {
 
     #[msg("Insufficent liquidity for migration")]
     InsufficentLiquidityForMigration,
+
+    #[msg("Missing pool config in remaning account")]
+    MissingPoolConfigInRemaningAccount,
 }

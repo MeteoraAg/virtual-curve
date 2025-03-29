@@ -4,7 +4,7 @@ import { IdlAccounts, Program } from "@coral-xyz/anchor";
 export type VirtualCurveProgram = Program<VirtualCurve>;
 
 export type Pool = IdlAccounts<VirtualCurve>["virtualPool"];
-export type Config = IdlAccounts<VirtualCurve>["config"];
+export type PoolConfig = IdlAccounts<VirtualCurve>["poolConfig"];
 export type ClaimFeeOperator = IdlAccounts<VirtualCurve>["claimFeeOperator"];
 export type MeteoraDammMigrationMetadata =
   IdlAccounts<VirtualCurve>["meteoraDammMigrationMetadata"];

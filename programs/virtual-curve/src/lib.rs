@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+
 use anchor_lang::prelude::*;
 
 #[macro_use]
@@ -66,7 +68,13 @@ pub mod virtual_curve {
         instructions::handle_partner_withdraw_surplus(ctx)
     }
 
-    /// USER FUNCTIONS ////
+    pub fn partner_claim_lp_from_meteora_dynamic_amm<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_meteora_damm_partner_claim_lp_token(ctx)
+    }
+
+    /// POOL CREATOR FUNCTIONS ////
     pub fn initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, InitializeVirtualPoolWithSplTokenCtx<'info>>,
         params: InitializePoolParameters,
@@ -81,6 +89,13 @@ pub mod virtual_curve {
         instructions::handle_initialize_virtual_pool_with_token2022(ctx, params)
     }
 
+    pub fn creator_claim_lp_from_meteora_dynamic_amm<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_meteora_damm_creator_claim_lp_token(ctx)
+    }
+
+    /// TRADING BOTS FUNCTIONS ////
     pub fn swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> {
         instructions::handle_swap(ctx, params)
     }
@@ -108,5 +123,30 @@ pub mod virtual_curve {
         ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
     ) -> Result<()> {
         instructions::handle_migrate_meteora_damm_lock_lp_token_for_partner(ctx)
+    }
+
+    pub fn migrate_meteora_damm_partner_claim_lp_token<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_meteora_damm_partner_claim_lp_token(ctx)
+    }
+
+    pub fn migrate_meteora_damm_creator_claim_lp_token<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_meteora_damm_creator_claim_lp_token(ctx)
+    }
+
+    // damm v2
+    pub fn migration_damm_v2_create_metadata<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrationDammV2CreateMetadataCtx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migration_damm_v2_create_metadata(ctx)
+    }
+
+    pub fn migration_damm_v2<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, MigrateDammV2Ctx<'info>>,
+    ) -> Result<()> {
+        instructions::handle_migrate_damm_v2(ctx)
     }
 }

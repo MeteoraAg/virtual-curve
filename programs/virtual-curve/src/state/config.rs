@@ -10,6 +10,7 @@ use crate::{
     },
     safe_math::SafeMath,
     state::fee::{BaseFeeStruct, DynamicFeeStruct, PoolFeesStruct},
+    utils_math::{safe_mul_div_cast_u128, safe_mul_div_cast_u64},
     PoolError,
 };
 
@@ -210,14 +211,24 @@ pub struct PoolConfig {
     pub activation_type: u8,
     /// token decimals
     pub token_decimal: u8,
-    /// creator post migration fee percentage
-    pub creator_post_migration_fee_percentage: u8,
     /// version
     pub version: u8,
     /// token type of base token
     pub token_type: u8,
     /// quote token flag
     pub quote_token_flag: u8,
+    /// partner locked lp percentage
+    pub partner_locked_lp_percentage: u8,
+    /// partner lp percentage
+    pub partner_lp_percentage: u8,
+    /// creator post migration fee percentage
+    pub creator_locked_lp_percentage: u8,
+    /// creator lp percentage
+    pub creator_lp_percentage: u8,
+    /// padding 0
+    pub _padding_0: [u8; 5],
+    /// padding 1
+    pub _padding_1: [u8; 8],
     /// swap base amount
     pub swap_base_amount: u64,
     /// migration quote threshold (in quote token)
@@ -226,8 +237,8 @@ pub struct PoolConfig {
     pub migration_base_threshold: u64,
     /// migration sqrt price
     pub migration_sqrt_price: u128,
-    /// padding 1
-    pub _padding_1: [u128; 7],
+    /// padding 2
+    pub _padding_2: [u128; 6],
     /// minimum price
     pub sqrt_start_price: u128,
     /// curve, only use 20 point firstly, we can extend that latter
@@ -258,7 +269,10 @@ impl PoolConfig {
         token_decimal: u8,
         token_type: u8,
         quote_token_flag: u8,
-        creator_post_migration_fee_percentage: u8,
+        partner_locked_lp_percentage: u8,
+        partner_lp_percentage: u8,
+        creator_locked_lp_percentage: u8,
+        creator_lp_percentage: u8,
         swap_base_amount: u64,
         migration_quote_threshold: u64,
         migration_base_threshold: u64,
@@ -282,7 +296,12 @@ impl PoolConfig {
         self.sqrt_start_price = sqrt_start_price;
         self.token_type = token_type;
         self.quote_token_flag = quote_token_flag;
-        self.creator_post_migration_fee_percentage = creator_post_migration_fee_percentage;
+
+        self.partner_lp_percentage = partner_lp_percentage;
+        self.partner_locked_lp_percentage = partner_locked_lp_percentage;
+
+        self.creator_lp_percentage = creator_lp_percentage;
+        self.creator_locked_lp_percentage = creator_locked_lp_percentage;
 
         let curve_length = curve.len();
         for i in 0..MAX_CURVE_POINT {
@@ -321,4 +340,56 @@ impl PoolConfig {
         )?;
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
     }
+
+    pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LpDistribution> {
+        let partner_locked_lp =
+            safe_mul_div_cast_u64(lp_amount, self.partner_locked_lp_percentage.into(), 100)?;
+        let partner_lp = safe_mul_div_cast_u64(lp_amount, self.partner_lp_percentage.into(), 100)?;
+        let creator_locked_lp =
+            safe_mul_div_cast_u64(lp_amount, self.creator_locked_lp_percentage.into(), 100)?;
+
+        let creator_lp = lp_amount
+            .safe_sub(partner_locked_lp)?
+            .safe_sub(partner_lp)?
+            .safe_sub(creator_locked_lp)?;
+        Ok(LpDistribution {
+            partner_locked_lp,
+            partner_lp,
+            creator_locked_lp,
+            creator_lp,
+        })
+    }
+
+    pub fn get_liquidity_distribution(&self, liquidity: u128) -> Result<LiquidityDistribution> {
+        let partner_locked_lp =
+            safe_mul_div_cast_u128(liquidity, self.partner_locked_lp_percentage.into(), 100)?;
+        let partner_lp = safe_mul_div_cast_u128(liquidity, self.partner_lp_percentage.into(), 100)?;
+        let creator_locked_lp =
+            safe_mul_div_cast_u128(liquidity, self.creator_locked_lp_percentage.into(), 100)?;
+
+        let creator_lp = liquidity
+            .safe_sub(partner_locked_lp)?
+            .safe_sub(partner_lp)?
+            .safe_sub(creator_locked_lp)?;
+        Ok(LiquidityDistribution {
+            partner_locked_lp,
+            partner_lp,
+            creator_locked_lp,
+            creator_lp,
+        })
+    }
+}
+
+pub struct LpDistribution {
+    pub partner_locked_lp: u64,
+    pub partner_lp: u64,
+    pub creator_locked_lp: u64,
+    pub creator_lp: u64,
+}
+
+pub struct LiquidityDistribution {
+    pub partner_locked_lp: u128,
+    pub partner_lp: u128,
+    pub creator_locked_lp: u128,
+    pub creator_lp: u128,
 }

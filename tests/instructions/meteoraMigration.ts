@@ -24,6 +24,7 @@ import {
   createLockEscrowIx,
   getOrCreateAssociatedTokenAccount,
   getMeteoraDammMigrationMetadata,
+  getConfig,
 } from "../utils";
 import { BanksClient } from "solana-bankrun";
 import {
@@ -382,6 +383,135 @@ export async function lockLpForPartnerDamm(
       bVaultLp,
       aVaultLpMint,
       bVaultLpMint,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions(preInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+
+
+
+export async function partnerClaimLpDamm(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: LockLPDammForPartnerParams
+) {
+  const { payer, virtualPool, dammConfig } = params;
+  const virtualPoolState = await getVirtualPool(
+    banksClient,
+    program,
+    virtualPool
+  );
+  const configState = await getConfig(
+    banksClient,
+    program,
+    virtualPoolState.config
+  );
+  const dammPool = deriveDammPoolAddress(
+    dammConfig,
+    virtualPoolState.baseMint,
+    configState.quoteMint
+  );
+  const poolAuthority = derivePoolAuthority();
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+
+  const lpMint = deriveLpMintAddress(dammPool);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const { ata: destinationToken, ix: createDestinationTokenIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      lpMint,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    );
+
+  createDestinationTokenIx && preInstructions.push(createDestinationTokenIx);
+
+  const sourceToken = getAssociatedTokenAddressSync(
+    lpMint,
+    poolAuthority,
+    true
+  );
+  const transaction = await program.methods
+    .migrateMeteoraDammPartnerClaimLpToken()
+    .accounts({
+      migrationMetadata,
+      poolAuthority,
+      pool: dammPool,
+      lpMint,
+      sourceToken,
+      destinationToken,
+      sender: payer.publicKey,
+      tokenProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions(preInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export async function creatorClaimLpDamm(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: LockLPDammForPartnerParams
+) {
+  const { payer, virtualPool, dammConfig } = params;
+  const virtualPoolState = await getVirtualPool(
+    banksClient,
+    program,
+    virtualPool
+  );
+  const configState = await getConfig(
+    banksClient,
+    program,
+    virtualPoolState.config
+  );
+  const dammPool = deriveDammPoolAddress(
+    dammConfig,
+    virtualPoolState.baseMint,
+    configState.quoteMint
+  );
+  const poolAuthority = derivePoolAuthority();
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+
+  const lpMint = deriveLpMintAddress(dammPool);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const { ata: destinationToken, ix: createDestinationTokenIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      lpMint,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    );
+
+  createDestinationTokenIx && preInstructions.push(createDestinationTokenIx);
+
+  const sourceToken = getAssociatedTokenAddressSync(
+    lpMint,
+    poolAuthority,
+    true
+  );
+  const transaction = await program.methods
+    .migrateMeteoraDammCreatorClaimLpToken()
+    .accounts({
+      migrationMetadata,
+      poolAuthority,
+      pool: dammPool,
+      lpMint,
+      sourceToken,
+      destinationToken,
+      sender: payer.publicKey,
       tokenProgram: TOKEN_PROGRAM_ID,
     })
     .preInstructions(preInstructions)

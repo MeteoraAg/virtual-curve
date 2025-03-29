@@ -2,9 +2,9 @@ import { PublicKey } from "@solana/web3.js";
 import { BanksClient } from "solana-bankrun";
 import {
   ClaimFeeOperator,
-  Config,
   MeteoraDammMigrationMetadata,
   Pool,
+  PoolConfig,
   VirtualCurveProgram,
 } from "./types";
 
@@ -24,7 +24,7 @@ export async function getConfig(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   config: PublicKey
-): Promise<Config> {
+): Promise<PoolConfig> {
   const account = await banksClient.getAccount(config);
   return program.coder.accounts.decode("poolConfig", Buffer.from(account.data));
 }

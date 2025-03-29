@@ -4,7 +4,6 @@ version = "0.0.1"
 authors = [""]
 edition = "2021"
 
-
 [dependencies]
 anchor-lang = { workspace = true }
 bytemuck = { workspace = true, features = ["min_const_generics"] }

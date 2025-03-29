@@ -17,6 +17,10 @@ export const VAULT_PROGRAM_ID = new PublicKey(
   "24Uqj9JCLxUeoC3hGfh5W3s9FM9uCHDS2SG3LYwBpyTi"
 );
 
+export const DAMM_V2_PROGRAM_ID = new PublicKey(
+  "cpamdpZCGKUy5JxQXB4dcpGPiikHawvSWAd6mEn1sGG"
+);
+
 export const TREASURY = new PublicKey(
   "BJQbRiRWhJCyTYZcAuAL3ngDCx3AyFQGKDq8zhiZAKUw"
 );

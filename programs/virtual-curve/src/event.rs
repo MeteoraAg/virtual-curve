@@ -22,6 +22,10 @@ pub struct EvtCreateConfig {
     pub activation_type: u8,
     pub token_decimal: u8,
     pub token_type: u8,
+    pub partner_locked_lp_percentage: u8,
+    pub partner_lp_percentage: u8,
+    pub creator_locked_lp_percentage: u8,
+    pub creator_lp_percentage: u8,
     pub swap_base_amount: u64,
     pub migration_quote_threshold: u64,
     pub migration_base_amount: u64,
@@ -88,6 +92,11 @@ pub struct EvtClaimTradingFee {
 
 #[event]
 pub struct EvtCreateMeteoraMigrationMetadata {
+    pub virtual_pool: Pubkey,
+}
+
+#[event]
+pub struct EvtCreateDammV2MigrationMetadata {
     pub virtual_pool: Pubkey,
 }
 

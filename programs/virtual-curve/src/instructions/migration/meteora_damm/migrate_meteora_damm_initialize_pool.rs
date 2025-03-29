@@ -7,10 +7,7 @@ use crate::{
     activation_handler::get_current_point,
     constants::seeds::POOL_AUTHORITY_PREFIX,
     safe_math::SafeMath,
-    state::{
-        MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption, PoolConfig,
-        VirtualPool,
-    },
+    state::{MigrationOption, PoolConfig, VirtualPool},
     u128x128_math::Rounding,
     utils_math::safe_mul_div_cast_u64,
     *,
@@ -143,10 +140,6 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             PoolError::InvalidConfigAccount
         );
         require!(
-            self.damm_config.pool_fees.trade_fee_numerator == 1000, // 1%
-            PoolError::InvalidConfigAccount
-        );
-        require!(
             self.damm_config.vault_config_key == Pubkey::default(),
             PoolError::InvalidConfigAccount
         );
@@ -261,11 +254,11 @@ pub fn handle_migrate_meteora_damm<'info>(
     virtual_pool.update_after_create_pool();
 
     // burn the rest of token in pool authority after migrated amount and fee
+    ctx.accounts.base_vault.reload()?;
     let left_base_token = ctx
         .accounts
         .base_vault
         .amount
-        .safe_sub(base_reserve)?
         .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
 
     if left_base_token > 0 {
@@ -303,18 +296,8 @@ pub fn handle_migrate_meteora_damm<'info>(
 
     let lp_minted_amount = anchor_spl::token::accessor::amount(&ctx.accounts.virtual_pool_lp)?;
 
-    let lp_minted_amount_for_creator = safe_mul_div_cast_u64(
-        lp_minted_amount,
-        config.creator_post_migration_fee_percentage.into(),
-        100,
-        Rounding::Down,
-    )?;
-    let lp_minted_amount_for_partner = lp_minted_amount.safe_sub(lp_minted_amount_for_creator)?;
-    migration_metadata.set_lp_minted(
-        ctx.accounts.lp_mint.key(),
-        lp_minted_amount_for_creator,
-        lp_minted_amount_for_partner,
-    );
+    let lp_distribution = config.get_lp_distribution(lp_minted_amount)?;
+    migration_metadata.set_lp_minted(ctx.accounts.lp_mint.key(), &lp_distribution);
     migration_metadata.set_progress(MigrationMeteoraDammProgress::CreatedPool.into());
 
     // TODO emit event

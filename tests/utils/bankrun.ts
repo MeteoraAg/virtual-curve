@@ -7,6 +7,7 @@ import {
 import { startAnchor } from "solana-bankrun";
 import {
   DAMM_PROGRAM_ID,
+  DAMM_V2_PROGRAM_ID,
   VAULT_PROGRAM_ID,
   VIRTUAL_CURVE_PROGRAM_ID,
 } from "./constants";
@@ -76,6 +77,10 @@ export async function startTest() {
       {
         name: "vault",
         programId: new PublicKey(VAULT_PROGRAM_ID),
+      },
+      {
+        name: "damm_v2",
+        programId: new PublicKey(DAMM_V2_PROGRAM_ID),
       },
     ],
     [

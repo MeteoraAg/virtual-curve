@@ -76,7 +76,10 @@ describe("Fee Swap test", () => {
         tokenType: 0, // spl_token
         tokenDecimal: 6,
         migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
-        creatorPostMigrationFeePercentage: 5,
+        partnerLpPercentage: 0,
+        creatorLpPercentage: 0,
+        partnerLockedLpPercentage: 95,
+        creatorLockedLpPercentage: 5,
         sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
         padding: [],
         curve: curves,
@@ -382,7 +385,10 @@ describe("Fee Swap test", () => {
         tokenType: 0, // spl_token
         tokenDecimal: 6,
         migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
-        creatorPostMigrationFeePercentage: 5,
+        partnerLpPercentage: 0,
+        creatorLpPercentage: 0,
+        partnerLockedLpPercentage: 95,
+        creatorLockedLpPercentage: 5,
         sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
         padding: [],
         curve: curves,

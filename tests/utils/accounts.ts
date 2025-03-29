@@ -3,6 +3,7 @@ import BN from "bn.js";
 
 import {
   DAMM_PROGRAM_ID,
+  DAMM_V2_PROGRAM_ID,
   METAPLEX_PROGRAM_ID,
   VAULT_PROGRAM_ID,
   VIRTUAL_CURVE_PROGRAM_ID,
@@ -81,6 +82,24 @@ export function deriveDammPoolAddress(
   )[0];
 }
 
+
+export function deriveDammV2PoolAddress(
+  config: PublicKey,
+  tokenAMint: PublicKey,
+  tokenBMint: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [
+      Buffer.from("pool"),
+      config.toBuffer(),
+      getFirstKey(tokenAMint, tokenBMint),
+      getSecondKey(tokenAMint, tokenBMint),
+    ],
+    DAMM_V2_PROGRAM_ID
+  )[0];
+}
+
+
 export function deriveTokenVaultAddress(
   tokenMint: PublicKey,
   pool: PublicKey
@@ -149,6 +168,16 @@ export function deriveMigrationMetadataAddress(
 ): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("meteora"), virtual_pool.toBuffer()],
+    VIRTUAL_CURVE_PROGRAM_ID
+  )[0];
+}
+
+
+export function deriveMigrationDammV2MetadataAddress(
+  virtual_pool: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("damm_v2"), virtual_pool.toBuffer()],
     VIRTUAL_CURVE_PROGRAM_ID
   )[0];
 }

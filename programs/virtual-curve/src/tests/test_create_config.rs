@@ -1,8 +1,10 @@
 use crate::{
     constants::MAX_SQRT_PRICE,
     params::liquidity_distribution::{
-        get_minimum_base_token_for_curve, LiquidityDistributionParameters,
+        get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
+        LiquidityDistributionParameters,
     },
+    state::MigrationOption,
 };
 
 use super::price_math::get_price_from_id;
@@ -20,9 +22,16 @@ fn test_create_config() {
             .checked_shl(64)
             .unwrap(),
     }];
-    let (swap_base_amount, migration_base_amount) =
-        get_minimum_base_token_for_curve(migration_quote_threshold, sqrt_start_price, &curve)
-            .unwrap();
+    let sqrt_migration_price =
+        get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve).unwrap();
+    let swap_base_amount =
+        get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve).unwrap();
+    let migration_base_amount = get_migration_base_token(
+        migration_quote_threshold,
+        sqrt_migration_price,
+        MigrationOption::MeteoraDamm,
+    )
+    .unwrap();
 
     println!("{} {}", swap_base_amount, migration_base_amount);
 }
