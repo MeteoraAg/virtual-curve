@@ -2,7 +2,7 @@ use anyhow::{ensure, Context, Result};
 use virtual_curve::{
     activation_handler::ActivationType,
     params::swap::TradeDirection,
-    state::{PoolConfig, SwapResult, VirtualPool},
+    state::{fee::FeeMode, PoolConfig, SwapResult, VirtualPool},
 };
 
 pub fn quote_exact_in(
@@ -12,7 +12,7 @@ pub fn quote_exact_in(
     current_timestamp: u64,
     current_slot: u64,
     transfer_fee_excluded_amount_in: u64, // must be calculated from outside
-    is_referral: bool,
+    has_referral: bool,
 ) -> Result<SwapResult> {
     let mut virtual_pool = *virtual_pool;
 
@@ -36,10 +36,11 @@ pub fn quote_exact_in(
     } else {
         TradeDirection::QuoteToBase
     };
+    let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
     let swap_result = virtual_pool.get_swap_result(
         &config,
         transfer_fee_excluded_amount_in,
-        is_referral,
+        fee_mode,
         trade_direction,
         current_point,
     )?;

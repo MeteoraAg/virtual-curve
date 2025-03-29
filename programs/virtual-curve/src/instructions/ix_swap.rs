@@ -6,6 +6,7 @@ use crate::{
     activation_handler::get_current_point,
     constants::seeds::POOL_AUTHORITY_PREFIX,
     params::swap::TradeDirection,
+    state::fee::FeeMode,
     state::{CollectFeeMode, PoolConfig, VirtualPool},
     token::{calculate_transfer_fee_excluded_amount, transfer_from_pool, transfer_from_user},
     EvtSwap, PoolError,
@@ -137,11 +138,12 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     pool.update_pre_swap(current_timestamp)?;
 
     let current_point = get_current_point(config.activation_type)?;
+    let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
 
     let swap_result = pool.get_swap_result(
         &config,
         transfer_fee_excluded_amount_in,
-        has_referral,
+        fee_mode,
         trade_direction,
         current_point,
     )?;
@@ -151,13 +153,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         PoolError::ExceededSlippage
     );
 
-    pool.apply_swap_result(
-        &config,
-        transfer_fee_excluded_amount_in,
-        &swap_result,
-        trade_direction,
-        current_timestamp,
-    )?;
+    pool.apply_swap_result(&swap_result, fee_mode, trade_direction, current_timestamp)?;
 
     // send to reserve
     transfer_from_user(

@@ -10,7 +10,9 @@ use crate::{
         BASIS_POINT_MAX,
     },
     fee_math::get_fee_in_period,
+    params::swap::TradeDirection,
     safe_math::SafeMath,
+    state::CollectFeeMode,
     utils_math::safe_mul_div_cast_u64,
     PoolError,
 };
@@ -289,5 +291,39 @@ impl DynamicFeeStruct {
         } else {
             Ok(0)
         }
+    }
+}
+
+#[derive(Default)]
+pub struct FeeMode {
+    pub fees_on_input: bool,
+    pub fees_on_base_token: bool,
+    pub has_referral: bool,
+}
+
+impl FeeMode {
+    pub fn get_fee_mode(
+        collect_fee_mode: u8,
+        trade_direction: TradeDirection,
+        has_referral: bool,
+    ) -> Result<FeeMode> {
+        let collect_fee_mode = CollectFeeMode::try_from(collect_fee_mode)
+            .map_err(|_| PoolError::InvalidCollectFeeMode)?;
+
+        let (fees_on_input, fees_on_base_token) = match (collect_fee_mode, trade_direction) {
+            // When collecting fees on output token
+            (CollectFeeMode::OutputToken, TradeDirection::BaseToQuote) => (false, false),
+            (CollectFeeMode::OutputToken, TradeDirection::QuoteToBase) => (false, true),
+
+            // When collecting fees on quote token
+            (CollectFeeMode::QuoteToken, TradeDirection::BaseToQuote) => (false, false),
+            (CollectFeeMode::QuoteToken, TradeDirection::QuoteToBase) => (true, false),
+        };
+
+        Ok(FeeMode {
+            fees_on_input,
+            fees_on_base_token,
+            has_referral,
+        })
     }
 }
