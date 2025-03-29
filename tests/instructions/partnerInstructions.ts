@@ -12,7 +12,7 @@ import {
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
 import { expect } from "chai";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 
 export type BaseFee = {
   cliffFeeNumerator: BN;
@@ -106,12 +106,19 @@ export async function claimTradingFee(
 ): Promise<any> {
   const { feeClaimer, pool, maxBaseAmount, maxQuoteAmount } = params;
   const poolState = await getVirtualPool(banksClient, program, pool);
+  const configState = await getConfig(banksClient, program, poolState.config);
   const poolAuthority = derivePoolAuthority();
 
   const quoteMintInfo = await getTokenAccount(
     banksClient,
     poolState.quoteVault
   );
+
+  const tokenBaseProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const tokenQuoteProgram =
+    configState.quoteTokenFlag == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
 
   const preInstructions: TransactionInstruction[] = [];
   const postInstructions: TransactionInstruction[] = [];
@@ -124,14 +131,14 @@ export async function claimTradingFee(
       feeClaimer,
       poolState.baseMint,
       feeClaimer.publicKey,
-      TOKEN_PROGRAM_ID
+      tokenBaseProgram
     ),
     getOrCreateAssociatedTokenAccount(
       banksClient,
       feeClaimer,
       quoteMintInfo.mint,
       feeClaimer.publicKey,
-      TOKEN_PROGRAM_ID
+      tokenQuoteProgram
     ),
   ]);
   createBaseTokenAccountIx && preInstructions.push(createBaseTokenAccountIx);
@@ -153,8 +160,8 @@ export async function claimTradingFee(
       baseMint: poolState.baseMint,
       quoteMint: quoteMintInfo.mint,
       feeClaimer: feeClaimer.publicKey,
-      tokenBaseProgram: TOKEN_PROGRAM_ID,
-      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      tokenBaseProgram,
+      tokenQuoteProgram,
     })
     .preInstructions(preInstructions)
     .postInstructions(postInstructions)

@@ -1,22 +1,19 @@
+use super::InitializePoolParameters;
+use super::{max_key, min_key};
+use crate::token::update_account_lamports_to_minimum_balance;
 use crate::{
     activation_handler::get_current_point,
     constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
     state::{PoolConfig, PoolType, TokenType, VirtualPool},
-    token::create_position_base_mint_with_extensions,
     EvtInitializePool, PoolError,
 };
-use anchor_lang::{
-    prelude::*,
-    system_program::{create_account, CreateAccount},
-};
+use anchor_lang::prelude::*;
 use anchor_spl::{
-    token::TokenAccount as TokenAccountSpl,
-    token_2022::{initialize_account3, mint_to, InitializeAccount3, MintTo, Token2022},
-    token_interface::{Mint, TokenAccount, TokenInterface},
+    token_2022::{mint_to, MintTo, Token2022},
+    token_interface::{
+        token_metadata_initialize, Mint, TokenAccount, TokenInterface, TokenMetadataInitialize,
+    },
 };
-
-use super::InitializePoolParameters;
-use super::{max_key, min_key};
 
 #[event_cpi]
 #[derive(Accounts)]
@@ -38,8 +35,18 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
     pub creator: UncheckedAccount<'info>,
 
     /// Unique token mint address, initialize in contract
-    #[account(mut)]
-    pub base_mint: Signer<'info>,
+    #[account(
+        init,
+        signer,
+        payer = payer,
+        mint::token_program = token_program,
+        mint::decimals = config.load()?.token_decimal,
+        mint::authority = pool_authority,
+        mint::freeze_authority = pool_authority,
+        extensions::metadata_pointer::authority = pool_authority,
+        extensions::metadata_pointer::metadata_address = base_mint,
+    )]
+    pub base_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mint::token_program = token_quote_program,
@@ -63,15 +70,19 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
 
     /// CHECK: Token base vault for the pool
     #[account(
-        mut,
+        init,
         seeds = [
             TOKEN_VAULT_PREFIX.as_ref(),
             base_mint.key().as_ref(),
             pool.key().as_ref(),
         ],
+        token::mint = base_mint,
+        token::authority = pool_authority,
+        token::token_program = token_program,
+        payer = payer,
         bump,
     )]
-    pub base_vault: UncheckedAccount<'info>,
+    pub base_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     /// Token quote vault for the pool
     #[account(
@@ -95,7 +106,7 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
 
     /// Program to create mint account and mint tokens
     pub token_quote_program: Interface<'info, TokenInterface>,
-
+    /// token program for base mint
     pub token_program: Program<'info, Token2022>,
     // Sysvar for program account
     pub system_program: Program<'info, System>,
@@ -115,49 +126,29 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
 
     let InitializePoolParameters { name, symbol, uri } = params;
 
-    // create mint
-    create_position_base_mint_with_extensions(
-        ctx.accounts.payer.to_account_info(),
+    // initialize metadata
+    let cpi_accounts = TokenMetadataInitialize {
+        program_id: ctx.accounts.token_program.to_account_info(),
+        mint: ctx.accounts.base_mint.to_account_info(),
+        metadata: ctx.accounts.base_mint.to_account_info(),
+        mint_authority: ctx.accounts.pool_authority.to_account_info(),
+        update_authority: ctx.accounts.pool_authority.to_account_info(),
+    };
+    let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+    let signer_seeds = &[&seeds[..]];
+    let cpi_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        cpi_accounts,
+        signer_seeds,
+    );
+    token_metadata_initialize(cpi_ctx, name, symbol, uri)?;
+
+    // transfer minimum rent to mint account
+    update_account_lamports_to_minimum_balance(
         ctx.accounts.base_mint.to_account_info(),
-        ctx.accounts.pool_authority.to_account_info(),
+        ctx.accounts.payer.to_account_info(),
         ctx.accounts.system_program.to_account_info(),
-        ctx.accounts.token_program.to_account_info(),
-        &name,
-        &symbol,
-        &uri,
-        ctx.bumps.pool_authority,
     )?;
-
-    // create token account
-    let pool_key = ctx.accounts.pool.key();
-    let base_vault_seeds =
-        base_vault_seeds!(ctx.accounts.base_mint.key, pool_key, ctx.bumps.base_vault);
-    let space = TokenAccountSpl::LEN;
-    let lamports = Rent::get()?.minimum_balance(space);
-    create_account(
-        CpiContext::new_with_signer(
-            ctx.accounts.system_program.to_account_info(),
-            CreateAccount {
-                from: ctx.accounts.payer.to_account_info(),
-                to: ctx.accounts.base_vault.to_account_info(),
-            },
-            &[&base_vault_seeds[..]],
-        ),
-        lamports,
-        space as u64,
-        ctx.accounts.token_program.key,
-    )?;
-
-    // create user position nft account
-    initialize_account3(CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        InitializeAccount3 {
-            account: ctx.accounts.base_vault.to_account_info(),
-            mint: ctx.accounts.base_mint.to_account_info(),
-            authority: ctx.accounts.pool_authority.to_account_info(),
-        },
-        &[&base_vault_seeds[..]],
-    ))?;
 
     let config = ctx.accounts.config.load()?;
     let initial_base_supply = config.get_initial_base_supply()?;

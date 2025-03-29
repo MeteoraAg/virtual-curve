@@ -1,6 +1,3 @@
-use anchor_lang::prelude::Pubkey;
-use anchor_lang::solana_program::pubkey;
-
 /// refer raydium clmm
 pub const MIN_SQRT_PRICE: u128 = 4295048016;
 /// refer raydium clmm
@@ -99,14 +96,3 @@ pub mod seeds {
     pub const CLAIM_FEE_OPERATOR_PREFIX: &[u8] = b"cf_operator";
     pub const METEORA_METADATA_PREFIX: &[u8] = b"meteora";
 }
-
-// Supported quote mints
-const SOL: Pubkey = pubkey!("So11111111111111111111111111111111111111112");
-const USDC: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
-pub const DEFAULT_QUOTE_MINTS: [Pubkey; 2] = [SOL, USDC];
-
-#[cfg(not(feature = "local"))]
-pub const DEFAULT_QUOTE_THRESHOLD: [u64; 2] = [500_000_000_000, 50_000_000_000]; // 500 SOL and 50k USDC
-
-#[cfg(feature = "local")]
-pub const DEFAULT_QUOTE_THRESHOLD: [u64; 2] = [5_000_000_000, 50_000_000_000]; // 5 SOL and 50k USDC

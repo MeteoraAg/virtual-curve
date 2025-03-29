@@ -1,5 +1,4 @@
 [workspace]
-# members = [ "cli","programs/*"]
 members = ["programs/*", "virtual-curve-sdk"]
 resolver = "2"
 

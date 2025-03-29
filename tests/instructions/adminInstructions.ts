@@ -13,8 +13,9 @@ import {
   processTransactionMaybeThrow,
   TREASURY,
   getClaimFeeOperator,
+  getConfig,
 } from "../utils";
-import { TOKEN_PROGRAM_ID } from "@solana/spl-token";
+import { TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { expect } from "chai";
 
 export type CreateClaimfeeOperatorParams = {
@@ -92,6 +93,7 @@ export async function claimProtocolFee(
 ): Promise<any> {
   const { operator, pool } = params;
   const poolState = await getVirtualPool(banksClient, program, pool);
+  const configState = await getConfig(banksClient, program, poolState.config);
   const totalQuoteProtocolFee = poolState.protocolQuoteFee;
   const totalBaseProtocolFee = poolState.protocolBaseFee;
   const poolAuthority = derivePoolAuthority();
@@ -100,6 +102,14 @@ export async function claimProtocolFee(
     banksClient,
     poolState.quoteVault
   );
+
+
+
+  const tokenBaseProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const tokenQuoteProgram =
+    configState.quoteTokenFlag == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
 
   const preInstructions: TransactionInstruction[] = [];
   const [
@@ -111,22 +121,22 @@ export async function claimProtocolFee(
       operator,
       poolState.baseMint,
       TREASURY,
-      TOKEN_PROGRAM_ID
+      tokenBaseProgram
     ),
     getOrCreateAssociatedTokenAccount(
       banksClient,
       operator,
       quoteMintInfo.mint,
       TREASURY,
-      TOKEN_PROGRAM_ID
+      tokenQuoteProgram
     ),
   ]);
   createBaseTokenAccountIx && preInstructions.push(createBaseTokenAccountIx);
   createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
 
-  const preQuoteTokenBalance = (
-    await getTokenAccount(banksClient, tokenQuoteAccount)
-  ).amount;
+  const tokenQuoteAccountState = await getTokenAccount(banksClient, tokenQuoteAccount);
+  const preQuoteTokenBalance = tokenQuoteAccountState ? tokenQuoteAccountState.amount : 0;
+
   const transaction = await program.methods
     .claimProtocolFee()
     .accounts({
@@ -141,8 +151,8 @@ export async function claimProtocolFee(
       tokenQuoteAccount,
       claimFeeOperator,
       operator: operator.publicKey,
-      tokenBaseProgram: TOKEN_PROGRAM_ID,
-      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      tokenBaseProgram,
+      tokenQuoteProgram,
     })
     .preInstructions(preInstructions)
     .transaction();

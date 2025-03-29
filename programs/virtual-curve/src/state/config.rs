@@ -209,14 +209,14 @@ pub struct PoolConfig {
     pub activation_type: u8,
     /// token decimals
     pub token_decimal: u8,
-    /// token type
-    pub token_type: u8,
     /// creator post migration fee percentage
     pub creator_post_migration_fee_percentage: u8,
     /// version
     pub version: u8,
-    /// padding 0
-    pub _padding_0: [u8; 1],
+    /// token type of base token
+    pub token_type: u8,
+    /// quote token flag
+    pub quote_token_flag: u8,
     /// swap base amount
     pub swap_base_amount: u64,
     /// migration quote threshold (in quote token)
@@ -254,6 +254,7 @@ impl PoolConfig {
         activation_type: u8,
         token_decimal: u8,
         token_type: u8,
+        quote_token_flag: u8,
         creator_post_migration_fee_percentage: u8,
         swap_base_amount: u64,
         migration_quote_threshold: u64,
@@ -275,6 +276,7 @@ impl PoolConfig {
         self.migration_base_threshold = migration_base_threshold;
         self.sqrt_start_price = sqrt_start_price;
         self.token_type = token_type;
+        self.quote_token_flag = quote_token_flag;
         self.creator_post_migration_fee_percentage = creator_post_migration_fee_percentage;
 
         let curve_length = curve.len();

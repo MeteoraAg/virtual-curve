@@ -1,0 +1,178 @@
+import { BN } from "bn.js";
+import { ProgramTestContext } from "solana-bankrun";
+import { unpack } from "@solana/spl-token-metadata";
+import {
+    BaseFee,
+    claimProtocolFee,
+    ClaimTradeFeeParams,
+    claimTradingFee,
+    ConfigParameters,
+    createClaimFeeOperator,
+    createConfig,
+    CreateConfigParams,
+    createPoolWithToken2022,
+    swap,
+    SwapParams,
+} from "./instructions";
+import { Pool, VirtualCurveProgram } from "./utils/types";
+import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { fundSol, startTest } from "./utils";
+import {
+    createVirtualCurveProgram,
+    MAX_SQRT_PRICE,
+    MIN_SQRT_PRICE,
+    U64_MAX,
+} from "./utils";
+import { getVirtualPool } from "./utils/fetcher";
+import { ACCOUNT_SIZE, ACCOUNT_TYPE_SIZE, ExtensionType, getExtensionData, NATIVE_MINT } from "@solana/spl-token";
+import { expect } from "chai";
+
+
+describe("Create pool with token2022", () => {
+    let context: ProgramTestContext;
+    let admin: Keypair;
+    let operator: Keypair;
+    let partner: Keypair;
+    let user: Keypair;
+    let poolCreator: Keypair;
+    let program: VirtualCurveProgram;
+    let config: PublicKey;
+    let virtualPool: PublicKey;
+    let virtualPoolState: Pool;
+    let claimFeeOperator: PublicKey;
+
+    before(async () => {
+        context = await startTest();
+        admin = context.payer;
+        operator = Keypair.generate();
+        partner = Keypair.generate();
+        user = Keypair.generate();
+        poolCreator = Keypair.generate();
+        const receivers = [
+            operator.publicKey,
+            partner.publicKey,
+            user.publicKey,
+            poolCreator.publicKey,
+        ];
+        await fundSol(context.banksClient, admin, receivers);
+        program = createVirtualCurveProgram();
+
+        // admin create claimFeeOperator
+        claimFeeOperator = await createClaimFeeOperator(
+            context.banksClient,
+            program,
+            {
+                admin,
+                operator: operator.publicKey,
+            }
+        );
+    });
+
+    it("Partner create config", async () => {
+        const baseFee: BaseFee = {
+            cliffFeeNumerator: new BN(2_500_000),
+            numberOfPeriod: 0,
+            reductionFactor: new BN(0),
+            periodFrequency: new BN(0),
+            feeSchedulerMode: 0,
+        };
+
+        const curves = [];
+
+        for (let i = 1; i <= 20; i++) {
+            curves.push({
+                sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+                liquidity: U64_MAX.shln(30 + i),
+            });
+        }
+
+        const instructionParams: ConfigParameters = {
+            poolFees: {
+                baseFee,
+                dynamicFee: null,
+            },
+            activationType: 0,
+            collectFeeMode: 0,
+            migrationOption: 0,
+            tokenType: 1, // token 2022
+            tokenDecimal: 6,
+            migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
+            creatorPostMigrationFeePercentage: 5,
+            sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
+            padding: [],
+            curve: curves,
+        };
+        const params: CreateConfigParams = {
+            payer: partner,
+            owner: partner.publicKey,
+            feeClaimer: partner.publicKey,
+            quoteMint: NATIVE_MINT,
+            instructionParams,
+        };
+        config = await createConfig(context.banksClient, program, params);
+    });
+
+    it("Create token2022 pool from config", async () => {
+        const name = "test token 2022";
+        const symbol = "TOKEN2022";
+        const uri = "token2022.com";
+
+        virtualPool = await createPoolWithToken2022(context.banksClient, program, {
+            payer: poolCreator,
+            quoteMint: NATIVE_MINT,
+            config,
+            instructionParams: {
+                name,
+                symbol,
+                uri,
+            },
+        });
+        virtualPoolState = await getVirtualPool(
+            context.banksClient,
+            program,
+            virtualPool
+        );
+
+        // validate metadata
+        const tlvData = (
+            await context.banksClient.getAccount(virtualPoolState.baseMint)
+        ).data.slice(ACCOUNT_SIZE + ACCOUNT_TYPE_SIZE);
+        const metadata = unpack(
+            getExtensionData(ExtensionType.TokenMetadata, Buffer.from(tlvData))
+        );
+        expect(metadata.name).eq(name);
+        expect(metadata.symbol).eq(symbol);
+        expect(metadata.uri).eq(uri);
+    });
+
+    it("Swap", async () => {
+        const params: SwapParams = {
+            config,
+            payer: user,
+            pool: virtualPool,
+            inputTokenMint: NATIVE_MINT,
+            outputTokenMint: virtualPoolState.baseMint,
+            amountIn: new BN(LAMPORTS_PER_SOL * 5.5),
+            minimumAmountOut: new BN(0),
+            referralTokenAccount: null,
+        };
+        await swap(context.banksClient, program, params);
+    });
+
+    it("Partner claim trading fee", async () => {
+        const claimTradingFeeParams: ClaimTradeFeeParams = {
+            feeClaimer: partner,
+            pool: virtualPool,
+            maxBaseAmount: new BN(U64_MAX),
+            maxQuoteAmount: new BN(U64_MAX),
+        };
+        await claimTradingFee(context.banksClient, program, claimTradingFeeParams);
+    });
+
+    it("Operator claim protocol fee", async () => {
+        await claimProtocolFee(context.banksClient, program, {
+            pool: virtualPool,
+            operator: operator,
+        });
+    });
+});
