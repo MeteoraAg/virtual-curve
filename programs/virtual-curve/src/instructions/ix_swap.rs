@@ -7,7 +7,7 @@ use crate::{
     constants::seeds::POOL_AUTHORITY_PREFIX,
     params::swap::TradeDirection,
     state::fee::FeeMode,
-    state::{CollectFeeMode, PoolConfig, VirtualPool},
+    state::{PoolConfig, VirtualPool},
     token::{calculate_transfer_fee_excluded_amount, transfer_from_pool, transfer_from_user},
     EvtSwap, PoolError,
 };
