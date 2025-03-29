@@ -7,6 +7,8 @@ pub const BASIS_POINT_MAX: u64 = 10_000;
 
 pub const U24_MAX: u32 = 0xffffff;
 
+pub const BIN_STEP_DEFAULT: u16 = 1;
+
 // Number of bits to scale. This will decide the position of the radix point.
 
 pub const MAX_CURVE_POINT: usize = 20;

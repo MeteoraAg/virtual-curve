@@ -3,7 +3,7 @@ use crate::constants::fee::{
     FEE_DENOMINATOR, HOST_FEE_PERCENT, MAX_BASIS_POINT, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR,
     PROTOCOL_FEE_PERCENT,
 };
-use crate::constants::{BASIS_POINT_MAX, U24_MAX};
+use crate::constants::{BASIS_POINT_MAX, BIN_STEP_DEFAULT, U24_MAX};
 use crate::error::PoolError;
 use crate::fee_math::get_fee_in_period;
 use crate::safe_math::SafeMath;
@@ -174,10 +174,7 @@ impl DynamicFeeParameters {
         }
     }
     pub fn validate(&self) -> Result<()> {
-        require!(
-            self.bin_step > 0 && self.bin_step <= 400,
-            PoolError::InvalidInput
-        );
+        require!(self.bin_step == BIN_STEP_DEFAULT, PoolError::InvalidInput);
 
         let bin_step_u128 = (self.bin_step as u128)
             .safe_shl(64)?

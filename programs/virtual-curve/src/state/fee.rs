@@ -1,5 +1,3 @@
-use std::u64;
-
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
@@ -13,7 +11,8 @@ use crate::{
     params::swap::TradeDirection,
     safe_math::SafeMath,
     state::CollectFeeMode,
-    utils_math::safe_mul_div_cast_u64,
+    u128x128_math::Rounding,
+    utils_math::{safe_mul_div_cast_u64, safe_mul_shr_cast, safe_shl_div_cast},
     PoolError,
 };
 
@@ -210,27 +209,26 @@ pub struct DynamicFeeStruct {
 const_assert_eq!(DynamicFeeStruct::INIT_SPACE, 96);
 
 impl DynamicFeeStruct {
-    // we approximate (1+bin_step)^bin_id = 1 + bin_step * bin_id
-    pub fn get_delta_bin_id(
-        bin_step_u128: u128,
-        sqrt_price_a: u128,
-        sqrt_price_b: u128,
-    ) -> Result<u128> {
-        let delta_id = if sqrt_price_a > sqrt_price_b {
-            sqrt_price_a
-                .safe_sub(sqrt_price_b)?
-                .safe_div(bin_step_u128)?
+    // Px / Py = 1 + b * delta_bin_id
+    // detal_bin_id = ((sqrt_price_x/sqrt_price_y) ^ 2 - 1) / b, b fixed = 1
+    pub fn get_delta_bin_id(sqrt_price_a: u128, sqrt_price_b: u128) -> Result<u128> {
+        let (max_price, min_price) = if sqrt_price_a > sqrt_price_b {
+            (sqrt_price_a, sqrt_price_b)
         } else {
-            sqrt_price_b
-                .safe_sub(sqrt_price_a)?
-                .safe_div(bin_step_u128)?
+            (sqrt_price_b, sqrt_price_a)
         };
-        Ok(delta_id.safe_mul(2)?) // mul 2 because we are using sqrt price
+
+        let price_ratio = safe_shl_div_cast(max_price, min_price, 64, Rounding::Down)?;
+
+        let square_price_ratio: u128 = safe_mul_shr_cast(price_ratio, price_ratio, 64)?;
+
+        let delta_bin_id = square_price_ratio.safe_sub(1u128)?;
+
+        Ok(delta_bin_id)
     }
 
     pub fn update_volatility_accumulator(&mut self, sqrt_price: u128) -> Result<()> {
-        let delta_price =
-            Self::get_delta_bin_id(self.bin_step_u128, sqrt_price, self.sqrt_price_reference)?;
+        let delta_price = Self::get_delta_bin_id(sqrt_price, self.sqrt_price_reference)?;
 
         let volatility_accumulator = self
             .volatility_reference

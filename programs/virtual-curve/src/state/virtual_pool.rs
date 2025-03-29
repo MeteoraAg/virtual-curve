@@ -435,11 +435,7 @@ impl VirtualPool {
                 .update_volatility_accumulator(self.sqrt_price)?;
 
             // update only last_update_timestamp if bin is crossed
-            let delta_price = DynamicFeeStruct::get_delta_bin_id(
-                self.pool_fees.dynamic_fee.bin_step_u128,
-                old_sqrt_price,
-                self.sqrt_price,
-            )?;
+            let delta_price = DynamicFeeStruct::get_delta_bin_id(old_sqrt_price, self.sqrt_price)?;
             if delta_price > 0 {
                 self.pool_fees.dynamic_fee.last_update_timestamp = current_timestamp;
             }
