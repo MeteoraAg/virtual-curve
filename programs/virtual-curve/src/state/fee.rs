@@ -5,7 +5,7 @@ use static_assertions::const_assert_eq;
 use crate::{
     constants::{
         fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
-        BASIS_POINT_MAX,
+        BASIS_POINT_MAX, ONE_Q64,
     },
     fee_math::get_fee_in_period,
     params::swap::TradeDirection,
@@ -225,9 +225,7 @@ impl DynamicFeeStruct {
         let price_ratio: u128 =
             safe_shl_div_cast(upper_sqrt_price, lower_sqrt_price, 64, Rounding::Down)?;
 
-        let delta_bin_id = price_ratio
-            .safe_sub(1u128.safe_shl(64)?)?
-            .safe_div(bin_step_u128)?;
+        let delta_bin_id = price_ratio.safe_sub(ONE_Q64)?.safe_div(bin_step_u128)?;
 
         Ok(delta_bin_id.safe_mul(2)?)
     }

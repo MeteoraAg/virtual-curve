@@ -7,6 +7,8 @@ pub const BASIS_POINT_MAX: u64 = 10_000;
 
 pub const U24_MAX: u32 = 0xffffff;
 
+pub const ONE_Q64: u128 = 1u128 << 64;
+
 pub const BIN_STEP_BPS_DEFAULT: u16 = 1;
 
 //  bin_step << 64 / BASIS_POINT_MAX
