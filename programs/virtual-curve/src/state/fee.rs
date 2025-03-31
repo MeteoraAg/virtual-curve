@@ -12,7 +12,7 @@ use crate::{
     safe_math::SafeMath,
     state::CollectFeeMode,
     u128x128_math::Rounding,
-    utils_math::{safe_mul_div_cast_u64, safe_mul_shr_cast, safe_shl_div_cast},
+    utils_math::{safe_mul_div_cast_u64, safe_shl_div_cast},
     PoolError,
 };
 
@@ -210,7 +210,6 @@ const_assert_eq!(DynamicFeeStruct::INIT_SPACE, 96);
 
 impl DynamicFeeStruct {
     // Px / Py = 1 + b * delta_bin_id
-    // detal_bin_id = ((sqrt_price_x/sqrt_price_y) ^ 2 - 1) / b, b fixed = 1
     pub fn get_delta_bin_id(
         bin_step_u128: u128,
         sqrt_price_a: u128,
@@ -222,15 +221,13 @@ impl DynamicFeeStruct {
             (sqrt_price_b, sqrt_price_a)
         };
 
-        let price_ratio = safe_shl_div_cast(max_price, min_price, 64, Rounding::Down)?;
+        let price_ratio: u128 = safe_shl_div_cast(max_price, min_price, 64, Rounding::Down)?;
 
-        let square_price_ratio: u128 = safe_mul_shr_cast(price_ratio, price_ratio, 64)?;
-
-        let delta_bin_id = square_price_ratio
-            .safe_sub(1u128)?
+        let delta_bin_id = price_ratio
+            .safe_sub(1u128.safe_shl(64)?)?
             .safe_div(bin_step_u128)?;
 
-        Ok(delta_bin_id)
+        Ok(delta_bin_id.safe_mul(2)?)
     }
 
     pub fn update_volatility_accumulator(&mut self, sqrt_price: u128) -> Result<()> {
