@@ -2,6 +2,7 @@ import {
   ComputeBudgetProgram,
   Keypair,
   PublicKey,
+  SystemProgram,
   SYSVAR_RENT_PUBKEY,
   TransactionInstruction,
 } from "@solana/web3.js";
@@ -24,6 +25,7 @@ import {
   createLockEscrowIx,
   getOrCreateAssociatedTokenAccount,
   getMeteoraDammMigrationMetadata,
+  deriveEventAuthority,
 } from "../utils";
 import { BanksClient } from "solana-bankrun";
 import {
@@ -44,12 +46,15 @@ export async function createMeteoraMetadata(
   params: CreateMeteoraMetadata
 ): Promise<any> {
   const { payer, virtualPool, config } = params;
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
   const transaction = await program.methods
     .migrationMeteoraDammCreateMetadata()
-    .accounts({
+    .accountsPartial({
       virtualPool,
       config,
+      migrationMetadata,
       payer: payer.publicKey,
+      systemProgram: SystemProgram.programId,
     })
     .transaction();
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
@@ -127,7 +132,7 @@ export async function migrateToMeteoraDamm(
 
   const transaction = await program.methods
     .migrateMeteoraDamm()
-    .accounts({
+    .accountsPartial({
       virtualPool,
       migrationMetadata,
       config: virtualPoolState.config,
@@ -158,6 +163,7 @@ export async function migrateToMeteoraDamm(
       vaultProgram: VAULT_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
     })
     .transaction();
   transaction.add(
@@ -254,7 +260,7 @@ export async function lockLpForCreatorDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammLockLpTokenForCreator()
-    .accounts({
+    .accountsPartial({
       migrationMetadata,
       poolAuthority,
       pool: dammPool,
@@ -366,7 +372,7 @@ export async function lockLpForPartnerDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammLockLpTokenForPartner()
-    .accounts({
+    .accountsPartial({
       migrationMetadata,
       poolAuthority,
       pool: dammPool,

@@ -28,6 +28,7 @@ import {
   createVaultProgram,
   DAMM_PROGRAM_ID,
   deriveDammPoolAddress,
+  deriveEventAuthority,
   deriveLpMintAddress,
   deriveProtocolFeeAddress,
   deriveVaultLPAddress,
@@ -79,7 +80,7 @@ export async function createPoolWithSplToken(
     configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
   const transaction = await program.methods
     .initializeVirtualPoolWithSplToken(instructionParams)
-    .accounts({
+    .accountsPartial({
       config,
       baseMint: baseMintKP.publicKey,
       quoteMint,
@@ -93,6 +94,7 @@ export async function createPoolWithSplToken(
       metadataProgram: METAPLEX_PROGRAM_ID,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
       tokenProgram,
+      systemProgram: SystemProgram.programId,
     })
     .transaction();
 
@@ -118,7 +120,7 @@ export async function createPoolWithToken2022(
   const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
   const transaction = await program.methods
     .initializeVirtualPoolWithToken2022(instructionParams)
-    .accounts({
+    .accountsPartial({
       config,
       baseMint: baseMintKP.publicKey,
       quoteMint,
@@ -130,6 +132,7 @@ export async function createPoolWithToken2022(
       quoteVault,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
       tokenProgram: TOKEN_2022_PROGRAM_ID,
+      systemProgram: SystemProgram.programId,
     })
     .transaction();
 
@@ -236,7 +239,7 @@ export async function swap(
 
   const transaction = await program.methods
     .swap({ amountIn, minimumAmountOut })
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config,
       pool,
@@ -348,7 +351,7 @@ export async function swapSimulate(
 
   const transaction = await program.methods
     .swap({ amountIn, minimumAmountOut })
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config,
       pool,

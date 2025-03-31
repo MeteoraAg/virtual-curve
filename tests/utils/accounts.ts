@@ -152,3 +152,10 @@ export function deriveMigrationMetadataAddress(
     VIRTUAL_CURVE_PROGRAM_ID
   )[0];
 }
+
+export function deriveEventAuthority(programId: PublicKey) {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("__event_authority")],
+    programId
+  );
+}

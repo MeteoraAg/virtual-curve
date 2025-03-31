@@ -1,4 +1,9 @@
-import { Keypair, PublicKey, TransactionInstruction } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { VirtualCurveProgram } from "../utils/types";
 import { BanksClient } from "solana-bankrun";
@@ -9,6 +14,7 @@ import {
   unwrapSOLInstruction,
   getTokenAccount,
   deriveMigrationMetadataAddress,
+  deriveEventAuthority,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
 import { expect } from "chai";
@@ -72,12 +78,13 @@ export async function createConfig(
 
   const transaction = await program.methods
     .createConfig(instructionParams)
-    .accounts({
+    .accountsPartial({
       config: config.publicKey,
       feeClaimer,
       owner,
       quoteMint,
       payer: payer.publicKey,
+      systemProgram: SystemProgram.programId,
     })
     .transaction();
 
@@ -149,7 +156,7 @@ export async function claimTradingFee(
   unrapSOLIx && postInstructions.push(unrapSOLIx);
   const transaction = await program.methods
     .claimTradingFee(maxBaseAmount, maxQuoteAmount)
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       pool,
@@ -208,7 +215,7 @@ export async function partnerWithdrawSurplus(
   unrapSOLIx && postInstructions.push(unrapSOLIx);
   const transaction = await program.methods
     .partnerWithdrawSurplus()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       virtualPool,
