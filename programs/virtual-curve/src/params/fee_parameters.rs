@@ -174,7 +174,7 @@ impl DynamicFeeParameters {
         }
     }
     pub fn validate(&self) -> Result<()> {
-        // force all bin_step as 1 for first version
+        // force all bin_step as 1 bps for first version
         require!(
             self.bin_step == BIN_STEP_BPS_DEFAULT,
             PoolError::InvalidInput
