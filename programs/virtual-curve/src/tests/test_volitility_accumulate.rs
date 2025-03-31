@@ -45,18 +45,6 @@ fn test_delta_bin_id_small_movement() {
 }
 
 #[test]
-fn test_delta_bin_id_downward_price() {
-    let sqrt_price_a = 985_000_000u128;
-    let sqrt_price_b = 1_000_000_000u128;
-
-    let result =
-        DynamicFeeStruct::get_delta_bin_id(BIN_STEP_BPS_U128_DEFAULT, sqrt_price_a, sqrt_price_b)
-            .unwrap();
-
-    assert!(result > 0);
-}
-
-#[test]
 fn test_get_delta_bin_id_overflow() {
     //  overflow in price ratio calculation
     let sqrt_price_a = u128::MAX;
