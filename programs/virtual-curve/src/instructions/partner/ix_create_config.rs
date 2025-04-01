@@ -32,7 +32,7 @@ pub struct ConfigParameters {
 }
 
 impl ConfigParameters {
-    pub fn validate(&self, quote_mint: &InterfaceAccount<'info, Mint>) -> Result<()> {
+    pub fn validate<'info>(&self, quote_mint: &InterfaceAccount<'info, Mint>) -> Result<()> {
         // validate quote mint
         require!(
             is_supported_quote_mint(quote_mint)?,
@@ -63,7 +63,7 @@ impl ConfigParameters {
 
             #[cfg(not(feature = "local"))]
             require!(
-                quote_mint.to_account_info().owner == anchor_spl::token::Token::id(),
+                *quote_mint.to_account_info().owner == anchor_spl::token::Token::id(),
                 PoolError::InvalidQuoteMint
             );
         }

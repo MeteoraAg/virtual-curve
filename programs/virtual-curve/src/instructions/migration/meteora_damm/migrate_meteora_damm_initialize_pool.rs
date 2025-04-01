@@ -9,6 +9,7 @@ use crate::{
         MeteoraDammMigrationMetadata, MigrationMeteoraDammProgress, MigrationOption, PoolConfig,
         VirtualPool,
     },
+    u128x128_math::Rounding,
     utils_math::safe_mul_div_cast_u64,
     *,
 };
@@ -287,6 +288,7 @@ pub fn handle_migrate_meteora_damm<'info>(
         lp_minted_amount,
         config.creator_post_migration_fee_percentage.into(),
         100,
+        Rounding::Down,
     )?;
     let lp_minted_amount_for_partner = lp_minted_amount.safe_sub(lp_minted_amount_for_creator)?;
     migration_metadata.set_lp_minted(

@@ -162,17 +162,27 @@ impl PoolFeesStruct {
         } else {
             trade_fee_numerator.try_into().unwrap()
         };
-        let trading_fee: u64 = safe_mul_div_cast_u64(amount, trade_fee_numerator, FEE_DENOMINATOR)?;
+        let trading_fee: u64 =
+            safe_mul_div_cast_u64(amount, trade_fee_numerator, FEE_DENOMINATOR, Rounding::Up)?;
         // update amount
         let amount = amount.safe_sub(trading_fee)?;
 
-        let protocol_fee =
-            safe_mul_div_cast_u64(trading_fee, self.protocol_fee_percent.into(), 100)?;
+        let protocol_fee = safe_mul_div_cast_u64(
+            trading_fee,
+            self.protocol_fee_percent.into(),
+            100,
+            Rounding::Down,
+        )?;
         // update trading fee
         let trading_fee: u64 = trading_fee.safe_sub(protocol_fee)?;
 
         let referral_fee = if is_referral {
-            safe_mul_div_cast_u64(protocol_fee, self.referral_fee_percent.into(), 100)?
+            safe_mul_div_cast_u64(
+                protocol_fee,
+                self.referral_fee_percent.into(),
+                100,
+                Rounding::Down,
+            )?
         } else {
             0
         };
