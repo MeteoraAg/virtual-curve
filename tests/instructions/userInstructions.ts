@@ -138,6 +138,7 @@ export async function createPoolWithToken2022(
 
   await processTransactionMaybeThrow(banksClient, transaction);
 
+
   return pool;
 }
 

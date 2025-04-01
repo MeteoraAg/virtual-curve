@@ -42,7 +42,7 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
         mint::token_program = token_program,
         mint::decimals = config.load()?.token_decimal,
         mint::authority = pool_authority,
-        mint::freeze_authority = pool_authority,
+        mint::freeze_authority = Pubkey::default(),
         extensions::metadata_pointer::authority = pool_authority,
         extensions::metadata_pointer::metadata_address = base_mint,
     )]

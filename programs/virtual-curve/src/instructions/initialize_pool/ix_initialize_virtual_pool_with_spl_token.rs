@@ -55,6 +55,7 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
         payer = payer,
         mint::decimals = config.load()?.token_decimal,
         mint::authority = pool_authority,
+        mint::freeze_authority = Pubkey::default(),
         mint::token_program = token_program,
     )]
     pub base_mint: Box<Account<'info, Mint>>,

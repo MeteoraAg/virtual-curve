@@ -17,7 +17,7 @@ import {
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { fundSol, startTest } from "./utils";
+import { fundSol, getMint, startTest } from "./utils";
 import {
   createDammConfig,
   createVirtualCurveProgram,
@@ -35,9 +35,9 @@ import {
   MigrateMeteoraParams,
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
-import { assert } from "chai";
+import { assert, expect } from "chai";
 
-describe("Happy path full flow", () => {
+describe("Full flow with spl-token", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let operator: Keypair;
@@ -139,6 +139,12 @@ describe("Happy path full flow", () => {
       program,
       virtualPool
     );
+
+    // validate freeze authority
+    const baseMintData = (
+      await getMint(context.banksClient, virtualPoolState.baseMint)
+    );
+    expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
   });
 
   it("Swap", async () => {
@@ -177,6 +183,12 @@ describe("Happy path full flow", () => {
     };
 
     await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
+
+    // validate mint authority
+    const baseMintData = (
+      await getMint(context.banksClient, virtualPoolState.baseMint)
+    );
+    expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
   });
 
   it("Partner lock LP", async () => {

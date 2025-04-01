@@ -16,7 +16,7 @@ import {
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { fundSol, startTest } from "./utils";
+import { fundSol, getMint, startTest } from "./utils";
 import {
     createVirtualCurveProgram,
     MAX_SQRT_PRICE,
@@ -143,6 +143,12 @@ describe("Create pool with token2022", () => {
         expect(metadata.name).eq(name);
         expect(metadata.symbol).eq(symbol);
         expect(metadata.uri).eq(uri);
+
+        // validate freeze authority
+        const baseMintData = (
+            await getMint(context.banksClient, virtualPoolState.baseMint)
+        );
+        expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
     });
 
     it("Swap", async () => {
