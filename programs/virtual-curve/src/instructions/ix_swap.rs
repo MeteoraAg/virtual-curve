@@ -6,7 +6,7 @@ use crate::{
     params::swap::TradeDirection,
     state::fee::FeeMode,
     state::{PoolConfig, VirtualPool},
-    token::{calculate_transfer_fee_excluded_amount, transfer_from_pool, transfer_from_user},
+    token::{transfer_from_pool, transfer_from_user},
     EvtSwap, PoolError,
 };
 use anchor_lang::prelude::*;
@@ -117,10 +117,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         ),
     };
 
-    let transfer_fee_excluded_amount_in =
-        calculate_transfer_fee_excluded_amount(&token_in_mint, amount_in)?.amount;
-
-    require!(transfer_fee_excluded_amount_in > 0, PoolError::AmountIsZero);
+    require!(amount_in > 0, PoolError::AmountIsZero);
 
     let has_referral = ctx.accounts.referral_token_account.is_some();
 
@@ -140,13 +137,8 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let current_point = get_current_point(config.activation_type)?;
     let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
 
-    let swap_result = pool.get_swap_result(
-        &config,
-        transfer_fee_excluded_amount_in,
-        fee_mode,
-        trade_direction,
-        current_point,
-    )?;
+    let swap_result =
+        pool.get_swap_result(&config, amount_in, fee_mode, trade_direction, current_point)?;
 
     require!(
         swap_result.output_amount >= minimum_amount_out,
@@ -208,7 +200,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         params,
         swap_result,
         has_referral,
-        transfer_fee_excluded_amount_in,
+        amount_in,
         current_timestamp,
     });
 

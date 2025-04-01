@@ -64,7 +64,7 @@ pub struct EvtSwap {
     pub has_referral: bool,
     pub params: SwapParameters,
     pub swap_result: SwapResult,
-    pub transfer_fee_excluded_amount_in: u64,
+    pub amount_in: u64,
     pub current_timestamp: u64,
 }
 
