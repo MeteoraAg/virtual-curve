@@ -8,13 +8,16 @@ use crate::{
     curve::{
         get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
         get_delta_amount_quote_unsigned_256, get_initial_liquidity_from_delta_quote,
-        get_initialize_amounts, get_next_sqrt_price_from_input,
+        get_next_sqrt_price_from_input,
     },
     safe_math::SafeMath,
     state::{LiquidityDistributionConfig, MigrationOption},
     u128x128_math::Rounding,
     PoolError,
 };
+
+#[cfg(feature = "local")]
+use crate::curve::get_initialize_amounts;
 
 #[derive(Copy, Clone, Debug, AnchorSerialize, AnchorDeserialize, InitSpace, Default)]
 pub struct LiquidityDistributionParameters {

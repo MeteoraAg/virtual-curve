@@ -7,7 +7,7 @@ The Virtual Curve program is a launch pool protocol that allows any launch partn
 - Launch partners can have different configurations for their launch pools, for example, customizable quote token (SOL/USDC/etc), customizable curve for token graduation, customizable fees, etc.
 - Users on these launch platforms can easily create tokens and launch pools directly with the partners' configurations directly on their partners' UI.
 - Trading platforms/bots can immediately trade on these tokens with our direct integrations.
-- Tokens will graduate directly into Meteora DAMM pools. With locked LP tokens, launchers can claim fees on the locked LPs.
+- Tokens will graduate to various AMM (rightnow we only support Meteora DAMM v1 and Meteora DAMM v2), based on partner configuration. With locked LP tokens, launchers can claim fees on the locked LPs.
 - Full API supports for easy integration for launch partners and trading platforms/bots.
 
 ## Notable Features

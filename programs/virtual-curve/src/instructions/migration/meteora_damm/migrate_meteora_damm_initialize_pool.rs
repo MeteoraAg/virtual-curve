@@ -8,8 +8,6 @@ use crate::{
     constants::seeds::POOL_AUTHORITY_PREFIX,
     safe_math::SafeMath,
     state::{MigrationOption, PoolConfig, VirtualPool},
-    u128x128_math::Rounding,
-    utils_math::safe_mul_div_cast_u64,
     *,
 };
 

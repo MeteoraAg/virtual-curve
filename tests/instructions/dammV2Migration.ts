@@ -128,7 +128,7 @@ export async function migrateToDammV2(
             tokenQuoteProgram,
             token2022Program: TOKEN_2022_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
-            dammEventAuhthority: deriveDammV2EventAuthority(),
+            dammEventAuthority: deriveDammV2EventAuthority(),
         }).remainingAccounts([
             {
                 isSigner: false,

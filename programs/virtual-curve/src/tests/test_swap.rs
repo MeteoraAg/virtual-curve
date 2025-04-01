@@ -9,7 +9,10 @@ use crate::{
         },
         swap::TradeDirection,
     },
-    state::{fee::FeeMode, CollectFeeMode, LiquidityDistributionConfig, PoolConfig, VirtualPool},
+    state::{
+        fee::FeeMode, CollectFeeMode, LiquidityDistributionConfig, MigrationOption, PoolConfig,
+        VirtualPool,
+    },
 };
 
 use super::price_math::get_price_from_id;

@@ -112,7 +112,7 @@ pub struct MigrateDammV2Ctx<'info> {
     /// CHECK: token_program
     pub token_2022_program: Interface<'info, TokenInterface>,
     /// CHECK: damm event authority
-    pub damm_event_auhthority: UncheckedAccount<'info>,
+    pub damm_event_authority: UncheckedAccount<'info>,
     /// System program.
     pub system_program: Program<'info, System>,
 }
@@ -196,7 +196,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
                     token_b_program: self.token_quote_program.to_account_info(),
                     token_2022_program: self.token_2022_program.to_account_info(),
                     system_program: self.system_program.to_account_info(),
-                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    event_authority: self.damm_event_authority.to_account_info(),
                     program: self.amm_program.to_account_info(),
                 },
                 &[&pool_authority_seeds[..]],
@@ -225,7 +225,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
                     position: self.first_position.to_account_info(),
                     position_nft_account: self.first_position_nft_account.to_account_info(),
                     owner: self.pool_authority.to_account_info(),
-                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    event_authority: self.damm_event_authority.to_account_info(),
                     program: self.amm_program.to_account_info(),
                 },
                 &[&pool_authority_seeds[..]],
@@ -280,7 +280,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
                 payer: self.payer.to_account_info(),
                 token_program: self.token_2022_program.to_account_info(),
                 system_program: self.system_program.to_account_info(),
-                event_authority: self.damm_event_auhthority.to_account_info(),
+                event_authority: self.damm_event_authority.to_account_info(),
                 program: self.amm_program.to_account_info(),
             },
             &[&pool_authority_seeds[..]],
@@ -308,7 +308,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
                     owner: self.pool_authority.to_account_info(),
                     token_a_program: self.token_base_program.to_account_info(),
                     token_b_program: self.token_quote_program.to_account_info(),
-                    event_authority: self.damm_event_auhthority.to_account_info(),
+                    event_authority: self.damm_event_authority.to_account_info(),
                     program: self.amm_program.to_account_info(),
                 },
                 &[&pool_authority_seeds[..]],
@@ -334,7 +334,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
                             .unwrap()
                             .to_account_info(),
                         owner: self.pool_authority.to_account_info(),
-                        event_authority: self.damm_event_auhthority.to_account_info(),
+                        event_authority: self.damm_event_authority.to_account_info(),
                         program: self.amm_program.to_account_info(),
                     },
                     &[&pool_authority_seeds[..]],
@@ -518,6 +518,23 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
                 &[&seeds[..]],
             ),
             left_base_token,
+        )?;
+    }
+
+    // remove mint authority
+    {
+        let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+        anchor_spl::token_interface::set_authority(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_base_program.to_account_info(),
+                anchor_spl::token_interface::SetAuthority {
+                    current_authority: ctx.accounts.pool_authority.to_account_info(),
+                    account_or_mint: ctx.accounts.base_mint.to_account_info(),
+                },
+                &[&seeds[..]],
+            ),
+            AuthorityType::MintTokens,
+            Some(Pubkey::default()),
         )?;
     }
 

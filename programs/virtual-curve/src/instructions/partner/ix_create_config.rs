@@ -70,8 +70,9 @@ impl ConfigParameters {
                 );
             }
             MigrationOption::DammV2 => {
-                #[cfg(not(feature = "local"))]
-                return Err(PoolError::InvalidMigrationOption.into());
+                // skip that check, we will deploy damm v2 soon
+                // #[cfg(not(feature = "local"))]
+                // return Err(PoolError::InvalidMigrationOption.into());
             }
         }
 

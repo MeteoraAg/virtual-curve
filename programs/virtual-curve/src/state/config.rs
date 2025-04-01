@@ -10,6 +10,7 @@ use crate::{
     },
     safe_math::SafeMath,
     state::fee::{BaseFeeStruct, DynamicFeeStruct, PoolFeesStruct},
+    u128x128_math::Rounding,
     utils_math::{safe_mul_div_cast_u128, safe_mul_div_cast_u64},
     PoolError,
 };
@@ -342,11 +343,24 @@ impl PoolConfig {
     }
 
     pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LpDistribution> {
-        let partner_locked_lp =
-            safe_mul_div_cast_u64(lp_amount, self.partner_locked_lp_percentage.into(), 100)?;
-        let partner_lp = safe_mul_div_cast_u64(lp_amount, self.partner_lp_percentage.into(), 100)?;
-        let creator_locked_lp =
-            safe_mul_div_cast_u64(lp_amount, self.creator_locked_lp_percentage.into(), 100)?;
+        let partner_locked_lp = safe_mul_div_cast_u64(
+            lp_amount,
+            self.partner_locked_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
+        let partner_lp = safe_mul_div_cast_u64(
+            lp_amount,
+            self.partner_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
+        let creator_locked_lp = safe_mul_div_cast_u64(
+            lp_amount,
+            self.creator_locked_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
 
         let creator_lp = lp_amount
             .safe_sub(partner_locked_lp)?

@@ -12,7 +12,7 @@ import {
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { createDammV2Config, fundSol, startTest } from "./utils";
+import { createDammV2Config, fundSol, getMint, startTest } from "./utils";
 import {
     createVirtualCurveProgram,
     derivePoolAuthority,
@@ -24,6 +24,7 @@ import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 import { createMeteoraDammV2Metadata, MigrateMeteoraDammV2Params, migrateToDammV2 } from "./instructions/dammV2Migration";
+import { expect } from "chai";
 
 describe("Migrate to damm v2", () => {
     let context: ProgramTestContext;
@@ -67,7 +68,7 @@ describe("Migrate to damm v2", () => {
         );
     });
 
-    it.only("Partner create config", async () => {
+    it("Partner create config", async () => {
         const baseFee: BaseFee = {
             cliffFeeNumerator: new BN(2_500_000),
             numberOfPeriod: 0,
@@ -168,5 +169,11 @@ describe("Migrate to damm v2", () => {
         };
 
         await migrateToDammV2(context.banksClient, program, migrationParams);
+
+        // validate mint authority
+        const baseMintData = (
+            await getMint(context.banksClient, virtualPoolState.baseMint)
+        );
+        expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
     });
 });
