@@ -32,7 +32,13 @@ pub struct ConfigParameters {
 }
 
 impl ConfigParameters {
-    pub fn validate(&self) -> Result<()> {
+    pub fn validate(&self, quote_mint: &InterfaceAccount<'info, Mint>) -> Result<()> {
+        // validate quote mint
+        require!(
+            is_supported_quote_mint(quote_mint)?,
+            PoolError::InvalidQuoteMint
+        );
+
         // validate fee
         self.pool_fees.validate()?;
 
@@ -53,6 +59,12 @@ impl ConfigParameters {
             require!(
                 _token_type_value == TokenType::SplToken,
                 PoolError::InvalidTokenType
+            );
+
+            #[cfg(not(feature = "local"))]
+            require!(
+                quote_mint.to_account_info().owner == anchor_spl::token::Token::id(),
+                PoolError::InvalidQuoteMint
             );
         }
 
@@ -134,12 +146,8 @@ pub fn handle_create_config(
     ctx: Context<CreateConfigCtx>,
     config_parameters: ConfigParameters,
 ) -> Result<()> {
-    config_parameters.validate()?;
-    // validate quote mint
-    require!(
-        is_supported_quote_mint(&ctx.accounts.quote_mint)?,
-        PoolError::InvalidQuoteMint
-    );
+    config_parameters.validate(&ctx.accounts.quote_mint)?;
+
     let ConfigParameters {
         pool_fees,
         collect_fee_mode,
