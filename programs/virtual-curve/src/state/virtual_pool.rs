@@ -100,7 +100,7 @@ pub struct VirtualPool {
     pub _padding_1: [u64; 10],
 }
 
-const_assert_eq!(VirtualPool::INIT_SPACE, 432);
+const_assert_eq!(VirtualPool::INIT_SPACE, 416);
 
 #[zero_copy]
 #[derive(Debug, InitSpace, Default)]

@@ -25,14 +25,13 @@ pub struct FeeOnAmountResult {
 #[derive(Debug, InitSpace, Default)]
 pub struct VolatilityTracker {
     pub last_update_timestamp: u64,
-    pub padding: [u8; 8], // Add padding for u128 alignment
-    pub bin_step_u128: u128,
+    pub padding: [u8; 8],           // Add padding for u128 alignment
     pub sqrt_price_reference: u128, // reference sqrt price
     pub volatility_accumulator: u128,
     pub volatility_reference: u128, // decayed volatility accumulator
 }
 
-const_assert_eq!(VolatilityTracker::INIT_SPACE, 80);
+const_assert_eq!(VolatilityTracker::INIT_SPACE, 64);
 
 impl VolatilityTracker {
     // we approximate Px / Py = (1 + b) ^ delta_bin  = 1 + b * delta_bin (if b is too small)
@@ -62,7 +61,7 @@ impl VolatilityTracker {
         sqrt_price: u128,
     ) -> Result<()> {
         let delta_price = VolatilityTracker::get_delta_bin_id(
-            self.bin_step_u128,
+            dynamic_fee_config.bin_step_u128,
             sqrt_price,
             self.sqrt_price_reference,
         )?;
