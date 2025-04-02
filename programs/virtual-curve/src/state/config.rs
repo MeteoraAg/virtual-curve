@@ -9,8 +9,7 @@ use crate::{
     },
     fee_math::get_fee_in_period,
     params::{
-        fee_parameters::{BaseFeeParameters, DynamicFeeParameters, PoolFeeParamters},
-        liquidity_distribution::LiquidityDistributionParameters,
+        fee_parameters::PoolFeeParamters, liquidity_distribution::LiquidityDistributionParameters,
     },
     safe_math::SafeMath,
     u128x128_math::Rounding,
@@ -54,46 +53,6 @@ pub struct PoolFeesConfig {
 const_assert_eq!(PoolFeesConfig::INIT_SPACE, 128);
 
 impl PoolFeesConfig {
-    pub fn to_pool_fee_parameters(&self) -> PoolFeeParamters {
-        let &PoolFeesConfig {
-            base_fee,
-            protocol_fee_percent: _protocol_fee_percent,
-            referral_fee_percent: _referral_fee_percent,
-            dynamic_fee:
-                DynamicFeeConfig {
-                    initialized,
-                    bin_step,
-                    bin_step_u128,
-                    filter_period,
-                    decay_period,
-                    reduction_factor,
-                    max_volatility_accumulator,
-                    variable_fee_control,
-                    ..
-                },
-            ..
-        } = self;
-        if initialized == 1 {
-            PoolFeeParamters {
-                base_fee: base_fee.to_base_fee_parameters(),
-                dynamic_fee: Some(DynamicFeeParameters {
-                    bin_step,
-                    bin_step_u128,
-                    filter_period,
-                    decay_period,
-                    reduction_factor,
-                    max_volatility_accumulator,
-                    variable_fee_control,
-                }),
-            }
-        } else {
-            PoolFeeParamters {
-                base_fee: base_fee.to_base_fee_parameters(),
-                ..Default::default()
-            }
-        }
-    }
-
     /// Calculates the total trading fee numerator by combining base fee and dynamic fee.
     /// The base fee is determined by the fee scheduler mode (linear or exponential) and time period.
     /// The dynamic fee is based on price volatility and is only applied if dynamic fees are enabled.
@@ -187,16 +146,6 @@ pub struct BaseFeeConfig {
 const_assert_eq!(BaseFeeConfig::INIT_SPACE, 32);
 
 impl BaseFeeConfig {
-    fn to_base_fee_parameters(&self) -> BaseFeeParameters {
-        BaseFeeParameters {
-            cliff_fee_numerator: self.cliff_fee_numerator,
-            number_of_period: self.number_of_period,
-            period_frequency: self.period_frequency,
-            reduction_factor: self.reduction_factor,
-            fee_scheduler_mode: self.fee_scheduler_mode,
-        }
-    }
-
     pub fn get_max_base_fee_numerator(&self) -> u64 {
         self.cliff_fee_numerator
     }
