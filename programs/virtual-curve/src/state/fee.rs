@@ -95,19 +95,20 @@ impl BaseFeeStruct {
     pub fn get_max_base_fee_numerator(&self) -> u64 {
         self.cliff_fee_numerator
     }
+
     pub fn get_min_base_fee_numerator(&self) -> Result<u64> {
-        // trick to force current_point < activation_point
-        self.get_current_base_fee_numerator(0, 1)
+        // trick to force current_point < activation_point (in order to get the lowest fee)
+        self.get_base_fee_numerator(0, 1)
     }
-    pub fn get_current_base_fee_numerator(
-        &self,
-        current_point: u64,
-        activation_point: u64,
-    ) -> Result<u64> {
+
+    pub fn get_base_fee_numerator(&self, current_point: u64, activation_point: u64) -> Result<u64> {
         if self.period_frequency == 0 {
             return Ok(self.cliff_fee_numerator);
         }
-        // can trade before activation point, so it is alpha-vault, we use min fee
+
+        // When trading before activation point (this won't happpen), use the maximum
+        // number of periods to ensure the lowest fee is charged. After activation, calculate
+        // periods based on time elapsed, capped by the maximum number of periods.
         let period = if current_point < activation_point {
             self.number_of_period.into()
         } else {
@@ -116,6 +117,7 @@ impl BaseFeeStruct {
                 .safe_div(self.period_frequency)?;
             period.min(self.number_of_period.into())
         };
+
         let fee_scheduler_mode = FeeSchedulerMode::try_from(self.fee_scheduler_mode)
             .map_err(|_| PoolError::TypeCastFailed)?;
 
@@ -123,7 +125,7 @@ impl BaseFeeStruct {
             FeeSchedulerMode::Linear => {
                 let fee_numerator = self
                     .cliff_fee_numerator
-                    .safe_sub(period.safe_mul(self.reduction_factor.into())?)?;
+                    .safe_sub(self.reduction_factor.safe_mul(period)?)?;
                 Ok(fee_numerator)
             }
             FeeSchedulerMode::Exponential => {
@@ -137,31 +139,41 @@ impl BaseFeeStruct {
 }
 
 impl PoolFeesStruct {
-    // in numerator
-    pub fn get_total_trading_fee(&self, current_point: u64, activation_point: u64) -> Result<u128> {
+    /// Calculates the total trading fee numerator by combining base fee and dynamic fee.
+    /// The base fee is determined by the fee scheduler mode (linear or exponential) and time period.
+    /// The dynamic fee is based on price volatility and is only applied if dynamic fees are enabled.
+    /// The total fee is capped at MAX_FEE_NUMERATOR (50%) to ensure reasonable trading costs.
+    ///
+    /// Returns the total fee numerator that will be used to calculate actual trading fees.
+    pub fn get_total_trading_fee(&self, current_point: u64, activation_point: u64) -> Result<u64> {
         let base_fee_numerator = self
             .base_fee
-            .get_current_base_fee_numerator(current_point, activation_point)?;
+            .get_base_fee_numerator(current_point, activation_point)?;
+
         let total_fee_numerator = self
             .dynamic_fee
-            .get_variable_fee()?
+            .get_variable_fee_numerator()?
             .safe_add(base_fee_numerator.into())?;
+
+        // Cap the total fee at MAX_FEE_NUMERATOR
+        let total_fee_numerator = if total_fee_numerator > MAX_FEE_NUMERATOR.into() {
+            MAX_FEE_NUMERATOR
+        } else {
+            total_fee_numerator.try_into().unwrap()
+        };
+
         Ok(total_fee_numerator)
     }
 
     pub fn get_fee_on_amount(
         &self,
         amount: u64,
-        is_referral: bool,
+        has_referral: bool,
         current_point: u64,
         activation_point: u64,
     ) -> Result<FeeOnAmountResult> {
         let trade_fee_numerator = self.get_total_trading_fee(current_point, activation_point)?;
-        let trade_fee_numerator = if trade_fee_numerator > MAX_FEE_NUMERATOR.into() {
-            MAX_FEE_NUMERATOR
-        } else {
-            trade_fee_numerator.try_into().unwrap()
-        };
+
         let trading_fee: u64 =
             safe_mul_div_cast_u64(amount, trade_fee_numerator, FEE_DENOMINATOR, Rounding::Up)?;
         // update amount
@@ -173,10 +185,11 @@ impl PoolFeesStruct {
             100,
             Rounding::Down,
         )?;
+
         // update trading fee
         let trading_fee: u64 = trading_fee.safe_sub(protocol_fee)?;
 
-        let referral_fee = if is_referral {
+        let referral_fee = if has_referral {
             safe_mul_div_cast_u64(
                 protocol_fee,
                 self.referral_fee_percent.into(),
@@ -252,6 +265,7 @@ impl DynamicFeeStruct {
             volatility_accumulator,
             self.max_volatility_accumulator.into(),
         );
+
         Ok(())
     }
 
@@ -286,23 +300,25 @@ impl DynamicFeeStruct {
         self.initialized != 0
     }
 
-    pub fn get_variable_fee(&self) -> Result<u128> {
-        if self.is_dynamic_fee_enable() {
-            let square_vfa_bin: u128 = self
-                .volatility_accumulator
-                .safe_mul(self.bin_step.into())?
-                .checked_pow(2)
-                .unwrap();
-            // Variable fee control, volatility accumulator, bin step are in basis point unit (10_000)
-            // This is 1e20. Which > 1e9. Scale down it to 1e9 unit and ceiling the remaining.
-            let v_fee = square_vfa_bin.safe_mul(self.variable_fee_control.into())?;
-
-            let scaled_v_fee = v_fee.safe_add(99_999_999_999)?.safe_div(100_000_000_000)?;
-
-            Ok(scaled_v_fee)
-        } else {
-            Ok(0)
+    pub fn get_variable_fee_numerator(&self) -> Result<u128> {
+        if !self.is_dynamic_fee_enable() {
+            return Ok(0);
         }
+
+        // 1. Computing the squared price movement (volatility_accumulator * bin_step)^2
+        let square_vfa_bin: u128 = self
+            .volatility_accumulator
+            .safe_mul(self.bin_step.into())?
+            .checked_pow(2)
+            .ok_or(PoolError::MathOverflow)?;
+
+        // 2. Multiplying by the fee control factor
+        let v_fee = square_vfa_bin.safe_mul(self.variable_fee_control.into())?;
+
+        // 3. Scaling down the result to fit within u64 range (dividing by 1e11 and rounding up)
+        let scaled_v_fee = v_fee.safe_add(99_999_999_999)?.safe_div(100_000_000_000)?;
+
+        Ok(scaled_v_fee)
     }
 }
 

@@ -5,9 +5,7 @@ use crate::constants::fee::{
 };
 use crate::constants::{BASIS_POINT_MAX, BIN_STEP_BPS_DEFAULT, BIN_STEP_BPS_U128_DEFAULT, U24_MAX};
 use crate::error::PoolError;
-use crate::fee_math::get_fee_in_period;
-use crate::safe_math::SafeMath;
-use crate::state::fee::{BaseFeeStruct, DynamicFeeStruct, FeeSchedulerMode, PoolFeesStruct};
+use crate::state::fee::{BaseFeeStruct, DynamicFeeStruct, PoolFeesStruct};
 use crate::state::{BaseFeeConfig, DynamicFeeConfig, PoolFeesConfig};
 use anchor_lang::prelude::*;
 
@@ -30,33 +28,11 @@ pub struct BaseFeeParameters {
 }
 
 impl BaseFeeParameters {
-    pub fn get_max_base_fee_numerator(&self) -> u64 {
-        self.cliff_fee_numerator
-    }
-    pub fn get_min_base_fee_numerator(&self) -> Result<u64> {
-        let fee_scheduler_mode = FeeSchedulerMode::try_from(self.fee_scheduler_mode)
-            .map_err(|_| PoolError::TypeCastFailed)?;
-        match fee_scheduler_mode {
-            FeeSchedulerMode::Linear => {
-                let fee_numerator = self.cliff_fee_numerator.safe_sub(
-                    self.reduction_factor
-                        .safe_mul(self.number_of_period.into())?,
-                )?;
-                Ok(fee_numerator)
-            }
-            FeeSchedulerMode::Exponential => {
-                let period =
-                    u16::try_from(self.number_of_period).map_err(|_| PoolError::MathOverflow)?;
-                let fee_numerator =
-                    get_fee_in_period(self.cliff_fee_numerator, self.reduction_factor, period)?;
-                Ok(fee_numerator)
-            }
-        }
-    }
-
     fn validate(&self) -> Result<()> {
-        let min_fee_numerator = self.get_min_base_fee_numerator()?;
-        let max_fee_numerator = self.get_max_base_fee_numerator();
+        let base_fee_struct = self.to_base_fee_struct();
+
+        let min_fee_numerator = base_fee_struct.get_min_base_fee_numerator()?;
+        let max_fee_numerator = base_fee_struct.get_max_base_fee_numerator();
         validate_fee_fraction(min_fee_numerator, FEE_DENOMINATOR)?;
         validate_fee_fraction(max_fee_numerator, FEE_DENOMINATOR)?;
         require!(
@@ -65,6 +41,7 @@ impl BaseFeeParameters {
         );
         Ok(())
     }
+
     fn to_base_fee_struct(&self) -> BaseFeeStruct {
         BaseFeeStruct {
             cliff_fee_numerator: self.cliff_fee_numerator,
@@ -111,6 +88,7 @@ impl PoolFeeParamters {
             }
         }
     }
+
     pub fn to_pool_fees_struct(&self) -> PoolFeesStruct {
         let &PoolFeeParamters {
             base_fee,
@@ -160,6 +138,7 @@ impl DynamicFeeParameters {
             ..Default::default()
         }
     }
+
     fn to_dynamic_fee_struct(&self) -> DynamicFeeStruct {
         DynamicFeeStruct {
             initialized: 1,
@@ -173,6 +152,7 @@ impl DynamicFeeParameters {
             ..Default::default()
         }
     }
+
     pub fn validate(&self) -> Result<()> {
         // force all bin_step as 1 bps for first version
         require!(
@@ -254,6 +234,7 @@ impl PoolFeeParamters {
         if let Some(dynamic_fee) = self.dynamic_fee {
             dynamic_fee.validate()?;
         }
+
         Ok(())
     }
 }
