@@ -1,18 +1,14 @@
 use anchor_lang::prelude::*;
-use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
 
 use crate::{
-    constants::{
-        fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
-        BASIS_POINT_MAX, ONE_Q64,
-    },
-    fee_math::get_fee_in_period,
+    constants::{BASIS_POINT_MAX, ONE_Q64},
     params::swap::TradeDirection,
     safe_math::SafeMath,
     state::CollectFeeMode,
+    state::DynamicFeeConfig,
     u128x128_math::Rounding,
-    utils_math::{safe_mul_div_cast_u64, safe_shl_div_cast},
+    utils_math::safe_shl_div_cast,
     PoolError,
 };
 
@@ -25,213 +21,20 @@ pub struct FeeOnAmountResult {
     pub referral_fee: u64,
 }
 
-/// collect fee mode
-#[repr(u8)]
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    PartialEq,
-    IntoPrimitive,
-    TryFromPrimitive,
-    AnchorDeserialize,
-    AnchorSerialize,
-)]
-
-// https://www.desmos.com/calculator/oxdndn2xdx
-pub enum FeeSchedulerMode {
-    // fee = cliff_fee_numerator - passed_period * reduction_factor
-    Linear,
-    // fee = cliff_fee_numerator * (1-reduction_factor/10_000)^passed_period
-    Exponential,
-}
-
-#[zero_copy]
-/// Information regarding fee charges
-/// trading_fee = amount * trade_fee_numerator / denominator
-/// protocol_fee = trading_fee * protocol_fee_percentage / 100
-/// referral_fee = protocol_fee * referral_percentage / 100
-/// partner_fee = trading_fee - protocol_fee - referral_fee
-#[derive(Debug, InitSpace, Default)]
-pub struct PoolFeesStruct {
-    /// Trade fees are extra token amounts that are held inside the token
-    /// accounts during a trade, making the value of liquidity tokens rise.
-    /// Trade fee numerator
-    pub base_fee: BaseFeeStruct,
-    /// Protocol trading fees are extra token amounts that are held inside the token
-    /// accounts during a trade, with the equivalent in pool tokens minted to
-    /// the protocol of the program.
-    /// Protocol trade fee numerator
-    pub protocol_fee_percent: u8,
-    /// referral fee
-    pub referral_fee_percent: u8,
-    /// padding
-    pub padding_0: [u8; 6],
-
-    /// dynamic fee
-    pub dynamic_fee: DynamicFeeStruct,
-
-    /// padding
-    pub padding_1: [u64; 2],
-}
-
-const_assert_eq!(PoolFeesStruct::INIT_SPACE, 160);
-
 #[zero_copy]
 #[derive(Debug, InitSpace, Default)]
-pub struct BaseFeeStruct {
-    pub cliff_fee_numerator: u64,
-    pub fee_scheduler_mode: u8,
-    pub padding_0: [u8; 5],
-    pub number_of_period: u16,
-    pub period_frequency: u64,
-    pub reduction_factor: u64,
-    pub padding_1: u64,
-}
-
-const_assert_eq!(BaseFeeStruct::INIT_SPACE, 40);
-
-impl BaseFeeStruct {
-    pub fn get_max_base_fee_numerator(&self) -> u64 {
-        self.cliff_fee_numerator
-    }
-
-    pub fn get_min_base_fee_numerator(&self) -> Result<u64> {
-        // trick to force current_point < activation_point (in order to get the lowest fee)
-        self.get_base_fee_numerator(0, 1)
-    }
-
-    pub fn get_base_fee_numerator(&self, current_point: u64, activation_point: u64) -> Result<u64> {
-        if self.period_frequency == 0 {
-            return Ok(self.cliff_fee_numerator);
-        }
-
-        // When trading before activation point (this won't happpen), use the maximum
-        // number of periods to ensure the lowest fee is charged. After activation, calculate
-        // periods based on time elapsed, capped by the maximum number of periods.
-        let period = if current_point < activation_point {
-            self.number_of_period.into()
-        } else {
-            let period = current_point
-                .safe_sub(activation_point)?
-                .safe_div(self.period_frequency)?;
-            period.min(self.number_of_period.into())
-        };
-
-        let fee_scheduler_mode = FeeSchedulerMode::try_from(self.fee_scheduler_mode)
-            .map_err(|_| PoolError::TypeCastFailed)?;
-
-        match fee_scheduler_mode {
-            FeeSchedulerMode::Linear => {
-                let fee_numerator = self
-                    .cliff_fee_numerator
-                    .safe_sub(self.reduction_factor.safe_mul(period)?)?;
-                Ok(fee_numerator)
-            }
-            FeeSchedulerMode::Exponential => {
-                let period = u16::try_from(period).map_err(|_| PoolError::MathOverflow)?;
-                let fee_numerator =
-                    get_fee_in_period(self.cliff_fee_numerator, self.reduction_factor, period)?;
-                Ok(fee_numerator)
-            }
-        }
-    }
-}
-
-impl PoolFeesStruct {
-    /// Calculates the total trading fee numerator by combining base fee and dynamic fee.
-    /// The base fee is determined by the fee scheduler mode (linear or exponential) and time period.
-    /// The dynamic fee is based on price volatility and is only applied if dynamic fees are enabled.
-    /// The total fee is capped at MAX_FEE_NUMERATOR (50%) to ensure reasonable trading costs.
-    ///
-    /// Returns the total fee numerator that will be used to calculate actual trading fees.
-    pub fn get_total_trading_fee(&self, current_point: u64, activation_point: u64) -> Result<u64> {
-        let base_fee_numerator = self
-            .base_fee
-            .get_base_fee_numerator(current_point, activation_point)?;
-
-        let total_fee_numerator = self
-            .dynamic_fee
-            .get_variable_fee_numerator()?
-            .safe_add(base_fee_numerator.into())?;
-
-        // Cap the total fee at MAX_FEE_NUMERATOR
-        let total_fee_numerator = if total_fee_numerator > MAX_FEE_NUMERATOR.into() {
-            MAX_FEE_NUMERATOR
-        } else {
-            total_fee_numerator.try_into().unwrap()
-        };
-
-        Ok(total_fee_numerator)
-    }
-
-    pub fn get_fee_on_amount(
-        &self,
-        amount: u64,
-        has_referral: bool,
-        current_point: u64,
-        activation_point: u64,
-    ) -> Result<FeeOnAmountResult> {
-        let trade_fee_numerator = self.get_total_trading_fee(current_point, activation_point)?;
-
-        let trading_fee: u64 =
-            safe_mul_div_cast_u64(amount, trade_fee_numerator, FEE_DENOMINATOR, Rounding::Up)?;
-        // update amount
-        let amount = amount.safe_sub(trading_fee)?;
-
-        let protocol_fee = safe_mul_div_cast_u64(
-            trading_fee,
-            self.protocol_fee_percent.into(),
-            100,
-            Rounding::Down,
-        )?;
-
-        // update trading fee
-        let trading_fee: u64 = trading_fee.safe_sub(protocol_fee)?;
-
-        let referral_fee = if has_referral {
-            safe_mul_div_cast_u64(
-                protocol_fee,
-                self.referral_fee_percent.into(),
-                100,
-                Rounding::Down,
-            )?
-        } else {
-            0
-        };
-
-        let protocol_fee = protocol_fee.safe_sub(referral_fee)?;
-
-        Ok(FeeOnAmountResult {
-            amount,
-            protocol_fee,
-            referral_fee,
-            trading_fee,
-        })
-    }
-}
-
-#[zero_copy]
-#[derive(Debug, InitSpace, Default)]
-pub struct DynamicFeeStruct {
-    pub initialized: u8, // 0, ignore for dynamic fee
-    pub padding: [u8; 7],
-    pub max_volatility_accumulator: u32,
-    pub variable_fee_control: u32,
-    pub bin_step: u16,
-    pub filter_period: u16,
-    pub decay_period: u16,
-    pub reduction_factor: u16,
+pub struct VolatilityTracker {
     pub last_update_timestamp: u64,
+    pub padding: [u8; 8], // Add padding for u128 alignment
     pub bin_step_u128: u128,
     pub sqrt_price_reference: u128, // reference sqrt price
     pub volatility_accumulator: u128,
     pub volatility_reference: u128, // decayed volatility accumulator
 }
 
-const_assert_eq!(DynamicFeeStruct::INIT_SPACE, 96);
+const_assert_eq!(VolatilityTracker::INIT_SPACE, 80);
 
-impl DynamicFeeStruct {
+impl VolatilityTracker {
     // we approximate Px / Py = (1 + b) ^ delta_bin  = 1 + b * delta_bin (if b is too small)
     // Ex: (1+1/10000)^ 5000 / (1+5000 * 1/10000) = 1.1 (10% diff if sqrt_price diff is (1+1/10000)^ 5000 = 1.64 times)
     pub fn get_delta_bin_id(
@@ -253,9 +56,16 @@ impl DynamicFeeStruct {
         Ok(delta_bin_id.safe_mul(2)?)
     }
 
-    pub fn update_volatility_accumulator(&mut self, sqrt_price: u128) -> Result<()> {
-        let delta_price =
-            Self::get_delta_bin_id(self.bin_step_u128, sqrt_price, self.sqrt_price_reference)?;
+    pub fn update_volatility_accumulator(
+        &mut self,
+        dynamic_fee_config: &DynamicFeeConfig,
+        sqrt_price: u128,
+    ) -> Result<()> {
+        let delta_price = VolatilityTracker::get_delta_bin_id(
+            self.bin_step_u128,
+            sqrt_price,
+            self.sqrt_price_reference,
+        )?;
 
         let volatility_accumulator = self
             .volatility_reference
@@ -263,7 +73,7 @@ impl DynamicFeeStruct {
 
         self.volatility_accumulator = std::cmp::min(
             volatility_accumulator,
-            self.max_volatility_accumulator.into(),
+            dynamic_fee_config.max_volatility_accumulator.into(),
         );
 
         Ok(())
@@ -271,19 +81,20 @@ impl DynamicFeeStruct {
 
     pub fn update_references(
         &mut self,
+        dynamic_fee_config: &DynamicFeeConfig,
         sqrt_price_current: u128,
         current_timestamp: u64,
     ) -> Result<()> {
         let elapsed = current_timestamp.safe_sub(self.last_update_timestamp)?;
         // Not high frequency trade
-        if elapsed >= self.filter_period as u64 {
+        if elapsed >= dynamic_fee_config.filter_period as u64 {
             // Update sqrt of last transaction
             self.sqrt_price_reference = sqrt_price_current;
             // filter period < t < decay_period. Decay time window.
-            if elapsed < self.decay_period as u64 {
+            if elapsed < dynamic_fee_config.decay_period as u64 {
                 let volatility_reference = self
                     .volatility_accumulator
-                    .safe_mul(self.reduction_factor.into())?
+                    .safe_mul(dynamic_fee_config.reduction_factor.into())?
                     .safe_div(BASIS_POINT_MAX.into())?;
 
                 self.volatility_reference = volatility_reference;
@@ -294,31 +105,6 @@ impl DynamicFeeStruct {
             }
         }
         Ok(())
-    }
-
-    pub fn is_dynamic_fee_enable(&self) -> bool {
-        self.initialized != 0
-    }
-
-    pub fn get_variable_fee_numerator(&self) -> Result<u128> {
-        if !self.is_dynamic_fee_enable() {
-            return Ok(0);
-        }
-
-        // 1. Computing the squared price movement (volatility_accumulator * bin_step)^2
-        let square_vfa_bin: u128 = self
-            .volatility_accumulator
-            .safe_mul(self.bin_step.into())?
-            .checked_pow(2)
-            .ok_or(PoolError::MathOverflow)?;
-
-        // 2. Multiplying by the fee control factor
-        let v_fee = square_vfa_bin.safe_mul(self.variable_fee_control.into())?;
-
-        // 3. Scaling down the result to fit within u64 range (dividing by 1e11 and rounding up)
-        let scaled_v_fee = v_fee.safe_add(99_999_999_999)?.safe_div(100_000_000_000)?;
-
-        Ok(scaled_v_fee)
     }
 }
 

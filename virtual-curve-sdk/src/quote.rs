@@ -23,7 +23,7 @@ pub fn quote_exact_in(
 
     ensure!(transfer_fee_excluded_amount_in > 0, "amount is zero");
 
-    virtual_pool.update_pre_swap(current_timestamp)?;
+    virtual_pool.update_pre_swap(config, current_timestamp)?;
     let activation_type =
         ActivationType::try_from(config.activation_type).context("invalid activation type")?;
     let current_point = match activation_type {

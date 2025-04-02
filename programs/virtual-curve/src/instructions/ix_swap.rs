@@ -132,7 +132,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 
     // update for dynamic fee reference
     let current_timestamp = Clock::get()?.unix_timestamp as u64;
-    pool.update_pre_swap(current_timestamp)?;
+    pool.update_pre_swap(&config, current_timestamp)?;
 
     let current_point = get_current_point(config.activation_type)?;
     let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
@@ -145,7 +145,13 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         PoolError::ExceededSlippage
     );
 
-    pool.apply_swap_result(&swap_result, fee_mode, trade_direction, current_timestamp)?;
+    pool.apply_swap_result(
+        &config,
+        &swap_result,
+        fee_mode,
+        trade_direction,
+        current_timestamp,
+    )?;
 
     // send to reserve
     transfer_from_user(

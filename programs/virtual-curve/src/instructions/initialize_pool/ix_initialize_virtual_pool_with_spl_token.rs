@@ -11,7 +11,7 @@ use crate::{
     activation_handler::get_current_point,
     constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
     process_create_token_metadata,
-    state::{PoolConfig, PoolType, TokenType, VirtualPool},
+    state::{fee::VolatilityTracker, PoolConfig, PoolType, TokenType, VirtualPool},
     EvtInitializePool, PoolError, ProcessCreateTokenMetadataParams,
 };
 
@@ -183,7 +183,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
     let activation_point = get_current_point(config.activation_type)?;
 
     pool.initialize(
-        config.pool_fees.to_pool_fees_struct(),
+        VolatilityTracker::default(),
         ctx.accounts.config.key(),
         ctx.accounts.creator.key(),
         ctx.accounts.base_mint.key(),

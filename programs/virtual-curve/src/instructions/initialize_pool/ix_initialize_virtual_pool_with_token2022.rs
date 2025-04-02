@@ -1,10 +1,11 @@
 use super::InitializePoolParameters;
 use super::{max_key, min_key};
-use crate::token::update_account_lamports_to_minimum_balance;
 use crate::{
     activation_handler::get_current_point,
     constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
+    state::fee::VolatilityTracker,
     state::{PoolConfig, PoolType, TokenType, VirtualPool},
+    token::update_account_lamports_to_minimum_balance,
     EvtInitializePool, PoolError,
 };
 use anchor_lang::prelude::*;
@@ -173,7 +174,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     let activation_point = get_current_point(config.activation_type)?;
 
     pool.initialize(
-        config.pool_fees.to_pool_fees_struct(),
+        VolatilityTracker::default(),
         ctx.accounts.config.key(),
         ctx.accounts.creator.key(),
         ctx.accounts.base_mint.key(),

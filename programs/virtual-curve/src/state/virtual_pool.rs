@@ -12,7 +12,7 @@ use crate::{
     },
     params::swap::TradeDirection,
     safe_math::SafeMath,
-    state::fee::{DynamicFeeStruct, FeeMode, FeeOnAmountResult, PoolFeesStruct},
+    state::fee::{FeeMode, FeeOnAmountResult, VolatilityTracker},
     state::PoolConfig,
     u128x128_math::Rounding,
     PoolError,
@@ -56,8 +56,8 @@ pub enum PoolType {
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
 pub struct VirtualPool {
-    /// Pool fee
-    pub pool_fees: PoolFeesStruct,
+    /// volatility tracker
+    pub volatility_tracker: VolatilityTracker,
     /// config key
     pub config: Pubkey,
     /// creator
@@ -100,7 +100,7 @@ pub struct VirtualPool {
     pub _padding_1: [u64; 10],
 }
 
-const_assert_eq!(VirtualPool::INIT_SPACE, 512);
+const_assert_eq!(VirtualPool::INIT_SPACE, 432);
 
 #[zero_copy]
 #[derive(Debug, InitSpace, Default)]
@@ -135,7 +135,7 @@ impl PoolMetrics {
 impl VirtualPool {
     pub fn initialize(
         &mut self,
-        pool_fees: PoolFeesStruct,
+        volatility_tracker: VolatilityTracker,
         config: Pubkey,
         creator: Pubkey,
         base_mint: Pubkey,
@@ -146,7 +146,7 @@ impl VirtualPool {
         activation_point: u64,
         base_reverse: u64,
     ) {
-        self.pool_fees = pool_fees;
+        self.volatility_tracker = volatility_tracker;
         self.config = config;
         self.creator = creator;
         self.base_mint = base_mint;
@@ -176,7 +176,8 @@ impl VirtualPool {
                 protocol_fee,
                 trading_fee,
                 referral_fee,
-            } = self.pool_fees.get_fee_on_amount(
+            } = config.pool_fees.get_fee_on_amount(
+                &self.volatility_tracker,
                 amount_in,
                 fee_mode.has_referral,
                 current_point,
@@ -212,7 +213,8 @@ impl VirtualPool {
                 protocol_fee,
                 trading_fee,
                 referral_fee,
-            } = self.pool_fees.get_fee_on_amount(
+            } = config.pool_fees.get_fee_on_amount(
+                &self.volatility_tracker,
                 output_amount,
                 fee_mode.has_referral,
                 current_point,
@@ -377,6 +379,7 @@ impl VirtualPool {
 
     pub fn apply_swap_result(
         &mut self,
+        config: &PoolConfig,
         swap_result: &SwapResult,
         fee_mode: &FeeMode,
         trade_direction: TradeDirection,
@@ -415,33 +418,40 @@ impl VirtualPool {
             self.base_reserve = self.base_reserve.safe_sub(output_amount)?;
         }
 
-        self.update_post_swap(old_sqrt_price, current_timestamp)?;
+        self.update_post_swap(config, old_sqrt_price, current_timestamp)?;
         Ok(())
     }
 
-    pub fn update_pre_swap(&mut self, current_timestamp: u64) -> Result<()> {
-        if self.pool_fees.dynamic_fee.is_dynamic_fee_enable() {
-            self.pool_fees
-                .dynamic_fee
-                .update_references(self.sqrt_price, current_timestamp)?;
+    pub fn update_pre_swap(&mut self, config: &PoolConfig, current_timestamp: u64) -> Result<()> {
+        if config.pool_fees.dynamic_fee.is_dynamic_fee_enable() {
+            self.volatility_tracker.update_references(
+                &config.pool_fees.dynamic_fee,
+                self.sqrt_price,
+                current_timestamp,
+            )?;
         }
         Ok(())
     }
 
-    pub fn update_post_swap(&mut self, old_sqrt_price: u128, current_timestamp: u64) -> Result<()> {
-        if self.pool_fees.dynamic_fee.is_dynamic_fee_enable() {
-            self.pool_fees
-                .dynamic_fee
-                .update_volatility_accumulator(self.sqrt_price)?;
+    pub fn update_post_swap(
+        &mut self,
+        config: &PoolConfig,
+        old_sqrt_price: u128,
+        current_timestamp: u64,
+    ) -> Result<()> {
+        if config.pool_fees.dynamic_fee.is_dynamic_fee_enable() {
+            self.volatility_tracker
+                .update_volatility_accumulator(&config.pool_fees.dynamic_fee, self.sqrt_price)?;
 
             // update only last_update_timestamp if bin is crossed
-            let delta_price = DynamicFeeStruct::get_delta_bin_id(
-                self.pool_fees.dynamic_fee.bin_step_u128,
+            let delta_price = VolatilityTracker::get_delta_bin_id(
+                config.pool_fees.dynamic_fee.bin_step_u128,
                 old_sqrt_price,
                 self.sqrt_price,
             )?;
+
             if delta_price > 0 {
-                self.pool_fees.dynamic_fee.last_update_timestamp = current_timestamp;
+                self.volatility_tracker.last_update_timestamp = current_timestamp;
             }
         }
         Ok(())

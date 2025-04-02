@@ -10,8 +10,8 @@ use crate::{
         swap::TradeDirection,
     },
     state::{
-        fee::FeeMode, CollectFeeMode, LiquidityDistributionConfig, MigrationOption, PoolConfig,
-        VirtualPool,
+        fee::{FeeMode, VolatilityTracker},
+        CollectFeeMode, LiquidityDistributionConfig, MigrationOption, PoolConfig, VirtualPool,
     },
 };
 
@@ -66,7 +66,7 @@ fn test_swap() {
 
     let mut pool = VirtualPool::default();
     pool.initialize(
-        config.pool_fees.to_pool_fees_struct(),
+        VolatilityTracker::default(),
         Pubkey::default(),
         Pubkey::default(),
         Pubkey::default(),

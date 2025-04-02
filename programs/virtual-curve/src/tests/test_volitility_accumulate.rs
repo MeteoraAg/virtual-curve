@@ -1,6 +1,6 @@
 use crate::{
     constants::{BASIS_POINT_MAX, BIN_STEP_BPS_DEFAULT, BIN_STEP_BPS_U128_DEFAULT, ONE_Q64},
-    state::fee::DynamicFeeStruct,
+    state::fee::VolatilityTracker,
     tests::price_math::get_price_from_id,
 };
 
@@ -22,7 +22,7 @@ fn test_delta_bin_id_basic() {
     let lower_bin_id = 20;
     let lower_sqrt_price = get_price_from_id(lower_bin_id, BIN_STEP_BPS_DEFAULT).unwrap();
 
-    let result = DynamicFeeStruct::get_delta_bin_id(
+    let result = VolatilityTracker::get_delta_bin_id(
         BIN_STEP_BPS_U128_DEFAULT,
         upper_sqrt_price,
         lower_sqrt_price,
@@ -42,7 +42,7 @@ fn test_delta_bin_id_max_delta() {
     let lower_bin_id = upper_bin_id - delta_bin;
     let lower_sqrt_price = get_price_from_id(lower_bin_id, BIN_STEP_BPS_DEFAULT).unwrap();
 
-    let result = DynamicFeeStruct::get_delta_bin_id(
+    let result = VolatilityTracker::get_delta_bin_id(
         BIN_STEP_BPS_U128_DEFAULT,
         upper_sqrt_price,
         lower_sqrt_price,
@@ -67,7 +67,7 @@ fn test_delta_bin_id_max_delta() {
 fn test_delta_bin_id_zero_movement() {
     let sqrt_price = 1_000_000_000u128;
     let result =
-        DynamicFeeStruct::get_delta_bin_id(BIN_STEP_BPS_U128_DEFAULT, sqrt_price, sqrt_price)
+        VolatilityTracker::get_delta_bin_id(BIN_STEP_BPS_U128_DEFAULT, sqrt_price, sqrt_price)
             .unwrap();
     assert_eq!(result, 0);
 }
