@@ -26,7 +26,7 @@ pub mod params;
 declare_id!("2grmPSxKzQBhRrTRjWazVtMkRGFbFaqLakxGEZfnXB5u");
 
 #[cfg(not(feature = "local"))]
-declare_id!("virwvN4ee9tWmGoT37FdxZMmxH54m64sYzPpBvXA3ZV");
+declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]
 pub mod virtual_curve {

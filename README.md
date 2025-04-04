@@ -90,5 +90,5 @@ pnpm test
 
 ## Program Address
 
-- Mainnet-beta: virwvN4ee9tWmGoT37FdxZMmxH54m64sYzPpBvXA3ZV
-- Devnet: virwvN4ee9tWmGoT37FdxZMmxH54m64sYzPpBvXA3ZV
+- Mainnet-beta: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
+- Devnet: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
