@@ -211,6 +211,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     });
 
     if pool.is_curve_complete(config.migration_quote_threshold) {
+        ctx.accounts.base_vault.reload()?;
         // validate if base reserve is enough token for migration
         let base_vault_balance = ctx.accounts.base_vault.amount;
 
