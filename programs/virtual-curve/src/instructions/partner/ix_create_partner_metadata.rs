@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct CreatePartnerMetadataParameters {
     // padding for future use
-    pub padding: [u8; 48],
+    pub padding: [u8; 96],
     pub name: String,
     pub website: String,
     pub logo: String,
@@ -43,9 +43,9 @@ pub fn handle_create_partner_metadata(
 ) -> Result<()> {
     let partner_metadata = &mut ctx.accounts.partner_metadata;
     partner_metadata.fee_claimer = ctx.accounts.fee_claimer.key();
-    partner_metadata.name = metadata.name.clone();
-    partner_metadata.website = metadata.website.clone();
-    partner_metadata.logo = metadata.logo.clone();
+    partner_metadata.name = metadata.name;
+    partner_metadata.website = metadata.website;
+    partner_metadata.logo = metadata.logo;
     emit_cpi!(EvtPartnerMetadata {
         partner_metadata: ctx.accounts.partner_metadata.key(),
         fee_claimer: ctx.accounts.fee_claimer.key(),

@@ -117,7 +117,7 @@ export async function createPartnerMetadata(
   const partnerMetadata = derivePartnerMetadata(feeClaimer.publicKey);
   const transaction = await program.methods
     .createPartnerMetadata({
-      padding: new Array(48).fill(0),
+      padding: new Array(96).fill(0),
       name,
       website,
       logo,
