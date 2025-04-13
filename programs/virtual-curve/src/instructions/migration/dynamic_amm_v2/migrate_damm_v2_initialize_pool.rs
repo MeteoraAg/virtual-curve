@@ -469,11 +469,11 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     let deposited_quote_amount =
         initial_quote_vault_amount.safe_sub(ctx.accounts.quote_vault.amount)?;
 
-    let updated_exclude_fee_base_reserve =
+    let updated_excluded_fee_base_reserve =
         excluded_fee_base_reserve.safe_sub(deposited_base_amount)?;
     let updated_quote_threshold = quote_threshold.safe_sub(deposited_quote_amount)?;
     let liquidity_for_second_position = get_liquidity_for_adding_liquidity(
-        updated_exclude_fee_base_reserve,
+        updated_excluded_fee_base_reserve,
         updated_quote_threshold,
         migration_sqrt_price,
     )?;
