@@ -88,7 +88,18 @@ pnpm install
 pnpm test
 ```
 
-## Program Address
+### Program Address
 
 - Mainnet-beta: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
 - Devnet: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
+
+
+### Config key for migration 
+
+#### Mainnet-beta
+- Meteora damm (v1): BG9eoMRXUCYZqLB2xyQxDqErXMcqc3JzaEVTJGKpiNH9
+- Damm v2: GGN4mTXqz59uBt5TXkERBJUKiNTsAVfZekDapDPLe5iZ
+
+#### Devnet
+- Meteora damm (v1): GnfMQ8oPzq84oK4PxTjhC1aUEMrLLasDfF9LsmW46U7j
+- Damm v2: GGN4mTXqz59uBt5TXkERBJUKiNTsAVfZekDapDPLe5iZ
