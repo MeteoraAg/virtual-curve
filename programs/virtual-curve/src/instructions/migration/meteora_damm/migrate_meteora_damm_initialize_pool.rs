@@ -4,7 +4,6 @@ use anchor_spl::token::{
 };
 
 use crate::{
-    activation_handler::get_current_point,
     constants::seeds::POOL_AUTHORITY_PREFIX,
     safe_math::SafeMath,
     state::{MigrationOption, PoolConfig, VirtualPool},
@@ -126,10 +125,6 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             PoolError::InvalidConfigAccount
         );
         require!(
-            self.damm_config.activation_type == self.config.load()?.activation_type,
-            PoolError::InvalidConfigAccount
-        );
-        require!(
             self.damm_config.activation_duration == 0,
             PoolError::InvalidConfigAccount
         );
@@ -148,7 +143,6 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
         &self,
         initial_base_amount: u64,
         initial_quote_amount: u64,
-        activation_point: Option<u64>,
         bump: u8,
     ) -> Result<()> {
         let pool_authority_seeds = pool_authority_seeds!(bump);
@@ -168,7 +162,6 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             ],
         )?;
         // Vault authority create pool
-        msg!("Activation point: {:?}", activation_point);
         msg!("create pool");
         dynamic_amm::cpi::initialize_permissionless_constant_product_pool_with_config2(
             CpiContext::new_with_signer(
@@ -205,7 +198,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             ),
             initial_base_amount,
             initial_quote_amount,
-            activation_point,
+            None,
         )?;
 
         Ok(())
@@ -242,12 +235,8 @@ pub fn handle_migrate_meteora_damm<'info>(
     let base_reserve = config.migration_base_threshold;
     let quote_reserve = config.migration_quote_threshold;
 
-    ctx.accounts.create_pool(
-        base_reserve,
-        quote_reserve,
-        Some(get_current_point(config.activation_type)?),
-        ctx.bumps.pool_authority,
-    )?;
+    ctx.accounts
+        .create_pool(base_reserve, quote_reserve, ctx.bumps.pool_authority)?;
 
     virtual_pool.update_after_create_pool();
 

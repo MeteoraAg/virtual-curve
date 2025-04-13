@@ -1,5 +1,7 @@
+use anchor_lang::prelude::Pubkey;
+
 use crate::{
-    constants::MAX_SQRT_PRICE,
+    constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE},
     params::liquidity_distribution::{
         get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
         LiquidityDistributionParameters,
@@ -34,4 +36,12 @@ fn test_create_config() {
     .unwrap();
 
     println!("{} {}", swap_base_amount, migration_base_amount);
+}
+
+#[test]
+fn test_pool_authority_pda() {
+    let prog_id = crate::ID;
+    let (pool_authority, _) =
+        Pubkey::find_program_address(&[POOL_AUTHORITY_PREFIX.as_ref()], &prog_id);
+    println!("{} {}", prog_id, pool_authority);
 }

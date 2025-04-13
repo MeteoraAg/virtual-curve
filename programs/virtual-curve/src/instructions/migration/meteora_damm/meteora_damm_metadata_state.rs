@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use static_assertions::const_assert_eq;
 
-use crate::state::LpDistribution;
+use crate::state::LiquidityDistributionU64;
 
 #[repr(u8)]
 #[derive(
@@ -60,9 +60,9 @@ impl MeteoraDammMigrationMetadata {
         self.progress = progress;
     }
 
-    pub fn set_lp_minted(&mut self, lp_mint: Pubkey, lp_distribution: &LpDistribution) {
+    pub fn set_lp_minted(&mut self, lp_mint: Pubkey, lp_distribution: &LiquidityDistributionU64) {
         self.lp_mint = lp_mint;
-        let &LpDistribution {
+        let &LiquidityDistributionU64 {
             partner_locked_lp,
             partner_lp,
             creator_locked_lp,

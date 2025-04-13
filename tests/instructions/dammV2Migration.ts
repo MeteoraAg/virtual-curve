@@ -139,7 +139,7 @@ export async function migrateToDammV2(
         .transaction();
     transaction.add(
         ComputeBudgetProgram.setComputeUnitLimit({
-            units: 400_000,
+            units: 500_000,
         })
     );
     transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];

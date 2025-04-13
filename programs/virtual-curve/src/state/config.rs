@@ -420,7 +420,7 @@ impl PoolConfig {
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
     }
 
-    pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LpDistribution> {
+    pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LiquidityDistributionU64> {
         let partner_locked_lp = safe_mul_div_cast_u64(
             lp_amount,
             self.partner_locked_lp_percentage.into(),
@@ -444,7 +444,7 @@ impl PoolConfig {
             .safe_sub(partner_locked_lp)?
             .safe_sub(partner_lp)?
             .safe_sub(creator_locked_lp)?;
-        Ok(LpDistribution {
+        Ok(LiquidityDistributionU64 {
             partner_locked_lp,
             partner_lp,
             creator_locked_lp,
@@ -464,15 +464,19 @@ impl PoolConfig {
             .safe_sub(partner_lp)?
             .safe_sub(creator_locked_lp)?;
         Ok(LiquidityDistribution {
-            partner_locked_lp,
-            partner_lp,
-            creator_locked_lp,
-            creator_lp,
+            partner: LiquidityDistributionItem {
+                unlocked_liquidity: partner_lp,
+                locked_liquidity: partner_locked_lp,
+            },
+            creator: LiquidityDistributionItem {
+                unlocked_liquidity: creator_lp,
+                locked_liquidity: creator_locked_lp,
+            },
         })
     }
 }
 
-pub struct LpDistribution {
+pub struct LiquidityDistributionU64 {
     pub partner_locked_lp: u64,
     pub partner_lp: u64,
     pub creator_locked_lp: u64,
@@ -480,8 +484,17 @@ pub struct LpDistribution {
 }
 
 pub struct LiquidityDistribution {
-    pub partner_locked_lp: u128,
-    pub partner_lp: u128,
-    pub creator_locked_lp: u128,
-    pub creator_lp: u128,
+    pub partner: LiquidityDistributionItem,
+    pub creator: LiquidityDistributionItem,
+}
+
+pub struct LiquidityDistributionItem {
+    pub unlocked_liquidity: u128,
+    pub locked_liquidity: u128,
+}
+
+impl LiquidityDistributionItem {
+    pub fn get_total_liquidity(&self) -> Result<u128> {
+        Ok(self.unlocked_liquidity.safe_add(self.locked_liquidity)?)
+    }
 }
