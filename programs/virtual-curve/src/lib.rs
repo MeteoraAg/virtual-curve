@@ -95,6 +95,13 @@ pub mod virtual_curve {
         instructions::handle_initialize_virtual_pool_with_token2022(ctx, params)
     }
 
+    pub fn create_virtual_pool_metadata(
+        ctx: Context<CreateVirtualPoolMetadataCtx>,
+        metadata: CreateVirtualPoolMetadataParameters,
+    ) -> Result<()> {
+        instructions::handle_create_virtual_pool_metadata(ctx, metadata)
+    }
+
     pub fn creator_claim_lp_from_meteora_dynamic_amm<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
     ) -> Result<()> {
@@ -107,6 +114,9 @@ pub mod virtual_curve {
     }
 
     /// PERMISSIONLESS FUNCTIONS ///
+    pub fn create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
+        instructions::handle_create_locker(ctx)
+    }
     pub fn migration_meteora_damm_create_metadata<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, MigrationMeteoraDammCreateMetadataCtx<'info>>,
     ) -> Result<()> {

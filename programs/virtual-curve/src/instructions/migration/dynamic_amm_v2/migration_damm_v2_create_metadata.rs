@@ -5,7 +5,6 @@ use crate::state::MigrationOption;
 use crate::state::PoolConfig;
 use crate::state::VirtualPool;
 use crate::EvtCreateDammV2MigrationMetadata;
-use crate::MeteoraDammV2MetadataProgress;
 use crate::PoolError;
 
 use super::MeteoraDammV2Metadata;
@@ -51,8 +50,6 @@ pub fn handle_migration_damm_v2_create_metadata(
     migration_metadata.virtual_pool = ctx.accounts.virtual_pool.key();
     migration_metadata.pool_creator = virtual_pool.creator;
     migration_metadata.partner = config.fee_claimer;
-
-    migration_metadata.set_progress(MeteoraDammV2MetadataProgress::Init.into());
 
     emit_cpi!(EvtCreateDammV2MigrationMetadata {
         virtual_pool: ctx.accounts.virtual_pool.key(),

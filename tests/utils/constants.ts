@@ -25,6 +25,10 @@ export const TREASURY = new PublicKey(
   "BJQbRiRWhJCyTYZcAuAL3ngDCx3AyFQGKDq8zhiZAKUw"
 );
 
+export const LOCKER_PROGRAM_ID = new PublicKey(
+  "LocpQgucEQHbqNABEYvBvwoxCPsSbG91A1QaQhQQqjn"
+);
+
 export const BASIS_POINT_MAX = 10_000;
 export const OFFSET = 64;
 export const U64_MAX = new BN("18446744073709551615");

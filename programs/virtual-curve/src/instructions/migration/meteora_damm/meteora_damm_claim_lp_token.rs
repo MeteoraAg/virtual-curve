@@ -1,12 +1,18 @@
 use std::u64;
 
-use crate::{constants::seeds::POOL_AUTHORITY_PREFIX, *};
+use crate::{
+    constants::seeds::POOL_AUTHORITY_PREFIX,
+    state::{MigrationProgress, VirtualPool},
+    *,
+};
 use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
 
 #[derive(Accounts)]
 pub struct MigrateMeteoraDammClaimLpTokenCtx<'info> {
+    pub virtual_pool: AccountLoader<'info, VirtualPool>,
+
     /// presale
-    #[account(mut, has_one = lp_mint)]
+    #[account(mut, has_one = lp_mint, has_one = virtual_pool)]
     pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
     /// CHECK: presale authority
@@ -68,6 +74,13 @@ impl<'info> MigrateMeteoraDammClaimLpTokenCtx<'info> {
 pub fn handle_migrate_meteora_damm_partner_claim_lp_token<'info>(
     ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
 ) -> Result<()> {
+    let virtual_pool = ctx.accounts.virtual_pool.load()?;
+
+    require!(
+        virtual_pool.get_migration_progress()? == MigrationProgress::CreatedPool,
+        PoolError::NotPermitToDoThisAction
+    );
+
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
     require!(
         !migration_metadata.is_partner_claim_lp(),
@@ -83,13 +96,6 @@ pub fn handle_migrate_meteora_damm_partner_claim_lp_token<'info>(
         PoolError::InvalidPartnerAccount
     );
 
-    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_metadata.progress)
-        .map_err(|_| PoolError::TypeCastFailed)?;
-
-    require!(
-        migration_progress == MigrationMeteoraDammProgress::CreatedPool,
-        PoolError::NotPermitToDoThisAction
-    );
     migration_metadata.set_partner_claim_status();
     ctx.accounts
         .transfer(ctx.bumps.pool_authority, migration_metadata.partner_lp)?;
@@ -98,6 +104,13 @@ pub fn handle_migrate_meteora_damm_partner_claim_lp_token<'info>(
 pub fn handle_migrate_meteora_damm_creator_claim_lp_token<'info>(
     ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
 ) -> Result<()> {
+    let virtual_pool = ctx.accounts.virtual_pool.load()?;
+
+    require!(
+        virtual_pool.get_migration_progress()? == MigrationProgress::CreatedPool,
+        PoolError::NotPermitToDoThisAction
+    );
+
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
     require!(
         !migration_metadata.is_creator_claim_lp(),
@@ -113,13 +126,6 @@ pub fn handle_migrate_meteora_damm_creator_claim_lp_token<'info>(
         PoolError::InvalidPartnerAccount
     );
 
-    let migration_progress = MigrationMeteoraDammProgress::try_from(migration_metadata.progress)
-        .map_err(|_| PoolError::TypeCastFailed)?;
-
-    require!(
-        migration_progress == MigrationMeteoraDammProgress::CreatedPool,
-        PoolError::NotPermitToDoThisAction
-    );
     migration_metadata.set_creator_claim_status();
     ctx.accounts
         .transfer(ctx.bumps.pool_authority, migration_metadata.creator_lp)?;

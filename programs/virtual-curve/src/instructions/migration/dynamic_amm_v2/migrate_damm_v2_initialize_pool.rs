@@ -11,7 +11,7 @@ use crate::{
     constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     curve::{get_initial_liquidity_from_delta_base, get_initial_liquidity_from_delta_quote},
     safe_math::SafeMath,
-    state::{LiquidityDistribution, MigrationOption, PoolConfig, VirtualPool},
+    state::{LiquidityDistribution, MigrationOption, MigrationProgress, PoolConfig, VirtualPool},
     *,
 };
 
@@ -22,7 +22,7 @@ pub struct MigrateDammV2Ctx<'info> {
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
     /// migration metadata
-    #[account(mut, has_one = virtual_pool)]
+    #[account(has_one = virtual_pool)]
     pub migration_metadata: AccountLoader<'info, MeteoraDammV2Metadata>,
 
     /// virtual pool config key
@@ -373,16 +373,14 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         ctx.accounts.validate_config_key(&damm_config)?;
     }
 
-    let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    let migration_progress = MeteoraDammV2MetadataProgress::try_from(migration_metadata.progress)
-        .map_err(|_| PoolError::TypeCastFailed)?;
+    let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
 
     require!(
-        migration_progress == MeteoraDammV2MetadataProgress::Init,
+        virtual_pool.get_migration_progress()? == MigrationProgress::LockedVesting,
         PoolError::NotPermitToDoThisAction
     );
 
-    let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
+    let migration_metadata = ctx.accounts.migration_metadata.load()?;
 
     let config = ctx.accounts.config.load()?;
     require!(
@@ -534,7 +532,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         )?;
     }
 
-    migration_metadata.set_progress(MigrationMeteoraDammProgress::CreatedPool.into());
+    virtual_pool.set_migration_progress(MigrationProgress::CreatedPool.into());
 
     // TODO emit event
 

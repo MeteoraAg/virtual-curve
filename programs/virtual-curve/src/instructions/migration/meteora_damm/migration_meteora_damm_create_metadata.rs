@@ -1,11 +1,11 @@
 use anchor_lang::prelude::*;
 
 use crate::state::{MigrationOption, PoolConfig};
+use crate::PoolError;
 use crate::{
     constants::seeds::METEORA_METADATA_PREFIX, state::VirtualPool,
     EvtCreateMeteoraMigrationMetadata,
 };
-use crate::{MigrationMeteoraDammProgress, PoolError};
 
 use super::MeteoraDammMigrationMetadata;
 
@@ -50,8 +50,6 @@ pub fn handle_migration_meteora_damm_create_metadata(
     migration_metadata.virtual_pool = ctx.accounts.virtual_pool.key();
     migration_metadata.pool_creator = virtual_pool.creator;
     migration_metadata.partner = config.fee_claimer;
-
-    migration_metadata.set_progress(MigrationMeteoraDammProgress::Init.into());
 
     emit_cpi!(EvtCreateMeteoraMigrationMetadata {
         virtual_pool: ctx.accounts.virtual_pool.key(),

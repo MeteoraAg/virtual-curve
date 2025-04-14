@@ -8,7 +8,6 @@ import {
   getOrCreateAssociatedTokenAccount,
   unwrapSOLInstruction,
   getTokenAccount,
-  deriveMigrationMetadataAddress,
   derivePartnerMetadata,
 } from "../utils";
 import { getConfig, getPartnerMetadata, getVirtualPool } from "../utils/fetcher";
@@ -33,6 +32,14 @@ export type DynamicFee = {
   variableFeeControl: number;
 };
 
+export type LockedVestingParams = {
+  amountPerPeriod: BN;
+  cliffDurationFromMigrationTime: BN;
+  frequency: BN;
+  numberOfPeriod: BN;
+  cliffUnlockAmount: BN;
+}
+
 export type LiquidityDistributionParameters = {
   sqrtPrice: BN;
   liquidity: BN;
@@ -54,7 +61,8 @@ export type ConfigParameters = {
   creatorLpPercentage: number;
   creatorLockedLpPercentage: number;
   sqrtStartPrice: BN;
-  padding: [];
+  lockedVesting: LockedVestingParams;
+  padding: BN;
   curve: Array<LiquidityDistributionParameters>;
 };
 
@@ -141,6 +149,7 @@ export async function createPartnerMetadata(
   expect(metadataState.website.toString()).equal(website.toString());
   expect(metadataState.logo.toString()).equal(logo.toString());
 }
+
 export type ClaimTradeFeeParams = {
   feeClaimer: Keypair;
   pool: PublicKey;
@@ -197,7 +206,7 @@ export async function claimTradingFee(
   unrapSOLIx && postInstructions.push(unrapSOLIx);
   const transaction = await program.methods
     .claimTradingFee(maxBaseAmount, maxQuoteAmount)
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       pool,
@@ -256,7 +265,7 @@ export async function partnerWithdrawSurplus(
   unrapSOLIx && postInstructions.push(unrapSOLIx);
   const transaction = await program.methods
     .partnerWithdrawSurplus()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       virtualPool,

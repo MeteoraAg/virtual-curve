@@ -100,4 +100,7 @@ pub enum PoolError {
 
     #[msg("Missing pool config in remaning account")]
     MissingPoolConfigInRemaningAccount,
+
+    #[msg("Invalid vesting parameters")]
+    InvalidVestingParameters,
 }

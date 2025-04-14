@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
+use locker::types::CreateVestingEscrowParameters;
 
 use crate::{
     activation_handler::ActivationType,
@@ -12,7 +13,7 @@ use crate::{
         },
     },
     safe_math::SafeMath,
-    state::{CollectFeeMode, MigrationOption, PoolConfig, TokenType},
+    state::{CollectFeeMode, LockedVestingConfig, MigrationOption, PoolConfig, TokenType},
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
 };
@@ -31,9 +32,72 @@ pub struct ConfigParameters {
     pub creator_locked_lp_percentage: u8,
     pub migration_quote_threshold: u64,
     pub sqrt_start_price: u128,
+    pub locked_vesting: LockedVestingParams,
     /// padding for future use
-    pub padding: [u64; 6],
+    pub padding: u64,
     pub curve: Vec<LiquidityDistributionParameters>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct LockedVestingParams {
+    pub amount_per_period: u64,
+    pub cliff_duration_from_migration_time: u64,
+    pub frequency: u64,
+    pub number_of_period: u64,
+    pub cliff_unlock_amount: u64,
+}
+
+impl LockedVestingParams {
+    pub fn to_locked_vesting_config(&self) -> LockedVestingConfig {
+        LockedVestingConfig {
+            amount_per_period: self.amount_per_period,
+            cliff_duration_from_migration_time: self.cliff_duration_from_migration_time,
+            frequency: self.frequency,
+            number_of_period: self.number_of_period,
+            cliff_unlock_amount: self.cliff_unlock_amount,
+            ..Default::default()
+        }
+    }
+
+    pub fn to_create_vesting_escrow_params(
+        &self,
+        finish_curve_timestamp: u64,
+        current_timestamp: u64,
+    ) -> Result<CreateVestingEscrowParameters> {
+        let cliff_time =
+            finish_curve_timestamp.safe_add(self.cliff_duration_from_migration_time)?;
+        Ok(CreateVestingEscrowParameters {
+            vesting_start_time: current_timestamp,
+            cliff_time,
+            frequency: self.frequency,
+            cliff_unlock_amount: self.cliff_unlock_amount,
+            amount_per_period: self.amount_per_period,
+            number_of_period: self.number_of_period,
+            update_recipient_mode: 1, // only creator
+            cancel_mode: 1,           // only creator
+        })
+    }
+
+    pub fn get_total_amount(&self) -> Result<u64> {
+        let total_amount = self
+            .cliff_unlock_amount
+            .safe_add(self.amount_per_period.safe_mul(self.number_of_period)?)?;
+        Ok(total_amount)
+    }
+
+    pub fn has_vesting(&self) -> bool {
+        *self != LockedVestingParams::default()
+    }
+    pub fn validate(&self) -> Result<()> {
+        if self.has_vesting() {
+            let total_amount = self.get_total_amount()?;
+            require!(
+                self.frequency != 0 && total_amount != 0,
+                PoolError::InvalidVestingParameters
+            );
+        }
+        Ok(())
+    }
 }
 
 impl ConfigParameters {
@@ -95,6 +159,10 @@ impl ConfigParameters {
             .safe_add(self.creator_locked_lp_percentage)?;
         require!(sum_lp_percentage == 100, PoolError::InvalidFeePercentage);
 
+        // validate vesting params
+        self.locked_vesting.validate()?;
+
+        // validate price and liquidity
         require!(
             self.sqrt_start_price >= MIN_SQRT_PRICE && self.sqrt_start_price < MAX_SQRT_PRICE,
             PoolError::InvalidCurve
@@ -171,6 +239,7 @@ pub fn handle_create_config(
         creator_locked_lp_percentage,
         migration_quote_threshold,
         sqrt_start_price,
+        locked_vesting,
         curve,
         ..
     } = config_parameters;
@@ -194,6 +263,13 @@ pub fn handle_create_config(
         PoolError::TotalBaseTokenExceedMaxSupply
     );
 
+    // validate total token is smaller than u64::MAX
+    require!(
+        total_base_with_buffer.safe_add(locked_vesting.get_total_amount()?.into())?
+            <= u64::MAX.into(),
+        PoolError::InvalidVestingParameters
+    );
+
     let mut config = ctx.accounts.config.load_init()?;
     config.init(
         &ctx.accounts.quote_mint.key(),
@@ -210,6 +286,7 @@ pub fn handle_create_config(
         partner_lp_percentage,
         creator_locked_lp_percentage,
         creator_lp_percentage,
+        &locked_vesting,
         swap_base_amount,
         migration_quote_threshold,
         migration_base_amount,

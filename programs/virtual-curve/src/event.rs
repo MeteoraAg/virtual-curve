@@ -15,6 +15,13 @@ pub struct EvtPartnerMetadata {
     pub partner_metadata: Pubkey,
     pub fee_claimer: Pubkey,
 }
+
+/// Create virtual pool metadata
+#[event]
+pub struct EvtVirtualPoolMetadata {
+    pub virtual_pool_metadata: Pubkey,
+    pub virtual_pool: Pubkey,
+}
 /// Create config
 #[event]
 pub struct EvtCreateConfig {

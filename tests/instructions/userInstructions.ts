@@ -31,12 +31,13 @@ import {
   deriveLpMintAddress,
   deriveProtocolFeeAddress,
   deriveVaultLPAddress,
+  deriveVirtualPoolMetadata,
   getVaultPdas,
   METAPLEX_PROGRAM_ID,
   processTransactionMaybeThrow,
   VAULT_PROGRAM_ID,
 } from "../utils";
-import { getConfig, getVirtualPool } from "../utils/fetcher";
+import { getConfig, getVirtualPool, getVirtualPoolMetadata } from "../utils/fetcher";
 import {
   getOrCreateAssociatedTokenAccount,
   getTokenAccount,
@@ -79,7 +80,7 @@ export async function createPoolWithSplToken(
     configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
   const transaction = await program.methods
     .initializeVirtualPoolWithSplToken(instructionParams)
-    .accounts({
+    .accountsPartial({
       config,
       baseMint: baseMintKP.publicKey,
       quoteMint,
@@ -118,7 +119,7 @@ export async function createPoolWithToken2022(
   const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
   const transaction = await program.methods
     .initializeVirtualPoolWithToken2022(instructionParams)
-    .accounts({
+    .accountsPartial({
       config,
       baseMint: baseMintKP.publicKey,
       quoteMint,
@@ -237,7 +238,7 @@ export async function swap(
 
   const transaction = await program.methods
     .swap({ amountIn, minimumAmountOut })
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config,
       pool,
@@ -349,7 +350,7 @@ export async function swapSimulate(
 
   const transaction = await program.methods
     .swap({ amountIn, minimumAmountOut })
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config,
       pool,
@@ -384,4 +385,48 @@ export async function swapSimulate(
     completed:
       Number(poolState.quoteReserve) >= Number(configs.migrationQuoteThreshold),
   };
+}
+
+
+export async function createVirtualPoolMetadata(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: {
+    virtualPool: PublicKey,
+    name: string,
+    website: string,
+    logo: string,
+    creator: Keypair,
+    payer: Keypair
+
+  }
+) {
+  const { virtualPool, creator, payer, name, website, logo } = params;
+  const virtualPoolMetadata = deriveVirtualPoolMetadata(virtualPool);
+  const transaction = await program.methods
+    .createVirtualPoolMetadata({
+      padding: new Array(96).fill(0),
+      name,
+      website,
+      logo,
+    })
+    .accountsPartial({
+      virtualPool,
+      virtualPoolMetadata,
+      creator: creator.publicKey,
+      payer: payer.publicKey,
+      systemProgram: SystemProgram.programId,
+    })
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer, creator);
+
+  await processTransactionMaybeThrow(banksClient, transaction);
+  //
+  const metadataState = await getVirtualPoolMetadata(banksClient, program, virtualPoolMetadata);
+  expect(metadataState.virtualPool.toString()).equal(virtualPool.toString());
+  expect(metadataState.name.toString()).equal(name.toString());
+  expect(metadataState.website.toString()).equal(website.toString());
+  expect(metadataState.logo.toString()).equal(logo.toString());
 }

@@ -31,6 +31,7 @@ mpl-token-metadata = "5.1.0"
 spl-token-metadata-interface = "0.6"
 dynamic-amm = { path = "../../libs/dynamic-amm"}
 damm-v2 = { path = "../../libs/damm-v2"}
+locker = { path = "../../libs/locker"}
 
 [dev-dependencies]
 proptest = "1.2.0"

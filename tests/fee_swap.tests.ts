@@ -81,7 +81,14 @@ describe("Fee Swap test", () => {
         partnerLockedLpPercentage: 95,
         creatorLockedLpPercentage: 5,
         sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
-        padding: [],
+        lockedVesting: {
+          amountPerPeriod: new BN(0),
+          cliffDurationFromMigrationTime: new BN(0),
+          frequency: new BN(0),
+          numberOfPeriod: new BN(0),
+          cliffUnlockAmount: new BN(0),
+        },
+        padding: new BN(0),
         curve: curves,
       };
       const params: CreateConfigParams = {
@@ -390,7 +397,14 @@ describe("Fee Swap test", () => {
         partnerLockedLpPercentage: 95,
         creatorLockedLpPercentage: 5,
         sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
-        padding: [],
+        lockedVesting: {
+          amountPerPeriod: new BN(0),
+          cliffDurationFromMigrationTime: new BN(0),
+          frequency: new BN(0),
+          numberOfPeriod: new BN(0),
+          cliffUnlockAmount: new BN(0),
+        },
+        padding: new BN(0),
         curve: curves,
       };
       const params: CreateConfigParams = {

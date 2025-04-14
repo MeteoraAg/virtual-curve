@@ -104,4 +104,6 @@ pub mod seeds {
     pub const METEORA_METADATA_PREFIX: &[u8] = b"meteora";
     pub const DAMM_V2_METADATA_PREFIX: &[u8] = b"damm_v2";
     pub const PARTNER_METADATA_PREFIX: &[u8] = b"partner_metadata";
+    pub const VIRTUAL_POOL_METADATA_PREFIX: &[u8] = b"virtual_pool_metadata";
+    pub const BASE_LOCKER_PREFIX: &[u8] = b"base_locker";
 }

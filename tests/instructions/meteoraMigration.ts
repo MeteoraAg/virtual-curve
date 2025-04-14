@@ -47,7 +47,7 @@ export async function createMeteoraMetadata(
   const { payer, virtualPool, config } = params;
   const transaction = await program.methods
     .migrationMeteoraDammCreateMetadata()
-    .accounts({
+    .accountsPartial({
       virtualPool,
       config,
       payer: payer.publicKey,
@@ -128,7 +128,7 @@ export async function migrateToMeteoraDamm(
 
   const transaction = await program.methods
     .migrateMeteoraDamm()
-    .accounts({
+    .accountsPartial({
       virtualPool,
       migrationMetadata,
       config: virtualPoolState.config,
@@ -255,7 +255,8 @@ export async function lockLpForCreatorDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammLockLpTokenForCreator()
-    .accounts({
+    .accountsPartial({
+      virtualPool,
       migrationMetadata,
       poolAuthority,
       pool: dammPool,
@@ -367,7 +368,8 @@ export async function lockLpForPartnerDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammLockLpTokenForPartner()
-    .accounts({
+    .accountsPartial({
+      virtualPool,
       migrationMetadata,
       poolAuthority,
       pool: dammPool,
@@ -441,7 +443,8 @@ export async function partnerClaimLpDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammPartnerClaimLpToken()
-    .accounts({
+    .accountsPartial({
+      virtualPool,
       migrationMetadata,
       poolAuthority,
       pool: dammPool,
@@ -504,7 +507,8 @@ export async function creatorClaimLpDamm(
   );
   const transaction = await program.methods
     .migrateMeteoraDammCreatorClaimLpToken()
-    .accounts({
+    .accountsPartial({
+      virtualPool,
       migrationMetadata,
       poolAuthority,
       pool: dammPool,

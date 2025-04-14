@@ -241,7 +241,7 @@ export async function createInitializePermissionlessDynamicVaultIx(
 
   const ix = await program.methods
     .initialize()
-    .accounts({
+    .accountsPartial({
       vault: vaultKey,
       tokenVault: tokenVaultKey,
       tokenMint: mint,
@@ -398,7 +398,7 @@ export async function createLockEscrowIx(
 
   const transaction = await program.methods
     .createLockEscrow()
-    .accounts({
+    .accountsPartial({
       pool,
       lpMint,
       owner: escrowOwner,

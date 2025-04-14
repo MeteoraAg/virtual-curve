@@ -7,3 +7,5 @@ pub mod fee;
 pub use claim_fee_operator::*;
 pub mod partner_metadata;
 pub use partner_metadata::*;
+pub mod virtual_pool_metadata;
+pub use virtual_pool_metadata::*;

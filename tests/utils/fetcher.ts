@@ -7,6 +7,7 @@ import {
   Pool,
   PoolConfig,
   VirtualCurveProgram,
+  VirtualPoolMetadata,
 } from "./types";
 
 export async function getVirtualPool(
@@ -38,6 +39,17 @@ export async function getPartnerMetadata(
   const account = await banksClient.getAccount(partnerMetadata);
   return program.coder.accounts.decode("partnerMetadata", Buffer.from(account.data));
 }
+
+
+export async function getVirtualPoolMetadata(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  virtualPoolMetadata: PublicKey
+): Promise<VirtualPoolMetadata> {
+  const account = await banksClient.getAccount(virtualPoolMetadata);
+  return program.coder.accounts.decode("virtualPoolMetadata", Buffer.from(account.data));
+}
+
 
 export async function getClaimFeeOperator(
   banksClient: BanksClient,

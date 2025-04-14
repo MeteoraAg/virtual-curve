@@ -53,6 +53,24 @@ pub enum PoolType {
     Token2022,
 }
 
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
+)]
+pub enum MigrationProgress {
+    PreBondingCurve,
+    PostBondingCurve,
+    LockedVesting,
+    CreatedPool,
+}
+
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
 pub struct VirtualPool {
@@ -92,12 +110,16 @@ pub struct VirtualPool {
     pub is_partner_withdraw_surplus: u8,
     /// is protocol withdraw surplus
     pub is_procotol_withdraw_surplus: u8,
+    /// migration progress
+    pub migration_progress: u8,
     /// padding
-    pub _padding_0: [u8; 4],
+    pub _padding_0: [u8; 3],
     /// pool metrics
     pub metrics: PoolMetrics,
+    /// The time curve is finished
+    pub finish_curve_timestamp: u64,
     /// Padding for further use
-    pub _padding_1: [u64; 10],
+    pub _padding_1: [u64; 9],
 }
 
 const_assert_eq!(VirtualPool::INIT_SPACE, 416);
@@ -514,6 +536,16 @@ impl VirtualPool {
 
     pub fn update_protocol_withdraw_surplus(&mut self) {
         self.is_procotol_withdraw_surplus = 1;
+    }
+
+    pub fn get_migration_progress(&self) -> Result<MigrationProgress> {
+        let migration_progress = MigrationProgress::try_from(self.migration_progress)
+            .map_err(|_| PoolError::TypeCastFailed)?;
+        Ok(migration_progress)
+    }
+
+    pub fn set_migration_progress(&mut self, progress: u8) {
+        self.migration_progress = progress;
     }
 }
 

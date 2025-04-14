@@ -1,4 +1,5 @@
 use crate::math::safe_math::SafeMath;
+use crate::state::MigrationProgress;
 use crate::EvtCurveComplete;
 use crate::{
     activation_handler::get_current_point,
@@ -223,6 +224,16 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
             base_vault_balance >= required_base_balance,
             PoolError::InsufficentLiquidityForMigration
         );
+
+        // set finish time and migration progress
+        pool.finish_curve_timestamp = current_timestamp;
+
+        let locked_vesting_params = config.locked_vesting_config.to_locked_vesting_params();
+        if locked_vesting_params.has_vesting() {
+            pool.set_migration_progress(MigrationProgress::PostBondingCurve.into());
+        } else {
+            pool.set_migration_progress(MigrationProgress::LockedVesting.into());
+        }
 
         emit_cpi!(EvtCurveComplete {
             pool: ctx.accounts.pool.key(),
