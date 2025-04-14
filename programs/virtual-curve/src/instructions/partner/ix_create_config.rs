@@ -62,12 +62,11 @@ impl LockedVestingParams {
     pub fn to_create_vesting_escrow_params(
         &self,
         finish_curve_timestamp: u64,
-        current_timestamp: u64,
     ) -> Result<CreateVestingEscrowParameters> {
         let cliff_time =
             finish_curve_timestamp.safe_add(self.cliff_duration_from_migration_time)?;
         Ok(CreateVestingEscrowParameters {
-            vesting_start_time: current_timestamp,
+            vesting_start_time: finish_curve_timestamp,
             cliff_time,
             frequency: self.frequency,
             cliff_unlock_amount: self.cliff_unlock_amount,

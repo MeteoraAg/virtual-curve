@@ -104,10 +104,8 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
         total_vested_amount,
     )?;
 
-    let vesting_params = locked_vesting_params.to_create_vesting_escrow_params(
-        virtual_pool.finish_curve_timestamp,
-        Clock::get()?.unix_timestamp as u64,
-    )?;
+    let vesting_params = locked_vesting_params
+        .to_create_vesting_escrow_params(virtual_pool.finish_curve_timestamp)?;
 
     let virtual_pool_key = ctx.accounts.virtual_pool.key();
     let base_seeds = base_locker_seeds!(virtual_pool_key, ctx.bumps.base);
