@@ -112,8 +112,8 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
     let virtual_pool_key = ctx.accounts.virtual_pool.key();
     let base_seeds = base_locker_seeds!(virtual_pool_key, ctx.bumps.base);
 
-    // Send some lamport to presale to pay rent fee?
-    msg!("transfer lamport to presale_authority");
+    // Send some lamport to pool authority to pay rent fee?
+    msg!("transfer lamport to pool authority");
     invoke(
         &system_instruction::transfer(
             &ctx.accounts.payer.key(),

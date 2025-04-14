@@ -13,11 +13,11 @@ use dynamic_amm::accounts::LockEscrow;
 pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
-    /// presale
+    /// migration_metadata
     #[account(mut, has_one = lp_mint, has_one = virtual_pool)]
     pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
-    /// CHECK: presale authority
+    /// CHECK: pool authority
     #[account(
         mut,
         seeds = [

@@ -11,11 +11,11 @@ use anchor_spl::token::{transfer, Token, TokenAccount, Transfer};
 pub struct MigrateMeteoraDammClaimLpTokenCtx<'info> {
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
-    /// presale
+    /// migration metadata
     #[account(mut, has_one = lp_mint, has_one = virtual_pool)]
     pub migration_metadata: AccountLoader<'info, MeteoraDammMigrationMetadata>,
 
-    /// CHECK: presale authority
+    /// CHECK: pool authority
     #[account(
         mut,
         seeds = [

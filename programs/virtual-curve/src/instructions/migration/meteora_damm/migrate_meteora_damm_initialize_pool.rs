@@ -147,7 +147,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
     ) -> Result<()> {
         let pool_authority_seeds = pool_authority_seeds!(bump);
 
-        // Send some lamport to presale to pay rent fee?
+        // Send some lamport to pool authority to pay rent fee?
         msg!("transfer lamport to pool_authority");
         invoke(
             &system_instruction::transfer(
