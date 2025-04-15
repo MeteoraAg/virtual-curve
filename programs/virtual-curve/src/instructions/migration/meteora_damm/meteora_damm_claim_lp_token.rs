@@ -41,8 +41,15 @@ pub struct MigrateMeteoraDammClaimLpTokenCtx<'info> {
     pub source_token: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: destination token account
-    #[account(mut)]
-    pub destination_token: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        associated_token::mint = migration_metadata.load()?.lp_mint,
+        associated_token::authority = owner.key()
+    )]
+    pub destination_token: Box<Account<'info, TokenAccount>>,
+
+    /// CHECK: owner of lp token, must be creator or partner
+    pub owner: UncheckedAccount<'info>,
 
     /// CHECK: signer
     pub sender: Signer<'info>,
@@ -71,7 +78,7 @@ impl<'info> MigrateMeteoraDammClaimLpTokenCtx<'info> {
         Ok(())
     }
 }
-pub fn handle_migrate_meteora_damm_partner_claim_lp_token<'info>(
+pub fn handle_migrate_meteora_damm_claim_lp_token<'info>(
     ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
 ) -> Result<()> {
     let virtual_pool = ctx.accounts.virtual_pool.load()?;
@@ -82,52 +89,35 @@ pub fn handle_migrate_meteora_damm_partner_claim_lp_token<'info>(
     );
 
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    require!(
-        !migration_metadata.is_partner_claim_lp(),
-        PoolError::NotPermitToDoThisAction
-    );
-    require!(
-        migration_metadata.partner_lp != 0,
-        PoolError::NotPermitToDoThisAction
-    );
-    // check partner address
-    require!(
-        migration_metadata.partner.eq(ctx.accounts.sender.key),
-        PoolError::InvalidPartnerAccount
-    );
 
-    migration_metadata.set_partner_claim_status();
-    ctx.accounts
-        .transfer(ctx.bumps.pool_authority, migration_metadata.partner_lp)?;
-    Ok(())
-}
-pub fn handle_migrate_meteora_damm_creator_claim_lp_token<'info>(
-    ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammClaimLpTokenCtx<'info>>,
-) -> Result<()> {
-    let virtual_pool = ctx.accounts.virtual_pool.load()?;
+    if ctx.accounts.owner.key() == migration_metadata.partner {
+        require!(
+            !migration_metadata.is_partner_claim_lp(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            migration_metadata.partner_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
+        migration_metadata.set_partner_claim_status();
+        ctx.accounts
+            .transfer(ctx.bumps.pool_authority, migration_metadata.partner_lp)?;
+    } else if ctx.accounts.owner.key() == migration_metadata.pool_creator {
+        require!(
+            !migration_metadata.is_creator_claim_lp(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            migration_metadata.creator_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
 
-    require!(
-        virtual_pool.get_migration_progress()? == MigrationProgress::CreatedPool,
-        PoolError::NotPermitToDoThisAction
-    );
+        migration_metadata.set_creator_claim_status();
+        ctx.accounts
+            .transfer(ctx.bumps.pool_authority, migration_metadata.creator_lp)?;
+    } else {
+        return Err(PoolError::InvalidOwnerAccount.into());
+    }
 
-    let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    require!(
-        !migration_metadata.is_creator_claim_lp(),
-        PoolError::NotPermitToDoThisAction
-    );
-    require!(
-        migration_metadata.creator_lp != 0,
-        PoolError::NotPermitToDoThisAction
-    );
-    // check creator address
-    require!(
-        migration_metadata.pool_creator.eq(ctx.accounts.sender.key),
-        PoolError::InvalidPartnerAccount
-    );
-
-    migration_metadata.set_creator_claim_status();
-    ctx.accounts
-        .transfer(ctx.bumps.pool_authority, migration_metadata.creator_lp)?;
     Ok(())
 }

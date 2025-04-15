@@ -12,8 +12,8 @@ use locker::cpi::accounts::CreateVestingEscrowV2;
 
 #[derive(Accounts)]
 pub struct CreateLockerCtx<'info> {
-    /// Config
-    #[account(mut, has_one = config, has_one = creator)]
+    /// Virtual pool
+    #[account(mut, has_one = config, has_one = creator, has_one = base_vault, has_one = base_mint)]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
     /// Config
     pub config: AccountLoader<'info, PoolConfig>,

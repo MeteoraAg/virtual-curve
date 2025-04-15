@@ -53,6 +53,12 @@ pub enum PoolType {
     Token2022,
 }
 
+// Pool state transition flows:
+// 1. Without jup lock
+//    PreBonding -> LockedVesting -> CreatedPool
+//
+// 2. With jup lock
+//    PreBonding -> PostBonding -> LockedVesting -> CreatedPool
 #[repr(u8)]
 #[derive(
     Clone,

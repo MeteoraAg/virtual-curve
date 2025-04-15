@@ -107,7 +107,7 @@ impl<'info> MigrateMeteoraDammLockLpTokenCtx<'info> {
         Ok(())
     }
 }
-pub fn handle_migrate_meteora_damm_lock_lp_token_for_partner<'info>(
+pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
     ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
 ) -> Result<()> {
     let virtual_pool = ctx.accounts.virtual_pool.load()?;
@@ -118,57 +118,37 @@ pub fn handle_migrate_meteora_damm_lock_lp_token_for_partner<'info>(
     );
 
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    require!(
-        !migration_metadata.is_partner_lp_locked(),
-        PoolError::NotPermitToDoThisAction
-    );
-    require!(
-        migration_metadata.partner_locked_lp != 0,
-        PoolError::NotPermitToDoThisAction
-    );
-    // check partner address
-    require!(
-        migration_metadata.partner.eq(ctx.accounts.owner.key),
-        PoolError::InvalidPartnerAccount
-    );
+    if ctx.accounts.owner.key() == migration_metadata.partner {
+        require!(
+            !migration_metadata.is_partner_lp_locked(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            migration_metadata.partner_locked_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
 
-    migration_metadata.set_partner_lock_status();
-    ctx.accounts.lock(
-        ctx.bumps.pool_authority,
-        migration_metadata.partner_locked_lp,
-    )?;
-    Ok(())
-}
+        migration_metadata.set_partner_lock_status();
+        ctx.accounts.lock(
+            ctx.bumps.pool_authority,
+            migration_metadata.partner_locked_lp,
+        )?;
+    } else if ctx.accounts.owner.key() == migration_metadata.pool_creator {
+        require!(
+            !migration_metadata.is_creator_lp_locked(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            migration_metadata.creator_locked_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
 
-pub fn handle_migrate_meteora_damm_lock_lp_token_for_creator<'info>(
-    ctx: Context<'_, '_, '_, 'info, MigrateMeteoraDammLockLpTokenCtx<'info>>,
-) -> Result<()> {
-    let virtual_pool = ctx.accounts.virtual_pool.load()?;
-    require!(
-        virtual_pool.get_migration_progress()? == MigrationProgress::CreatedPool,
-        PoolError::NotPermitToDoThisAction
-    );
+        migration_metadata.set_creator_lock_status();
 
-    let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    require!(
-        !migration_metadata.is_creator_lp_locked(),
-        PoolError::NotPermitToDoThisAction
-    );
-    require!(
-        migration_metadata.creator_locked_lp != 0,
-        PoolError::NotPermitToDoThisAction
-    );
-    // check partner address
-    require!(
-        migration_metadata.pool_creator.eq(ctx.accounts.owner.key),
-        PoolError::InvalidOwnerAccount
-    );
-
-    migration_metadata.set_creator_lock_status();
-
-    ctx.accounts.lock(
-        ctx.bumps.pool_authority,
-        migration_metadata.creator_locked_lp,
-    )?;
+        ctx.accounts.lock(
+            ctx.bumps.pool_authority,
+            migration_metadata.creator_locked_lp,
+        )?;
+    }
     Ok(())
 }

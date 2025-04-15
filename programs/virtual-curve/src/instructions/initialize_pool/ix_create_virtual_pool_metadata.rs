@@ -21,7 +21,7 @@ pub struct CreateVirtualPoolMetadataCtx<'info> {
         has_one = creator,
     )]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
-    /// Partner metadata
+    /// Virtual pool metadata
     #[account(
         init,
         seeds = [
