@@ -22,10 +22,6 @@ pub mod tests;
 
 pub mod params;
 
-#[cfg(feature = "local")]
-declare_id!("2grmPSxKzQBhRrTRjWazVtMkRGFbFaqLakxGEZfnXB5u");
-
-#[cfg(not(feature = "local"))]
 declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]
