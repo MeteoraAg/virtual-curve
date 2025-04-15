@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     params::{
-        fee_parameters::PoolFeeParamters, liquidity_distribution::LiquidityDistributionParameters,
+        fee_parameters::PoolFeeParameters, liquidity_distribution::LiquidityDistributionParameters,
     },
     state::SwapResult,
     SwapParameters,
@@ -29,7 +29,7 @@ pub struct EvtCreateConfig {
     pub quote_mint: Pubkey,
     pub fee_claimer: Pubkey,
     pub owner: Pubkey,
-    pub pool_fees: PoolFeeParamters,
+    pub pool_fees: PoolFeeParameters,
     pub collect_fee_mode: u8,
     pub migration_option: u8,
     pub activation_type: u8,

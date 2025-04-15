@@ -6,7 +6,7 @@ use crate::{
     activation_handler::ActivationType,
     constants::{MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     params::{
-        fee_parameters::PoolFeeParamters,
+        fee_parameters::PoolFeeParameters,
         liquidity_distribution::{
             get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
             LiquidityDistributionParameters,
@@ -20,7 +20,7 @@ use crate::{
 
 #[derive(AnchorSerialize, AnchorDeserialize, Debug)]
 pub struct ConfigParameters {
-    pub pool_fees: PoolFeeParamters,
+    pub pool_fees: PoolFeeParameters,
     pub collect_fee_mode: u8,
     pub migration_option: u8,
     pub activation_type: u8,
@@ -158,6 +158,11 @@ impl ConfigParameters {
             .safe_add(self.creator_locked_lp_percentage)?;
         require!(sum_lp_percentage == 100, PoolError::InvalidFeePercentage);
 
+        require!(
+            self.migration_quote_threshold > 0,
+            PoolError::InvalidQuoteThreshold
+        );
+
         // validate vesting params
         self.locked_vesting.validate()?;
 
@@ -201,6 +206,7 @@ impl ConfigParameters {
 pub struct CreateConfigCtx<'info> {
     #[account(
         init,
+        signer,
         payer = payer,
         space = 8 + PoolConfig::INIT_SPACE
     )]
@@ -245,6 +251,7 @@ pub fn handle_create_config(
 
     let sqrt_migration_price =
         get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve)?;
+
     let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
 
     let migration_base_amount = get_migration_base_token(

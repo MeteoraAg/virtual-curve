@@ -9,7 +9,7 @@ use crate::{
     },
     fee_math::get_fee_in_period,
     params::{
-        fee_parameters::PoolFeeParamters, liquidity_distribution::LiquidityDistributionParameters,
+        fee_parameters::PoolFeeParameters, liquidity_distribution::LiquidityDistributionParameters,
     },
     safe_math::SafeMath,
     u128x128_math::Rounding,
@@ -160,17 +160,10 @@ impl BaseFeeConfig {
             return Ok(self.cliff_fee_numerator);
         }
 
-        // When trading before activation point (this won't happpen), use the maximum
-        // number of periods to ensure the lowest fee is charged. After activation, calculate
-        // periods based on time elapsed, capped by the maximum number of periods.
-        let period = if current_point < activation_point {
-            self.number_of_period.into()
-        } else {
-            let period = current_point
-                .safe_sub(activation_point)?
-                .safe_div(self.period_frequency)?;
-            period.min(self.number_of_period.into())
-        };
+        let period = current_point
+            .safe_sub(activation_point)?
+            .safe_div(self.period_frequency)?;
+        let period = period.min(self.number_of_period.into());
 
         let fee_scheduler_mode = FeeSchedulerMode::try_from(self.fee_scheduler_mode)
             .map_err(|_| PoolError::TypeCastFailed)?;
@@ -368,7 +361,7 @@ impl PoolConfig {
         quote_mint: &Pubkey,
         fee_claimer: &Pubkey,
         owner: &Pubkey,
-        pool_fees: &PoolFeeParamters,
+        pool_fees: &PoolFeeParameters,
         collect_fee_mode: u8,
         migration_option: u8,
         activation_type: u8,
