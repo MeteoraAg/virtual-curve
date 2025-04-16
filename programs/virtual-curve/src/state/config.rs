@@ -436,13 +436,13 @@ impl PoolConfig {
     }
 
     pub fn get_initial_base_supply(&self) -> Result<u64> {
-        let total_logic_amount = PoolConfig::total_amount_with_buffer(
+        let total_circulating_amount = PoolConfig::total_amount_with_buffer(
             self.swap_base_amount,
             self.migration_base_threshold,
         )?;
         let locked_vesting_params = self.locked_vesting_config.to_locked_vesting_params();
         let total_locked_vesting_amount = locked_vesting_params.get_total_amount()?;
-        let total_amount = total_logic_amount.safe_add(total_locked_vesting_amount.into())?;
+        let total_amount = total_circulating_amount.safe_add(total_locked_vesting_amount.into())?;
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
     }
 

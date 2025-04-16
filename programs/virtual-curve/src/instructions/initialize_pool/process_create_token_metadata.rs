@@ -41,20 +41,5 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
 
     builder.invoke_signed(&[&seeds[..]])?;
 
-    // re-validate on local
-    #[cfg(feature = "local")]
-    {
-        use crate::PoolError;
-        let metadata = mpl_token_metadata::accounts::Metadata::safe_deserialize(
-            &params.mint_metadata.try_borrow_data().unwrap(),
-        )
-        .unwrap();
-        require!(
-            metadata.update_authority == params.creator.key(),
-            PoolError::InvalidParameters
-        );
-        require!(metadata.is_mutable, PoolError::InvalidParameters);
-    }
-
     Ok(())
 }

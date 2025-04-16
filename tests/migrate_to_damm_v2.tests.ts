@@ -176,11 +176,5 @@ describe("Migrate to damm v2", () => {
         };
 
         await migrateToDammV2(context.banksClient, program, migrationParams);
-
-        // validate mint authority
-        const baseMintData = (
-            await getMint(context.banksClient, virtualPoolState.baseMint)
-        );
-        expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
     });
 });

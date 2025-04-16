@@ -68,9 +68,9 @@ jobs:
     if: needs.program_changed_files.outputs.program == 'true'
     steps:
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.79.0
+          toolchain: 1.85.0
           components: clippy
       # Cache rust, cargo
       - uses: Swatinem/rust-cache@v2
@@ -91,10 +91,21 @@ jobs:
         with:
           version: 9.5.0 # Optional: specify a pnpm version
 
+<<<<<<< HEAD
       # Install nightly toolchains
       - uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: ${{ env.NIGHTLY_TOOLCHAIN }}
+=======
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: 1.85.0
+          components: clippy
+      # Install rust + toolchain
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+>>>>>>> f2c9ba7 (fix based comments)
           components: clippy
       # proc-macro2 version 
       - name: Update proc-macro2 version

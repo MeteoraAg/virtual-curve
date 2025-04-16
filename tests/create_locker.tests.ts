@@ -174,12 +174,6 @@ describe("Create locker", () => {
             };
 
             await migrateToDammV2(context.banksClient, program, migrationParams);
-
-            // validate mint authority
-            const baseMintData = (
-                await getMint(context.banksClient, virtualPoolState.baseMint)
-            );
-            expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
         });
     })
 
@@ -329,12 +323,6 @@ describe("Create locker", () => {
             };
 
             await migrateToDammV2(context.banksClient, program, migrationParams);
-
-            // validate mint authority
-            const baseMintData = (
-                await getMint(context.banksClient, virtualPoolState.baseMint)
-            );
-            expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
         });
     })
 

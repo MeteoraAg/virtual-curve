@@ -159,7 +159,7 @@ describe("Create pool with token2022", () => {
             await getMint(context.banksClient, virtualPoolState.baseMint)
         );
         expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
-        expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
+        expect(baseMintData.mintAuthorityOption).eq(0)
     });
 
     it("Swap", async () => {

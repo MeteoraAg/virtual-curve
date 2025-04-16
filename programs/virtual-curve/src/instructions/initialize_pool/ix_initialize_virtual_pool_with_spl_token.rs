@@ -191,7 +191,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        Some(Pubkey::default()),
+        None,
     )?;
 
     // init pool
