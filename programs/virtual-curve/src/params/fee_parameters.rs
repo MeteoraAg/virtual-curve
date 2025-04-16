@@ -5,6 +5,7 @@ use crate::constants::fee::{
 };
 use crate::constants::{BASIS_POINT_MAX, BIN_STEP_BPS_DEFAULT, BIN_STEP_BPS_U128_DEFAULT, U24_MAX};
 use crate::error::PoolError;
+use crate::safe_math::SafeMath;
 use crate::state::{BaseFeeConfig, DynamicFeeConfig, PoolFeesConfig};
 use anchor_lang::prelude::*;
 
@@ -170,11 +171,11 @@ pub fn validate_fee_fraction(numerator: u64, denominator: u64) -> Result<()> {
 }
 
 /// Convert fees numerator and denominator to BPS. Minimum 1 bps, Maximum 10_000 bps. 0.01% -> 100%
-pub fn to_bps(numerator: u128, denominator: u128) -> Option<u64> {
+pub fn to_bps(numerator: u128, denominator: u128) -> Result<u64> {
     let bps = numerator
-        .checked_mul(MAX_BASIS_POINT.into())?
-        .checked_div(denominator)?;
-    bps.try_into().ok()
+        .safe_mul(MAX_BASIS_POINT.into())?
+        .safe_div(denominator)?;
+    Ok(u64::try_from(bps).map_err(|_| PoolError::TypeCastFailed)?)
 }
 
 impl PoolFeeParameters {

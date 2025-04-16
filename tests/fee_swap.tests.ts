@@ -88,7 +88,8 @@ describe("Fee Swap test", () => {
           numberOfPeriod: new BN(0),
           cliffUnlockAmount: new BN(0),
         },
-        padding: new BN(0),
+        migrationFeeOption: 0,
+        padding: [0, 0, 0, 0, 0, 0, 0],
         curve: curves,
       };
       const params: CreateConfigParams = {
@@ -404,7 +405,8 @@ describe("Fee Swap test", () => {
           numberOfPeriod: new BN(0),
           cliffUnlockAmount: new BN(0),
         },
-        padding: new BN(0),
+        migrationFeeOption: 0,
+        padding: [0, 0, 0, 0, 0, 0, 0],
         curve: curves,
       };
       const params: CreateConfigParams = {

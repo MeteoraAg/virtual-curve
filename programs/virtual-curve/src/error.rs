@@ -38,6 +38,9 @@ pub enum PoolError {
     #[msg("Invalid collect fee mode")]
     InvalidCollectFeeMode,
 
+    #[msg("Invalid migration fee option")]
+    InvalidMigrationFeeOption,
+
     #[msg("Invalid input")]
     InvalidInput,
 

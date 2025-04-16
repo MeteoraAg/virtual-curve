@@ -13,7 +13,10 @@ use crate::{
         },
     },
     safe_math::SafeMath,
-    state::{CollectFeeMode, LockedVestingConfig, MigrationOption, PoolConfig, TokenType},
+    state::{
+        CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
+        TokenType,
+    },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
 };
@@ -33,8 +36,9 @@ pub struct ConfigParameters {
     pub migration_quote_threshold: u64,
     pub sqrt_start_price: u128,
     pub locked_vesting: LockedVestingParams,
+    pub migration_fee_option: u8,
     /// padding for future use
-    pub padding: u64,
+    pub padding: [u8; 7],
     pub curve: Vec<LiquidityDistributionParameters>,
 }
 
@@ -166,6 +170,12 @@ impl ConfigParameters {
         // validate vesting params
         self.locked_vesting.validate()?;
 
+        // validate migrate fee option
+        require!(
+            MigrationFeeOption::try_from(self.migration_fee_option).is_ok(),
+            PoolError::InvalidMigrationFeeOption
+        );
+
         // validate price and liquidity
         require!(
             self.sqrt_start_price >= MIN_SQRT_PRICE && self.sqrt_start_price < MAX_SQRT_PRICE,
@@ -245,6 +255,7 @@ pub fn handle_create_config(
         migration_quote_threshold,
         sqrt_start_price,
         locked_vesting,
+        migration_fee_option,
         curve,
         ..
     } = config_parameters;
@@ -293,6 +304,7 @@ pub fn handle_create_config(
         creator_locked_lp_percentage,
         creator_lp_percentage,
         &locked_vesting,
+        migration_fee_option,
         swap_base_amount,
         migration_quote_threshold,
         migration_base_amount,
