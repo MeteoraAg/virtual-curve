@@ -28,7 +28,7 @@ declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 pub mod virtual_curve {
     use super::*;
 
-    /// ADMIN FUNCTIONS ////
+    /// ADMIN FUNCTIONS ///
     pub fn create_claim_fee_operator(ctx: Context<CreateClaimFeeOperatorCtx>) -> Result<()> {
         instructions::handle_create_claim_fee_operator(ctx)
     }
