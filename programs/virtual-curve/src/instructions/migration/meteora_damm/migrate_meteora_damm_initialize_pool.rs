@@ -1,7 +1,5 @@
 use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::token::{
-    spl_token::instruction::AuthorityType, Burn, SetAuthority, Token, TokenAccount,
-};
+use anchor_spl::token::{Burn, Token, TokenAccount};
 
 use crate::{
     constants::seeds::POOL_AUTHORITY_PREFIX,
@@ -259,23 +257,6 @@ pub fn handle_migrate_meteora_damm<'info>(
                 &[&seeds[..]],
             ),
             left_base_token,
-        )?;
-    }
-
-    // remove mint authority
-    {
-        let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
-        anchor_spl::token::set_authority(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_program.to_account_info(),
-                SetAuthority {
-                    current_authority: ctx.accounts.pool_authority.to_account_info(),
-                    account_or_mint: ctx.accounts.token_a_mint.to_account_info(),
-                },
-                &[&seeds[..]],
-            ),
-            AuthorityType::MintTokens,
-            Some(Pubkey::default()),
         )?;
     }
 

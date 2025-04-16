@@ -155,6 +155,7 @@ describe("Full flow with spl-token", () => {
       await getMint(context.banksClient, virtualPoolState.baseMint)
     );
     expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
+    expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
   });
 
   it("Swap", async () => {
