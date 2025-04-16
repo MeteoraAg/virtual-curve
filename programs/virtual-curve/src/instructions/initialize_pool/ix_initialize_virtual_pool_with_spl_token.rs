@@ -158,6 +158,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         mint: ctx.accounts.base_mint.to_account_info(),
         metadata_program: ctx.accounts.metadata_program.to_account_info(),
         mint_metadata: ctx.accounts.mint_metadata.to_account_info(),
+        creator: ctx.accounts.creator.to_account_info(),
         name: &name,
         symbol: &symbol,
         uri: &uri,
