@@ -176,13 +176,13 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     )?;
 
     // send to referral
-    if has_referral {
+    if let Some(referral_token_account) = ctx.accounts.referral_token_account.clone() {
         if fee_mode.fees_on_base_token {
             transfer_from_pool(
                 ctx.accounts.pool_authority.to_account_info(),
                 &ctx.accounts.base_mint,
                 &ctx.accounts.base_vault,
-                &ctx.accounts.referral_token_account.clone().unwrap(),
+                &referral_token_account,
                 &ctx.accounts.token_base_program,
                 swap_result.referral_fee,
                 ctx.bumps.pool_authority,
@@ -192,7 +192,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
                 ctx.accounts.pool_authority.to_account_info(),
                 &ctx.accounts.quote_mint,
                 &ctx.accounts.quote_vault,
-                &ctx.accounts.referral_token_account.clone().unwrap(),
+                &referral_token_account,
                 &ctx.accounts.token_quote_program,
                 swap_result.referral_fee,
                 ctx.bumps.pool_authority,
