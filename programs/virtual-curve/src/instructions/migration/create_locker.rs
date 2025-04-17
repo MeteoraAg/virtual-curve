@@ -4,10 +4,7 @@ use crate::{
     *,
 };
 use anchor_lang::solana_program::{program::invoke, system_instruction};
-use anchor_spl::{
-    token_2022::{mint_to, MintTo},
-    token_interface::{TokenAccount, TokenInterface},
-};
+use anchor_spl::token_interface::{TokenAccount, TokenInterface};
 use locker::cpi::accounts::CreateVestingEscrowV2;
 
 #[derive(Accounts)]
@@ -86,23 +83,6 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
     let config = ctx.accounts.config.load()?;
 
     let locked_vesting_params = config.locked_vesting_config.to_locked_vesting_params();
-    let total_vested_amount = locked_vesting_params.get_total_amount()?;
-
-    let pool_authority_seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
-
-    msg!("mint token to base vault");
-    mint_to(
-        CpiContext::new_with_signer(
-            ctx.accounts.token_program.to_account_info(),
-            MintTo {
-                mint: ctx.accounts.base_mint.to_account_info(),
-                to: ctx.accounts.base_vault.to_account_info(),
-                authority: ctx.accounts.pool_authority.to_account_info(),
-            },
-            &[&pool_authority_seeds[..]],
-        ),
-        total_vested_amount,
-    )?;
 
     let vesting_params = locked_vesting_params
         .to_create_vesting_escrow_params(virtual_pool.finish_curve_timestamp)?;
@@ -125,6 +105,7 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
         ],
     )?;
 
+    let pool_authority_seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
     msg!("create vesting escrow for creator");
     locker::cpi::create_vesting_escrow_v2(
         CpiContext::new_with_signer(

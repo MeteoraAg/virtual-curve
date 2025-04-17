@@ -9,6 +9,7 @@ use crate::{
     EvtInitializePool, PoolError,
 };
 use anchor_lang::prelude::*;
+use anchor_spl::token_2022::spl_token_2022::instruction::AuthorityType;
 use anchor_spl::{
     token_2022::{mint_to, MintTo, Token2022},
     token_interface::{
@@ -150,6 +151,20 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
+    // transfer update authority to creator
+    anchor_spl::token_interface::set_authority(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            anchor_spl::token_interface::SetAuthority {
+                current_authority: ctx.accounts.pool_authority.to_account_info(),
+                account_or_mint: ctx.accounts.base_mint.to_account_info(),
+            },
+            &[&seeds[..]],
+        ),
+        AuthorityType::MetadataPointer,
+        Some(ctx.accounts.creator.key()),
+    )?;
+
     let config = ctx.accounts.config.load()?;
     let initial_base_supply = config.get_initial_base_supply()?;
 
@@ -166,6 +181,20 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         initial_base_supply,
+    )?;
+
+    // remove mint authority
+    anchor_spl::token_interface::set_authority(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            anchor_spl::token_interface::SetAuthority {
+                current_authority: ctx.accounts.pool_authority.to_account_info(),
+                account_or_mint: ctx.accounts.base_mint.to_account_info(),
+            },
+            &[&seeds[..]],
+        ),
+        AuthorityType::MintTokens,
+        None,
     )?;
 
     // init pool

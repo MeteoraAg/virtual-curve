@@ -17,7 +17,7 @@ import {
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { fundSol, getMint, startTest } from "./utils";
+import { deriveMetadatAccount, fundSol, getMint, startTest } from "./utils";
 import {
   createDammConfig,
   createVirtualCurveProgram,
@@ -155,6 +155,7 @@ describe("Full flow with spl-token", () => {
       await getMint(context.banksClient, virtualPoolState.baseMint)
     );
     expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
+    expect(baseMintData.mintAuthorityOption).eq(0)
   });
 
   it("Swap", async () => {
@@ -198,7 +199,7 @@ describe("Full flow with spl-token", () => {
     const baseMintData = (
       await getMint(context.banksClient, virtualPoolState.baseMint)
     );
-    expect(baseMintData.mintAuthority.toString()).eq(PublicKey.default.toString())
+    expect(baseMintData.mintAuthorityOption).eq(0)
   });
 
   it("Partner lock LP", async () => {

@@ -515,23 +515,6 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         )?;
     }
 
-    // remove mint authority
-    {
-        let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
-        anchor_spl::token_interface::set_authority(
-            CpiContext::new_with_signer(
-                ctx.accounts.token_base_program.to_account_info(),
-                anchor_spl::token_interface::SetAuthority {
-                    current_authority: ctx.accounts.pool_authority.to_account_info(),
-                    account_or_mint: ctx.accounts.base_mint.to_account_info(),
-                },
-                &[&seeds[..]],
-            ),
-            AuthorityType::MintTokens,
-            Some(Pubkey::default()),
-        )?;
-    }
-
     virtual_pool.set_migration_progress(MigrationProgress::CreatedPool.into());
 
     // TODO emit event
