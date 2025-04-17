@@ -579,9 +579,3 @@ pub struct SwapAmount {
     output_amount: u64,
     next_sqrt_price: u128,
 }
-
-#[derive(Debug, PartialEq)]
-pub struct ModifyLiquidityResult {
-    pub amount_a: u64,
-    pub amount_b: u64,
-}
