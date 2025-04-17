@@ -222,7 +222,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 
         require!(
             base_vault_balance >= required_base_balance,
-            PoolError::InsufficentLiquidityForMigration
+            PoolError::InsufficientLiquidityForMigration
         );
 
         // set finish time and migration progress

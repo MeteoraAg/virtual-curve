@@ -172,7 +172,7 @@ impl VirtualPool {
         sqrt_price: u128,
         pool_type: u8,
         activation_point: u64,
-        base_reverse: u64,
+        base_reserve: u64,
     ) {
         self.volatility_tracker = volatility_tracker;
         self.config = config;
@@ -183,7 +183,7 @@ impl VirtualPool {
         self.sqrt_price = sqrt_price;
         self.pool_type = pool_type;
         self.activation_point = activation_point;
-        self.base_reserve = base_reverse;
+        self.base_reserve = base_reserve;
     }
 
     pub fn get_swap_result(

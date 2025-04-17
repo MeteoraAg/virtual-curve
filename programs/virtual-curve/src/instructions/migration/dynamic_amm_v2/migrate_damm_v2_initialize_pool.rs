@@ -395,7 +395,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     {
         require!(
             ctx.remaining_accounts.len() == 1,
-            PoolError::MissingPoolConfigInRemaningAccount
+            PoolError::MissingPoolConfigInRemainingAccount
         );
         let damm_config_loader: AccountLoader<'_, damm_v2::accounts::Config> =
             AccountLoader::try_from(&ctx.remaining_accounts[0])?; // TODO fix damm config in remaning accounts

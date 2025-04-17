@@ -98,11 +98,11 @@ pub enum PoolError {
     #[msg("Unsupport native mint token 2022")]
     UnsupportNativeMintToken2022,
 
-    #[msg("Insufficent liquidity for migration")]
-    InsufficentLiquidityForMigration,
+    #[msg("Insufficient liquidity for migration")]
+    InsufficientLiquidityForMigration,
 
-    #[msg("Missing pool config in remaning account")]
-    MissingPoolConfigInRemaningAccount,
+    #[msg("Missing pool config in remaining account")]
+    MissingPoolConfigInRemainingAccount,
 
     #[msg("Invalid vesting parameters")]
     InvalidVestingParameters,
