@@ -1,7 +1,7 @@
 use std::u64;
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{MigrationProgress, VirtualPool},
     *,
 };
@@ -20,12 +20,9 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
     #[account(mut)]

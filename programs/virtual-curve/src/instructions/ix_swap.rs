@@ -3,7 +3,7 @@ use crate::state::MigrationProgress;
 use crate::EvtCurveComplete;
 use crate::{
     activation_handler::get_current_point,
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     params::swap::TradeDirection,
     state::fee::FeeMode,
     state::{PoolConfig, VirtualPool},
@@ -24,12 +24,9 @@ pub struct SwapParameters {
 pub struct SwapCtx<'info> {
     /// CHECK: pool authority
     #[account(
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID,
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// config key
     pub config: AccountLoader<'info, PoolConfig>,
@@ -159,7 +156,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         &ctx.accounts.payer,
         token_in_mint,
         &ctx.accounts.input_token_account,
-        &input_vault_account,
+        input_vault_account,
         input_program,
         amount_in,
     )?;
@@ -167,12 +164,12 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     // send to user
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),
-        &token_out_mint,
-        &output_vault_account,
+        token_out_mint,
+        output_vault_account,
         &ctx.accounts.output_token_account,
         output_program,
         swap_result.output_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     // send to referral
@@ -185,7 +182,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
                 referral_token_account,
                 &ctx.accounts.token_base_program,
                 swap_result.referral_fee,
-                ctx.bumps.pool_authority,
+                const_pda::pool_authority::BUMP,
             )?;
         } else {
             transfer_from_pool(
@@ -195,7 +192,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
                 referral_token_account,
                 &ctx.accounts.token_quote_program,
                 swap_result.referral_fee,
-                ctx.bumps.pool_authority,
+                const_pda::pool_authority::BUMP,
             )?;
         }
     }

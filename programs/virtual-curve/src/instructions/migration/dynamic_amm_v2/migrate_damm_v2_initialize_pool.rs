@@ -8,7 +8,8 @@ use anchor_spl::{
 use damm_v2::types::{AddLiquidityParameters, InitializePoolParameters};
 
 use crate::{
-    constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
+    const_pda,
+    constants::{MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     curve::{get_initial_liquidity_from_delta_base, get_initial_liquidity_from_delta_quote},
     params::fee_parameters::to_bps,
     safe_math::SafeMath,
@@ -35,12 +36,9 @@ pub struct MigrateDammV2Ctx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-            seeds = [
-                POOL_AUTHORITY_PREFIX.as_ref(),
-            ],
-            bump,
-        )]
-    pub pool_authority: UncheckedAccount<'info>,
+        address = const_pda::pool_authority::ID,
+    )]
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
     #[account(mut)]
@@ -474,20 +472,20 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         ctx.remaining_accounts[0].clone(),
         first_position_liquidity_distribution.get_total_liquidity()?,
         config.migration_sqrt_price,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
     // lock permanent liquidity
     if first_position_liquidity_distribution.locked_liquidity > 0 {
         msg!("lock permanent liquidity for first position");
         ctx.accounts.lock_permanent_liquidity_for_first_position(
             first_position_liquidity_distribution.locked_liquidity,
-            ctx.bumps.pool_authority,
+            const_pda::pool_authority::BUMP,
         )?;
     }
 
     msg!("transfer ownership of the first position");
     ctx.accounts
-        .set_authority_for_first_position(first_position_owner, ctx.bumps.pool_authority)?;
+        .set_authority_for_first_position(first_position_owner, const_pda::pool_authority::BUMP)?;
 
     // reload quote reserve and base reserve
     ctx.accounts.quote_vault.reload()?;
@@ -515,7 +513,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
             second_position_owner,
             unlocked_lp,
             locked_lp,
-            ctx.bumps.pool_authority,
+            const_pda::pool_authority::BUMP,
         )?;
     }
 
@@ -530,7 +528,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         .safe_sub(protocol_and_partner_base_fee)?;
 
     if left_base_token > 0 {
-        let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+        let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
         anchor_spl::token_interface::burn(
             CpiContext::new_with_signer(
                 ctx.accounts.token_base_program.to_account_info(),

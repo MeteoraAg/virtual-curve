@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 #[macro_use]
 pub mod macros;
 
+pub mod const_pda;
 pub mod instructions;
 pub use instructions::*;
 pub mod constants;
@@ -22,7 +23,7 @@ pub mod tests;
 
 pub mod params;
 
-declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
+pub const ID: Pubkey = pubkey!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]
 pub mod virtual_curve {

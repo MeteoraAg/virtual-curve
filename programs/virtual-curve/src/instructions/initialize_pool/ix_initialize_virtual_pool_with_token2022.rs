@@ -2,7 +2,8 @@ use super::InitializePoolParameters;
 use super::{max_key, min_key};
 use crate::{
     activation_handler::get_current_point,
-    constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
+    const_pda,
+    constants::seeds::{POOL_PREFIX, TOKEN_VAULT_PREFIX},
     state::fee::VolatilityTracker,
     state::{PoolConfig, PoolType, TokenType, VirtualPool},
     token::update_account_lamports_to_minimum_balance,
@@ -26,12 +27,9 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
 
     /// CHECK: pool authority
     #[account(
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: Pool creator
     pub creator: UncheckedAccount<'info>,
@@ -135,7 +133,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         mint_authority: ctx.accounts.pool_authority.to_account_info(),
         update_authority: ctx.accounts.creator.to_account_info(),
     };
-    let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+    let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
     let signer_seeds = &[&seeds[..]];
     let cpi_ctx = CpiContext::new_with_signer(
         ctx.accounts.token_program.to_account_info(),
@@ -169,7 +167,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     let initial_base_supply = config.get_initial_base_supply()?;
 
     // mint token
-    let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+    let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
     mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
