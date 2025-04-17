@@ -98,10 +98,14 @@ pnpm test
 
 ### Config key for migration 
 
-#### Mainnet-beta
-- Meteora damm (v1): BG9eoMRXUCYZqLB2xyQxDqErXMcqc3JzaEVTJGKpiNH9
-- Damm v2: GGN4mTXqz59uBt5TXkERBJUKiNTsAVfZekDapDPLe5iZ
+#### Meteora damm (v1):
+- migration_fee_option == 0: EtwbXRxV8b46Vkho5EhMshi9qEU7xv6sMQnPHK3fX8WR
+- migration_fee_option == 1: VEtZapzJXreco3cbzUT8ZszawsRvRRQzGN5GBaCMwWh
+- migration_fee_option == 2: 8z2tYtwiAkby1tMSdf1hG2Ni8MFBk43o9tYey5zegNDh
+- migration_fee_option == 3: 3BuQgW3g75azhKeE3yzaqeWkmwezuDGwF6FT5py3mFrt
 
-#### Devnet
-- Meteora damm (v1): GnfMQ8oPzq84oK4PxTjhC1aUEMrLLasDfF9LsmW46U7j
-- Damm v2: GGN4mTXqz59uBt5TXkERBJUKiNTsAVfZekDapDPLe5iZ
+#### Damm v2:
+- migration_fee_option == 0: 96gRhsiKyBJnXT2GxEnh54b9YLjzpEJ4aTetvLmQ5tWj
+- migration_fee_option == 1: 3GZLmQJ98xPRLNJjofzK3bfvhU11WFCiZJhEuPwgfBHb
+- migration_fee_option == 2: 7aqweHmWjiMJEVzTXjvpEasRiDQSK79GNWPqjbkeWtyL
+- migration_fee_option == 3: 6ym6zMi5RqUH3k2BNdiXUtSdpeypdWMLsxTyRhKqzhz2
