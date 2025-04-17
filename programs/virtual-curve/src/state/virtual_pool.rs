@@ -419,7 +419,7 @@ impl VirtualPool {
             next_sqrt_price,
             protocol_fee,
             trading_fee,
-            referral_fee: _referral_fee,
+            referral_fee,
         } = swap_result;
 
         let old_sqrt_price = self.sqrt_price;
@@ -438,12 +438,21 @@ impl VirtualPool {
                 .accumulate_fee(protocol_fee, trading_fee, false)?;
         }
 
+        let actual_output_amount = if fee_mode.fees_on_input {
+            output_amount
+        } else {
+            output_amount
+                .safe_add(trading_fee)?
+                .safe_add(protocol_fee)?
+                .safe_add(referral_fee)?
+        };
+
         if trade_direction == TradeDirection::BaseToQuote {
             self.base_reserve = self.base_reserve.safe_add(actual_input_amount)?;
-            self.quote_reserve = self.quote_reserve.safe_sub(output_amount)?;
+            self.quote_reserve = self.quote_reserve.safe_sub(actual_output_amount)?;
         } else {
             self.quote_reserve = self.quote_reserve.safe_add(actual_input_amount)?;
-            self.base_reserve = self.base_reserve.safe_sub(output_amount)?;
+            self.base_reserve = self.base_reserve.safe_sub(actual_output_amount)?;
         }
 
         self.update_post_swap(config, old_sqrt_price, current_timestamp)?;
