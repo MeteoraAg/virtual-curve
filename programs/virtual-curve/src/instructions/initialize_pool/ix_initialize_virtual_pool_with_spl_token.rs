@@ -52,6 +52,7 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
 
     #[account(
         init,
+        signer,
         payer = payer,
         mint::decimals = config.load()?.token_decimal,
         mint::authority = pool_authority,

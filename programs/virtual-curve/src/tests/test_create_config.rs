@@ -37,11 +37,3 @@ fn test_create_config() {
 
     println!("{} {}", swap_base_amount, migration_base_amount);
 }
-
-#[test]
-fn test_pool_authority_pda() {
-    let prog_id = crate::ID;
-    let (pool_authority, _) =
-        Pubkey::find_program_address(&[POOL_AUTHORITY_PREFIX.as_ref()], &prog_id);
-    println!("{} {}", prog_id, pool_authority);
-}

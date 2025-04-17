@@ -25,10 +25,6 @@ pub struct MigrateMeteoraDammClaimLpTokenCtx<'info> {
     )]
     pub pool_authority: UncheckedAccount<'info>,
 
-    /// CHECK: pool
-    #[account(mut)]
-    pub pool: UncheckedAccount<'info>,
-
     /// CHECK: lp_mint
     pub lp_mint: UncheckedAccount<'info>,
 

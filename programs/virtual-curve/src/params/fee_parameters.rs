@@ -10,7 +10,7 @@ use anchor_lang::prelude::*;
 
 /// Information regarding fee charges
 #[derive(Copy, Clone, Debug, AnchorSerialize, AnchorDeserialize, InitSpace, Default)]
-pub struct PoolFeeParamters {
+pub struct PoolFeeParameters {
     /// Base fee
     pub base_fee: BaseFeeParameters,
     /// dynamic fee
@@ -53,9 +53,9 @@ impl BaseFeeParameters {
     }
 }
 
-impl PoolFeeParamters {
+impl PoolFeeParameters {
     pub fn to_pool_fees_config(&self) -> PoolFeesConfig {
-        let &PoolFeeParamters {
+        let &PoolFeeParameters {
             base_fee,
             dynamic_fee,
         } = self;
@@ -177,7 +177,7 @@ pub fn to_bps(numerator: u128, denominator: u128) -> Option<u64> {
     bps.try_into().ok()
 }
 
-impl PoolFeeParamters {
+impl PoolFeeParameters {
     /// Validate that the fees are reasonable
     pub fn validate(&self) -> Result<()> {
         self.base_fee.validate()?;
