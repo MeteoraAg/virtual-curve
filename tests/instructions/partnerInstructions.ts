@@ -62,7 +62,8 @@ export type ConfigParameters = {
   creatorLockedLpPercentage: number;
   sqrtStartPrice: BN;
   lockedVesting: LockedVestingParams;
-  padding: BN;
+  migrationFeeOption: number;
+  padding: number[];
   curve: Array<LiquidityDistributionParameters>;
 };
 

@@ -289,6 +289,44 @@ pub enum TokenType {
     Token2022,
 }
 
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
+)]
+pub enum MigrationFeeOption {
+    FixedBps25,  // 0.25%
+    FixedBps30,  // 0.3%
+    FixedBps100, // 1%
+    FixedBps200, // 2%
+}
+
+impl MigrationFeeOption {
+    pub fn validate_base_fee(&self, base_fee_bps: u64) -> Result<()> {
+        match *self {
+            MigrationFeeOption::FixedBps25 => {
+                require!(base_fee_bps == 25, PoolError::InvalidMigrationFeeOption);
+            }
+            MigrationFeeOption::FixedBps30 => {
+                require!(base_fee_bps == 30, PoolError::InvalidMigrationFeeOption);
+            }
+            MigrationFeeOption::FixedBps100 => {
+                require!(base_fee_bps == 100, PoolError::InvalidMigrationFeeOption);
+            }
+            MigrationFeeOption::FixedBps200 => {
+                require!(base_fee_bps == 200, PoolError::InvalidMigrationFeeOption);
+            }
+        }
+        Ok(())
+    }
+}
+
 #[account(zero_copy)]
 #[derive(InitSpace, Debug, Default)]
 pub struct PoolConfig {
@@ -322,8 +360,10 @@ pub struct PoolConfig {
     pub creator_locked_lp_percentage: u8,
     /// creator lp percentage
     pub creator_lp_percentage: u8,
+    /// migration fee option
+    pub migration_fee_option: u8,
     /// padding 0
-    pub _padding_0: [u8; 5],
+    pub _padding_0: [u8; 4],
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount
@@ -373,6 +413,7 @@ impl PoolConfig {
         creator_locked_lp_percentage: u8,
         creator_lp_percentage: u8,
         locked_vesting_params: &LockedVestingParams,
+        migration_fee_option: u8,
         swap_base_amount: u64,
         migration_quote_threshold: u64,
         migration_base_threshold: u64,
@@ -404,6 +445,7 @@ impl PoolConfig {
         self.creator_locked_lp_percentage = creator_locked_lp_percentage;
 
         self.locked_vesting_config = locked_vesting_params.to_locked_vesting_config();
+        self.migration_fee_option = migration_fee_option;
 
         let curve_length = curve.len();
         for i in 0..MAX_CURVE_POINT {

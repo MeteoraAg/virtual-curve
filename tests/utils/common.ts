@@ -308,7 +308,7 @@ export async function createDammConfig(
 ): Promise<PublicKey> {
   const program = createDammProgram();
   const params = {
-    tradeFeeNumerator: new BN(1_000),
+    tradeFeeNumerator: new BN(250),
     protocolTradeFeeNumerator: new BN(10),
     activationDuration: new BN(0),
     vaultConfigKey: PublicKey.default,

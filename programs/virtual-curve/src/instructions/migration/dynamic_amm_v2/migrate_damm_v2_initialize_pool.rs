@@ -10,8 +10,12 @@ use damm_v2::types::{AddLiquidityParameters, InitializePoolParameters};
 use crate::{
     constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     curve::{get_initial_liquidity_from_delta_base, get_initial_liquidity_from_delta_quote},
+    params::fee_parameters::to_bps,
     safe_math::SafeMath,
-    state::{LiquidityDistribution, MigrationOption, MigrationProgress, PoolConfig, VirtualPool},
+    state::{
+        LiquidityDistribution, MigrationFeeOption, MigrationOption, MigrationProgress, PoolConfig,
+        VirtualPool,
+    },
     *,
 };
 
@@ -117,7 +121,32 @@ pub struct MigrateDammV2Ctx<'info> {
 }
 
 impl<'info> MigrateDammV2Ctx<'info> {
-    fn validate_config_key(&self, damm_config: &damm_v2::accounts::Config) -> Result<()> {
+    fn validate_config_key(
+        &self,
+        damm_config: &damm_v2::accounts::Config,
+        migration_fee_option: u8,
+    ) -> Result<()> {
+        let migration_fee_option = MigrationFeeOption::try_from(migration_fee_option)
+            .map_err(|_| PoolError::InvalidMigrationFeeOption)?;
+        let base_fee_bps = to_bps(
+            damm_config.pool_fees.base_fee.cliff_fee_numerator.into(),
+            1_000_000_000, // damm v2 using the same fee denominator with virtual curve
+        )?;
+        migration_fee_option.validate_base_fee(base_fee_bps)?;
+
+        // validate non fee scheduler
+        match migration_fee_option {
+            MigrationFeeOption::FixedBps25
+            | MigrationFeeOption::FixedBps30
+            | MigrationFeeOption::FixedBps100
+            | MigrationFeeOption::FixedBps200 => {
+                require!(
+                    damm_config.pool_fees.base_fee.period_frequency == 0,
+                    PoolError::InvalidConfigAccount
+                );
+            }
+        }
+
         require!(
             damm_config.pool_creator_authority == self.pool_authority.key(),
             PoolError::InvalidConfigAccount
@@ -362,6 +391,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
 pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, MigrateDammV2Ctx<'info>>,
 ) -> Result<()> {
+    let config = ctx.accounts.config.load()?;
     {
         require!(
             ctx.remaining_accounts.len() == 1,
@@ -370,7 +400,8 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
         let damm_config_loader: AccountLoader<'_, damm_v2::accounts::Config> =
             AccountLoader::try_from(&ctx.remaining_accounts[0])?; // TODO fix damm config in remaning accounts
         let damm_config = damm_config_loader.load()?;
-        ctx.accounts.validate_config_key(&damm_config)?;
+        ctx.accounts
+            .validate_config_key(&damm_config, config.migration_fee_option)?;
     }
 
     let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
@@ -382,7 +413,6 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     let migration_metadata = ctx.accounts.migration_metadata.load()?;
 
-    let config = ctx.accounts.config.load()?;
     require!(
         virtual_pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::PoolIsIncompleted
