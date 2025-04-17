@@ -130,7 +130,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
             .map_err(|_| PoolError::InvalidMigrationFeeOption)?;
         let base_fee_bps = to_bps(
             damm_config.pool_fees.base_fee.cliff_fee_numerator.into(),
-            1_000_000_000, // damm v2 using the same fee denomiantor with virtual curve
+            1_000_000_000, // damm v2 using the same fee denominator with virtual curve
         )?;
         migration_fee_option.validate_base_fee(base_fee_bps)?;
 
