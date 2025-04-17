@@ -4,11 +4,14 @@ on:
   pull_request:
     branches:
       - main
+      - develop
 
 env:
   SOLANA_CLI_VERSION: 2.1.0
   NODE_VERSION: 20.19.0
   ANCHOR_CLI_VERSION: 0.31.0
+  PROC_MACRO2_VERSION: 1.0.94
+  NIGHTLY_TOOLCHAIN: nightly-2025-04-14
 
 jobs:
   program_changed_files:
@@ -39,9 +42,14 @@ jobs:
       - uses: ./.github/actions/setup-anchor
       - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.79.0
+          toolchain: ${{ env.NIGHTLY_TOOLCHAIN }}
           components: clippy
-       # Cache rust, cargo
+      # proc-macro2 version
+      - name: Pin proc-macro2 version
+        run: |
+          cargo update -p proc-macro2 --precise ${{ env.PROC_MACRO2_VERSION }}
+        shell: bash
+      # Cache rust, cargo
       - uses: Swatinem/rust-cache@v2
         with:
           cache-targets: "true"
@@ -50,7 +58,8 @@ jobs:
         with:
           path: ~/.anchor
           key: anchor-${{ runner.os }}-${{ hashFiles('Anchor.toml') }}
-      - run: anchor build -p virtual_curve
+      # Build with nightly toolchain
+      - run: RUSTUP_TOOLCHAIN=${{ env.NIGHTLY_TOOLCHAIN }} anchor build -p virtual_curve --no-idl
         shell: bash
 
   cargo_test:
@@ -82,15 +91,16 @@ jobs:
         with:
           version: 9.5.0 # Optional: specify a pnpm version
 
+      # Install nightly toolchains
       - uses: dtolnay/rust-toolchain@v1
         with:
-          toolchain: 1.79.0
+          toolchain: ${{ env.NIGHTLY_TOOLCHAIN }}
           components: clippy
-      # Install rust + toolchain
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: clippy
+      # proc-macro2 version 
+      - name: Update proc-macro2 version
+        run: |
+          cargo update -p proc-macro2 --precise ${{ env.PROC_MACRO2_VERSION }}
+        shell: bash
       # Cache rust, cargo
       - uses: Swatinem/rust-cache@v2
 
@@ -105,5 +115,6 @@ jobs:
       # Testing
       - run: pnpm install
         shell: bash
-      - run: pnpm test
+      # Run tests with nightly toolchain
+      - run: RUSTUP_TOOLCHAIN=${{ env.NIGHTLY_TOOLCHAIN }} pnpm test
         shell: bash
