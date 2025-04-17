@@ -154,6 +154,7 @@ describe("Create pool with token2022", () => {
         expect(metadata.name).eq(name);
         expect(metadata.symbol).eq(symbol);
         expect(metadata.uri).eq(uri);
+        expect(metadata.updateAuthority.toString()).eq(poolCreator.publicKey.toString());
 
         // validate freeze authority
         const baseMintData = (

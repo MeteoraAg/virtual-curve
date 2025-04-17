@@ -133,7 +133,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         mint: ctx.accounts.base_mint.to_account_info(),
         metadata: ctx.accounts.base_mint.to_account_info(),
         mint_authority: ctx.accounts.pool_authority.to_account_info(),
-        update_authority: ctx.accounts.pool_authority.to_account_info(),
+        update_authority: ctx.accounts.creator.to_account_info(),
     };
     let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
     let signer_seeds = &[&seeds[..]];
