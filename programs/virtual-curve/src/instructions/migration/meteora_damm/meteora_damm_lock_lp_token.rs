@@ -1,7 +1,7 @@
 use std::u64;
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{MigrationProgress, VirtualPool},
     *,
 };
@@ -20,12 +20,9 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
     #[account(mut)]
@@ -129,5 +126,6 @@ pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
         (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
     };
 
-    ctx.accounts.lock(ctx.bumps.pool_authority, lp_to_lock)
+    ctx.accounts
+        .lock(const_pda::pool_authority::BUMP, lp_to_lock)
 }

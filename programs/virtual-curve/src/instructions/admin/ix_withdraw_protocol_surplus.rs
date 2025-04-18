@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
     treasury, EvtProtocolWithdrawSurplus, PoolError,
@@ -13,7 +13,9 @@ use crate::{
 #[derive(Accounts)]
 pub struct ProtocolWithdrawSurplusCtx<'info> {
     /// CHECK: pool authority
-    #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
+    #[account(
+        address = const_pda::pool_authority::ID
+    )]
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one = quote_mint)]
@@ -70,7 +72,7 @@ pub fn handle_protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>
         &ctx.accounts.token_quote_account,
         &ctx.accounts.token_quote_program,
         protocol_surplus_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     // Update protocol withdraw surplus

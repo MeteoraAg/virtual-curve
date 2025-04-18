@@ -1,5 +1,6 @@
 use crate::{
-    constants::seeds::{BASE_LOCKER_PREFIX, POOL_AUTHORITY_PREFIX},
+    const_pda,
+    constants::seeds::BASE_LOCKER_PREFIX,
     state::{MigrationProgress, PoolConfig, VirtualPool},
     *,
 };
@@ -17,12 +18,9 @@ pub struct CreateLockerCtx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-            seeds = [
-                POOL_AUTHORITY_PREFIX.as_ref(),
-            ],
-            bump,
-        )]
-    pub pool_authority: UncheckedAccount<'info>,
+        address = const_pda::pool_authority::ID,
+    )]
+    pub pool_authority: AccountInfo<'info>,
     /// CHECK: base_vault
     #[account(
         mut,
@@ -105,7 +103,7 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
         ],
     )?;
 
-    let pool_authority_seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+    let pool_authority_seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
     msg!("create vesting escrow for creator");
     locker::cpi::create_vesting_escrow_v2(
         CpiContext::new_with_signer(
