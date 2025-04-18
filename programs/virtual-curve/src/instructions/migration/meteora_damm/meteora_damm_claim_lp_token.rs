@@ -93,5 +93,6 @@ pub fn handle_migrate_meteora_damm_claim_lp_token<'info>(
         (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
     };
 
-    ctx.accounts.transfer(ctx.bumps.pool_authority, lp_to_claim)
+    ctx.accounts
+        .transfer(const_pda::pool_authority::BUMP, lp_to_claim)
 }

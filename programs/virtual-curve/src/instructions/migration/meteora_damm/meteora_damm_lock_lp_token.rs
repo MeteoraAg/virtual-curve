@@ -126,5 +126,6 @@ pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
         (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
     };
 
-    ctx.accounts.lock(ctx.bumps.pool_authority, lp_to_lock)
+    ctx.accounts
+        .lock(const_pda::pool_authority::BUMP, lp_to_lock)
 }

@@ -23,7 +23,9 @@ pub mod tests;
 
 pub mod params;
 
-pub const ID: Pubkey = pubkey!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
+pub const CONST_PROGRAM_ID: Pubkey =
+    Pubkey::from_str_const("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
+declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]
 pub mod virtual_curve {
