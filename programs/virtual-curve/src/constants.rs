@@ -18,8 +18,6 @@ pub const BIN_STEP_BPS_U128_DEFAULT: u128 = 1844674407370955;
 
 pub const MAX_CURVE_POINT: usize = 20;
 
-// pub const MAX_TOKEN_SUPPLY: u64 = 10_000_000_000; // 10 billion
-
 pub const SWAP_BUFFER_PERCENTAGE: u8 = 25; // 25%
 
 pub const PARTNER_SURPLUS_SHARE: u8 = 90; // 90 %

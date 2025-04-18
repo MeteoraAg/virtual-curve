@@ -3,7 +3,6 @@ import { ProgramTestContext } from "solana-bankrun";
 import {
     BaseFee,
     ConfigParameters,
-    createClaimFeeOperator,
     createConfig,
     CreateConfigParams,
     createPoolWithSplToken,
@@ -27,7 +26,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { createMeteoraDammV2Metadata, MigrateMeteoraDammV2Params, migrateToDammV2 } from "./instructions/dammV2Migration";
 import { expect } from "chai";
 
-describe.only("Fixed token supply", () => {
+describe("Fixed token supply", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
