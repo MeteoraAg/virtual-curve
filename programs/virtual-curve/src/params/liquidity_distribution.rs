@@ -121,7 +121,7 @@ pub fn get_migration_base_token(
                 );
                 require!(
                     initial_quote_amount <= migration_threshold,
-                    PoolError::InsufficentLiquidityForMigration
+                    PoolError::InsufficientLiquidityForMigration
                 );
             }
             Ok(base_amount)

@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
     EvtClaimTradingFee,
@@ -13,7 +13,9 @@ use crate::{
 #[derive(Accounts)]
 pub struct ClaimTradingFeesCtx<'info> {
     /// CHECK: pool authority
-    #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
+    #[account(
+        address = const_pda::pool_authority::ID
+    )]
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one=quote_mint, has_one=fee_claimer)]
@@ -76,7 +78,7 @@ pub fn handle_claim_trading_fee(
         &ctx.accounts.token_a_account,
         &ctx.accounts.token_base_program,
         token_base_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     transfer_from_pool(
@@ -86,7 +88,7 @@ pub fn handle_claim_trading_fee(
         &ctx.accounts.token_b_account,
         &ctx.accounts.token_quote_program,
         token_quote_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     emit_cpi!(EvtClaimTradingFee {

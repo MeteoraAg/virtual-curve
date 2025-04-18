@@ -41,15 +41,6 @@ pub fn mul_shr(x: u128, y: u128, offset: u8) -> Option<u128> {
     quotient.try_into().ok()
 }
 
-#[inline]
-pub fn mul_shr_256(x: U256, y: U256, offset: u8) -> Option<u128> {
-    let x = U512::from(x);
-    let y = U512::from(y);
-    let prod = x.checked_mul(y)?;
-    let (quotient, _is_overflow) = prod.overflowing_shr(offset.into());
-    quotient.try_into().ok()
-}
-
 /// (x << offset) / y
 #[inline]
 pub fn shl_div(x: u128, y: u128, offset: u8, rounding: Rounding) -> Option<u128> {

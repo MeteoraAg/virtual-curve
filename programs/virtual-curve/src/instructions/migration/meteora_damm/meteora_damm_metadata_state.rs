@@ -1,4 +1,4 @@
-use crate::state::LiquidityDistributionU64;
+use crate::{safe_math::SafeMath, state::LiquidityDistributionU64, PoolError};
 use anchor_lang::prelude::*;
 use static_assertions::const_assert_eq;
 
@@ -13,7 +13,6 @@ pub struct MeteoraDammMigrationMetadata {
     pub partner: Pubkey,
     /// lp mint
     pub lp_mint: Pubkey,
-
     /// partner locked lp
     pub partner_locked_lp: u64,
     /// partner lp
@@ -56,8 +55,92 @@ impl MeteoraDammMigrationMetadata {
         self.creator_locked_status = 1;
     }
 
+    pub fn lock_as_creator(&mut self) -> Result<u64> {
+        require!(
+            !self.is_creator_lp_locked(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            self.creator_locked_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
+
+        self.set_creator_lock_status();
+
+        Ok(self.creator_locked_lp)
+    }
+
+    pub fn lock_as_partner(&mut self) -> Result<u64> {
+        require!(
+            !self.is_partner_lp_locked(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(
+            self.partner_locked_lp != 0,
+            PoolError::NotPermitToDoThisAction
+        );
+
+        self.set_partner_lock_status();
+
+        Ok(self.partner_locked_lp)
+    }
+
+    pub fn lock_as_self_partnered_creator(&mut self) -> Result<u64> {
+        require!(
+            !self.is_creator_lp_locked() && !self.is_partner_lp_locked(),
+            PoolError::NotPermitToDoThisAction
+        );
+
+        let lp_to_lock = self.partner_locked_lp.safe_add(self.creator_locked_lp)?;
+        require!(lp_to_lock != 0, PoolError::NotPermitToDoThisAction);
+
+        self.set_creator_lock_status();
+        self.set_partner_lock_status();
+
+        Ok(lp_to_lock)
+    }
+
     pub fn set_partner_lock_status(&mut self) {
         self.partner_locked_status = 1;
+    }
+
+    pub fn claim_as_creator(&mut self) -> Result<u64> {
+        require!(
+            !self.is_creator_claim_lp(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(self.creator_lp != 0, PoolError::NotPermitToDoThisAction);
+
+        self.set_creator_claim_status();
+
+        Ok(self.creator_lp)
+    }
+
+    pub fn claim_as_partner(&mut self) -> Result<u64> {
+        require!(
+            !self.is_partner_claim_lp(),
+            PoolError::NotPermitToDoThisAction
+        );
+        require!(self.partner_lp != 0, PoolError::NotPermitToDoThisAction);
+
+        self.set_partner_claim_status();
+
+        Ok(self.partner_lp)
+    }
+
+    pub fn claim_as_self_partnered_creator(&mut self) -> Result<u64> {
+        require!(
+            !self.is_creator_claim_lp() && !self.is_partner_claim_lp(),
+            PoolError::NotPermitToDoThisAction
+        );
+
+        let lp_to_claim = self.partner_lp.safe_add(self.creator_lp)?;
+        require!(lp_to_claim != 0, PoolError::NotPermitToDoThisAction);
+
+        self.set_creator_claim_status();
+        self.set_partner_claim_status();
+
+        Ok(lp_to_claim)
     }
 
     pub fn set_creator_claim_status(&mut self) {

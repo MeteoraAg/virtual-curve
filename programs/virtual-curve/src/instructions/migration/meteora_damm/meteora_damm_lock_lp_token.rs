@@ -1,7 +1,7 @@
 use std::u64;
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{MigrationProgress, VirtualPool},
     *,
 };
@@ -20,12 +20,9 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
     #[account(mut)]
@@ -118,37 +115,17 @@ pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
     );
 
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
-    if ctx.accounts.owner.key() == migration_metadata.partner {
-        require!(
-            !migration_metadata.is_partner_lp_locked(),
-            PoolError::NotPermitToDoThisAction
-        );
-        require!(
-            migration_metadata.partner_locked_lp != 0,
-            PoolError::NotPermitToDoThisAction
-        );
 
-        migration_metadata.set_partner_lock_status();
-        ctx.accounts.lock(
-            ctx.bumps.pool_authority,
-            migration_metadata.partner_locked_lp,
-        )?;
-    } else if ctx.accounts.owner.key() == migration_metadata.pool_creator {
-        require!(
-            !migration_metadata.is_creator_lp_locked(),
-            PoolError::NotPermitToDoThisAction
-        );
-        require!(
-            migration_metadata.creator_locked_lp != 0,
-            PoolError::NotPermitToDoThisAction
-        );
+    let is_partner = ctx.accounts.owner.key() == migration_metadata.partner;
+    let is_creator = ctx.accounts.owner.key() == migration_metadata.pool_creator;
 
-        migration_metadata.set_creator_lock_status();
+    let lp_to_lock = match (is_partner, is_creator) {
+        (true, true) => migration_metadata.lock_as_self_partnered_creator()?,
+        (true, false) => migration_metadata.lock_as_partner()?,
+        (false, true) => migration_metadata.lock_as_creator()?,
+        (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
+    };
 
-        ctx.accounts.lock(
-            ctx.bumps.pool_authority,
-            migration_metadata.creator_locked_lp,
-        )?;
-    }
-    Ok(())
+    ctx.accounts
+        .lock(const_pda::pool_authority::BUMP, lp_to_lock)
 }

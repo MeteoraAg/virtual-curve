@@ -10,7 +10,8 @@ use std::cmp::{max, min};
 
 use crate::{
     activation_handler::get_current_point,
-    constants::seeds::{POOL_AUTHORITY_PREFIX, POOL_PREFIX, TOKEN_VAULT_PREFIX},
+    const_pda,
+    constants::seeds::{POOL_PREFIX, TOKEN_VAULT_PREFIX},
     process_create_token_metadata,
     state::{fee::VolatilityTracker, PoolConfig, PoolType, TokenType, VirtualPool},
     EvtInitializePool, PoolError, ProcessCreateTokenMetadataParams,
@@ -41,12 +42,9 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
 
     /// CHECK: pool authority
     #[account(
-        seeds = [
-            POOL_AUTHORITY_PREFIX.as_ref(),
-        ],
-        bump,
+        address = const_pda::pool_authority::ID
     )]
-    pub pool_authority: UncheckedAccount<'info>,
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: Pool creator
     pub creator: UncheckedAccount<'info>,
@@ -162,11 +160,11 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         name: &name,
         symbol: &symbol,
         uri: &uri,
-        pool_authority_bump: ctx.bumps.pool_authority,
+        pool_authority_bump: const_pda::pool_authority::BUMP,
     })?;
 
     // mint token
-    let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+    let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
     anchor_spl::token::mint_to(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),

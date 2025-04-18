@@ -2,7 +2,7 @@ use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::{Burn, Token, TokenAccount};
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     params::fee_parameters::to_bps,
     safe_math::SafeMath,
     state::{MigrationFeeOption, MigrationOption, MigrationProgress, PoolConfig, VirtualPool},
@@ -23,12 +23,9 @@ pub struct MigrateMeteoraDammCtx<'info> {
     /// CHECK: pool authority
     #[account(
         mut,
-            seeds = [
-                POOL_AUTHORITY_PREFIX.as_ref(),
-            ],
-            bump,
-        )]
-    pub pool_authority: UncheckedAccount<'info>,
+        address = const_pda::pool_authority::ID,
+    )]
+    pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
     #[account(mut)]
@@ -241,7 +238,7 @@ pub fn handle_migrate_meteora_damm<'info>(
     let quote_reserve = config.migration_quote_threshold;
 
     ctx.accounts
-        .create_pool(base_reserve, quote_reserve, ctx.bumps.pool_authority)?;
+        .create_pool(base_reserve, quote_reserve, const_pda::pool_authority::BUMP)?;
 
     virtual_pool.update_after_create_pool();
 
@@ -254,7 +251,7 @@ pub fn handle_migrate_meteora_damm<'info>(
         .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
 
     if left_base_token > 0 {
-        let seeds = pool_authority_seeds!(ctx.bumps.pool_authority);
+        let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
         anchor_spl::token::burn(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),

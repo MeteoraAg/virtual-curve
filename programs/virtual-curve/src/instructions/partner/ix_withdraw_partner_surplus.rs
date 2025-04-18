@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
     EvtPartnerWithdrawSurplus, PoolError,
@@ -13,7 +13,9 @@ use crate::{
 #[derive(Accounts)]
 pub struct PartnerWithdrawSurplusCtx<'info> {
     /// CHECK: pool authority
-    #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
+    #[account(
+        address = const_pda::pool_authority::ID
+    )]
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one = quote_mint, has_one=fee_claimer)]
@@ -68,7 +70,7 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
         &ctx.accounts.token_quote_account,
         &ctx.accounts.token_quote_program,
         partner_surplus_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     // update partner withdraw surplus

@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 #[macro_use]
 pub mod macros;
 
+pub mod const_pda;
 pub mod instructions;
 pub use instructions::*;
 pub mod constants;
@@ -22,6 +23,8 @@ pub mod tests;
 
 pub mod params;
 
+pub const CONST_PROGRAM_ID: Pubkey =
+    Pubkey::from_str_const("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]

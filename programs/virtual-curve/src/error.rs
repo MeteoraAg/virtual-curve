@@ -32,9 +32,6 @@ pub enum PoolError {
     #[msg("Invalid quote mint")]
     InvalidQuoteMint,
 
-    #[msg("Invalid parameters")]
-    InvalidParameters,
-
     #[msg("Invalid collect fee mode")]
     InvalidCollectFeeMode,
 
@@ -43,12 +40,6 @@ pub enum PoolError {
 
     #[msg("Invalid input")]
     InvalidInput,
-
-    #[msg("Invalid extension")]
-    InvalidExtension,
-
-    #[msg("Fee inverse is incorrect")]
-    FeeInverseIsIncorrect,
 
     #[msg("Not enough liquidity")]
     NotEnoughLiquidity,
@@ -80,9 +71,6 @@ pub enum PoolError {
     #[msg("Not permit to do this action")]
     NotPermitToDoThisAction,
 
-    #[msg("Invalid partner account")]
-    InvalidPartnerAccount,
-
     #[msg("Invalid owner account")]
     InvalidOwnerAccount,
 
@@ -98,11 +86,11 @@ pub enum PoolError {
     #[msg("Unsupport native mint token 2022")]
     UnsupportNativeMintToken2022,
 
-    #[msg("Insufficent liquidity for migration")]
-    InsufficentLiquidityForMigration,
+    #[msg("Insufficient liquidity for migration")]
+    InsufficientLiquidityForMigration,
 
-    #[msg("Missing pool config in remaning account")]
-    MissingPoolConfigInRemaningAccount,
+    #[msg("Missing pool config in remaining account")]
+    MissingPoolConfigInRemainingAccount,
 
     #[msg("Invalid vesting parameters")]
     InvalidVestingParameters,
