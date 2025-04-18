@@ -40,6 +40,13 @@ export type LockedVestingParams = {
   cliffUnlockAmount: BN;
 }
 
+
+export type TokenSupplyParams = {
+  preMigrationTokenSupply: BN;
+  postMigrationTokenSupply: BN;
+}
+
+
 export type LiquidityDistributionParameters = {
   sqrtPrice: BN;
   liquidity: BN;
@@ -63,13 +70,14 @@ export type ConfigParameters = {
   sqrtStartPrice: BN;
   lockedVesting: LockedVestingParams;
   migrationFeeOption: number;
-  padding: number[];
+  tokenSupply: TokenSupplyParams | null;
+  padding: BN[];
   curve: Array<LiquidityDistributionParameters>;
 };
 
 export type CreateConfigParams = {
   payer: Keypair;
-  owner: PublicKey;
+  leftoverReceiver: PublicKey;
   feeClaimer: PublicKey;
   quoteMint: PublicKey;
   instructionParams: ConfigParameters;
@@ -80,15 +88,15 @@ export async function createConfig(
   program: VirtualCurveProgram,
   params: CreateConfigParams
 ): Promise<PublicKey> {
-  const { payer, owner, feeClaimer, quoteMint, instructionParams } = params;
+  const { payer, leftoverReceiver, feeClaimer, quoteMint, instructionParams } = params;
   const config = Keypair.generate();
 
   const transaction = await program.methods
     .createConfig(instructionParams)
-    .accounts({
+    .accountsPartial({
       config: config.publicKey,
       feeClaimer,
-      owner,
+      leftoverReceiver,
       quoteMint,
       payer: payer.publicKey,
     })
@@ -282,5 +290,56 @@ export async function partnerWithdrawSurplus(
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(feeClaimer);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export async function withdrawLeftover(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: {
+    payer: Keypair;
+    virtualPool: PublicKey;
+  }
+): Promise<any> {
+  const { payer, virtualPool } = params;
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const configState = await getConfig(banksClient, program, poolState.config);
+  const poolAuthority = derivePoolAuthority();
+
+  const tokenBaseProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const preInstructions: TransactionInstruction[] = [];
+  const postInstructions: TransactionInstruction[] = [];
+  const [
+    { ata: tokenBaseAccount, ix: createBaseTokenAccountIx },
+  ] = await Promise.all([
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      poolState.baseMint,
+      configState.leftoverReceiver,
+      tokenBaseProgram
+    ),
+  ]);
+  createBaseTokenAccountIx && preInstructions.push(createBaseTokenAccountIx);
+  const transaction = await program.methods
+    .withdrawLeftover()
+    .accountsPartial({
+      poolAuthority,
+      config: poolState.config,
+      virtualPool,
+      tokenBaseAccount,
+      baseVault: poolState.baseVault,
+      baseMint: poolState.baseMint,
+      leftoverReceiver: configState.leftoverReceiver,
+      tokenBaseProgram,
+    })
+    .preInstructions(preInstructions)
+    .postInstructions(postInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer);
   await processTransactionMaybeThrow(banksClient, transaction);
 }

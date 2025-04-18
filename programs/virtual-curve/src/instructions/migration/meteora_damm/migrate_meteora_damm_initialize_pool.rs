@@ -250,7 +250,8 @@ pub fn handle_migrate_meteora_damm<'info>(
         .amount
         .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
 
-    if left_base_token > 0 {
+    let burnable_amount = config.get_burnable_amount_post_migration(left_base_token)?;
+    if burnable_amount > 0 {
         let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
         anchor_spl::token::burn(
             CpiContext::new_with_signer(
@@ -262,7 +263,7 @@ pub fn handle_migrate_meteora_damm<'info>(
                 },
                 &[&seeds[..]],
             ),
-            left_base_token,
+            burnable_amount,
         )?;
     }
 

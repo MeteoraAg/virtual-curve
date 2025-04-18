@@ -6,20 +6,33 @@ import {
     createConfig,
     CreateConfigParams,
     createPoolWithSplToken,
-    createVirtualPoolMetadata,
+    swap,
+    SwapParams,
 } from "./instructions";
-import { VirtualCurveProgram } from "./utils/types";
+import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { fundSol, startTest } from "./utils";
 import {
+    createDammConfig,
     createVirtualCurveProgram,
+    derivePoolAuthority,
     MAX_SQRT_PRICE,
     MIN_SQRT_PRICE,
     U64_MAX,
 } from "./utils";
+import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
+import {
+    createMeteoraMetadata,
+    creatorClaimLpDamm,
+    lockLpForCreatorDamm,
+    lockLpForPartnerDamm,
+    MigrateMeteoraParams,
+    migrateToMeteoraDamm,
+    partnerClaimLpDamm,
+} from "./instructions/meteoraMigration";
 
-describe("Create virtual pool metadata", () => {
+describe("Claim lp on meteora dammm", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
@@ -29,6 +42,8 @@ describe("Create virtual pool metadata", () => {
     let program: VirtualCurveProgram;
     let config: PublicKey;
     let virtualPool: PublicKey;
+    let virtualPoolState: Pool;
+    let dammConfig: PublicKey;
 
     before(async () => {
         context = await startTest();
@@ -46,6 +61,7 @@ describe("Create virtual pool metadata", () => {
         await fundSol(context.banksClient, admin, receivers);
         program = createVirtualCurveProgram();
     });
+
 
     it("Partner create config", async () => {
         const baseFee: BaseFee = {
@@ -72,7 +88,7 @@ describe("Create virtual pool metadata", () => {
             },
             activationType: 0,
             collectFeeMode: 0,
-            migrationOption: 1,
+            migrationOption: 0,
             tokenType: 0, // spl_token
             tokenDecimal: 6,
             migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
@@ -114,21 +130,81 @@ describe("Create virtual pool metadata", () => {
                 uri: "abc.com",
             },
         });
-    });
-
-
-    it("creator create a metadata", async () => {
-        await createVirtualPoolMetadata(
+        virtualPoolState = await getVirtualPool(
             context.banksClient,
             program,
-            {
-                virtualPool,
-                name: "Moonshot",
-                website: "moonshot.com",
-                logo: "https://raw.githubusercontent.com/MeteoraAg/token-metadata/main/meteora_permission_lp.png",
-                creator: poolCreator,
-                payer: poolCreator,
-            }
+            virtualPool
         );
     });
+
+    it("Swap", async () => {
+        const params: SwapParams = {
+            config,
+            payer: user,
+            pool: virtualPool,
+            inputTokenMint: NATIVE_MINT,
+            outputTokenMint: virtualPoolState.baseMint,
+            amountIn: new BN(LAMPORTS_PER_SOL * 5.5),
+            minimumAmountOut: new BN(0),
+            referralTokenAccount: null,
+        };
+        await swap(context.banksClient, program, params);
+    });
+
+    it("Create meteora metadata", async () => {
+        await createMeteoraMetadata(context.banksClient, program, {
+            payer: admin,
+            virtualPool,
+            config,
+        });
+    });
+
+    it("Migrate to Meteora Damm Pool", async () => {
+        const poolAuthority = derivePoolAuthority();
+        dammConfig = await createDammConfig(
+            context.banksClient,
+            admin,
+            poolAuthority
+        );
+        const migrationParams: MigrateMeteoraParams = {
+            payer: admin,
+            virtualPool,
+            dammConfig,
+        };
+
+        await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
+    });
+
+    it("Partner lock LP", async () => {
+        await lockLpForPartnerDamm(context.banksClient, program, {
+            payer: partner,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Creator lock LP", async () => {
+        await lockLpForCreatorDamm(context.banksClient, program, {
+            payer: poolCreator,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Partner claim LP", async () => {
+        await partnerClaimLpDamm(context.banksClient, program, {
+            payer: partner,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Creator claim LP", async () => {
+        await creatorClaimLpDamm(context.banksClient, program, {
+            payer: poolCreator,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
 });

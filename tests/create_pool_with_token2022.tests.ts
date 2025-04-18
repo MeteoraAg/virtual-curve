@@ -110,12 +110,13 @@ describe("Create pool with token2022", () => {
                 cliffUnlockAmount: new BN(0),
             },
             migrationFeeOption: 0,
-            padding: [0, 0, 0, 0, 0, 0, 0],
+            tokenSupply: null,
+            padding: [],
             curve: curves,
         };
         const params: CreateConfigParams = {
             payer: partner,
-            owner: partner.publicKey,
+            leftoverReceiver: partner.publicKey,
             feeClaimer: partner.publicKey,
             quoteMint: NATIVE_MINT,
             instructionParams,

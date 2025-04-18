@@ -78,12 +78,13 @@ describe("Simulate CU swap", () => {
           cliffUnlockAmount: new BN(0),
         },
         migrationFeeOption: 0,
-        padding: [0, 0, 0, 0, 0, 0, 0],
+        tokenSupply: null,
+        padding: [],
         curve: curves,
       };
       const createConfigParams: CreateConfigParams = {
         payer: user,
-        owner: user.publicKey,
+        leftoverReceiver: user.publicKey,
         feeClaimer: user.publicKey,
         quoteMint: NATIVE_MINT,
         instructionParams,
