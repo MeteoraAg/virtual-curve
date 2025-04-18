@@ -43,7 +43,12 @@ import {
   Transaction,
   TransactionInstruction,
 } from "@solana/web3.js";
-import { DAMM_PROGRAM_ID, DAMM_V2_PROGRAM_ID, MAX_SQRT_PRICE, MIN_SQRT_PRICE } from "./constants";
+import {
+  DAMM_PROGRAM_ID,
+  DAMM_V2_PROGRAM_ID,
+  MAX_SQRT_PRICE,
+  MIN_SQRT_PRICE,
+} from "./constants";
 import { BanksClient } from "solana-bankrun";
 import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
@@ -321,6 +326,12 @@ export async function createDammConfig(
     [Buffer.from("config"), params.index.toBuffer("le", 8)],
     DAMM_PROGRAM_ID
   );
+
+  const account = await banksClient.getAccount(config);
+  if (account) {
+    return config;
+  }
+
   const transaction = await program.methods
     .createConfig(params)
     .accounts({
@@ -336,7 +347,6 @@ export async function createDammConfig(
 
   return config;
 }
-
 
 export async function createDammV2Config(
   banksClient: BanksClient,

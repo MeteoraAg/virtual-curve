@@ -86,34 +86,15 @@ pub fn handle_migrate_meteora_damm_claim_lp_token<'info>(
 
     let mut migration_metadata = ctx.accounts.migration_metadata.load_mut()?;
 
-    if ctx.accounts.owner.key() == migration_metadata.partner {
-        require!(
-            !migration_metadata.is_partner_claim_lp(),
-            PoolError::NotPermitToDoThisAction
-        );
-        require!(
-            migration_metadata.partner_lp != 0,
-            PoolError::NotPermitToDoThisAction
-        );
-        migration_metadata.set_partner_claim_status();
-        ctx.accounts
-            .transfer(ctx.bumps.pool_authority, migration_metadata.partner_lp)?;
-    } else if ctx.accounts.owner.key() == migration_metadata.pool_creator {
-        require!(
-            !migration_metadata.is_creator_claim_lp(),
-            PoolError::NotPermitToDoThisAction
-        );
-        require!(
-            migration_metadata.creator_lp != 0,
-            PoolError::NotPermitToDoThisAction
-        );
+    let is_partner = ctx.accounts.owner.key() == migration_metadata.partner;
+    let is_creator = ctx.accounts.owner.key() == migration_metadata.pool_creator;
 
-        migration_metadata.set_creator_claim_status();
-        ctx.accounts
-            .transfer(ctx.bumps.pool_authority, migration_metadata.creator_lp)?;
-    } else {
-        return Err(PoolError::InvalidOwnerAccount.into());
-    }
+    let lp_to_claim = match (is_partner, is_creator) {
+        (true, true) => migration_metadata.claim_as_self_partnered_creator()?,
+        (true, false) => migration_metadata.claim_as_partner()?,
+        (false, true) => migration_metadata.claim_as_creator()?,
+        (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
+    };
 
-    Ok(())
+    ctx.accounts.transfer(ctx.bumps.pool_authority, lp_to_claim)
 }
