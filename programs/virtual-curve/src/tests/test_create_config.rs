@@ -1,12 +1,10 @@
-use anchor_lang::prelude::Pubkey;
-
 use crate::{
-    constants::{seeds::POOL_AUTHORITY_PREFIX, MAX_SQRT_PRICE},
+    constants::MAX_SQRT_PRICE,
     params::liquidity_distribution::{
         get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
         LiquidityDistributionParameters,
     },
-    state::MigrationOption,
+    state::{MigrationOption, PoolConfig},
 };
 
 use super::price_math::get_price_from_id;
@@ -36,4 +34,32 @@ fn test_create_config() {
     .unwrap();
 
     println!("{} {}", swap_base_amount, migration_base_amount);
+}
+
+#[test]
+fn test_get_swap_buffer() {
+    let migration_quote_threshold = 80_000_000_000; // 80 SOL
+    let sqrt_start_price: u128 = 2916686334356757; // price = 0.20
+    let curve = vec![
+        LiquidityDistributionParameters {
+            sqrt_price: 11666745337427032,
+            liquidity: 3111132089980541388292920297291756,
+        },
+        LiquidityDistributionParameters {
+            sqrt_price: MAX_SQRT_PRICE,
+            liquidity: 1,
+        },
+    ];
+    let sqrt_migration_price =
+        get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve).unwrap();
+    let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)
+        .unwrap()
+        .try_into()
+        .unwrap();
+
+    let minimum_base_supply_with_buffer =
+        PoolConfig::get_swap_amount_with_buffer(swap_base_amount, sqrt_start_price, &curve)
+            .unwrap();
+
+    println!("{} {}", swap_base_amount, minimum_base_supply_with_buffer);
 }

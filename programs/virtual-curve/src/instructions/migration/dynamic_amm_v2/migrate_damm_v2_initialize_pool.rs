@@ -521,13 +521,18 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     // burn the rest of token in pool authority after migrated amount and fee
     ctx.accounts.base_vault.reload()?;
+
+    // check whether we should burn token
+
     let left_base_token = ctx
         .accounts
         .base_vault
         .amount
         .safe_sub(protocol_and_partner_base_fee)?;
 
-    if left_base_token > 0 {
+    let burnable_amount = config.get_burnable_amount_post_migration(left_base_token)?;
+
+    if burnable_amount > 0 {
         let seeds = pool_authority_seeds!(const_pda::pool_authority::BUMP);
         anchor_spl::token_interface::burn(
             CpiContext::new_with_signer(
@@ -539,7 +544,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
                 },
                 &[&seeds[..]],
             ),
-            left_base_token,
+            burnable_amount,
         )?;
     }
 

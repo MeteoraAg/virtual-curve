@@ -118,8 +118,10 @@ pub struct VirtualPool {
     pub is_procotol_withdraw_surplus: u8,
     /// migration progress
     pub migration_progress: u8,
+    /// is withdraw leftover
+    pub is_withdraw_leftover: u8,
     /// padding
-    pub _padding_0: [u8; 3],
+    pub _padding_0: [u8; 2],
     /// pool metrics
     pub metrics: PoolMetrics,
     /// The time curve is finished
@@ -551,6 +553,10 @@ impl VirtualPool {
 
     pub fn update_protocol_withdraw_surplus(&mut self) {
         self.is_procotol_withdraw_surplus = 1;
+    }
+
+    pub fn update_withdraw_leftover(&mut self) {
+        self.is_withdraw_leftover = 1;
     }
 
     pub fn get_migration_progress(&self) -> Result<MigrationProgress> {
