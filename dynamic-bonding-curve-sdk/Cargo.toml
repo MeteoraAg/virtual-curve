@@ -1,15 +1,15 @@
 [package]
-name = "virtual-curve-sdk"
+name = "dynamic-bonding-curve-sdk"
 version = "0.1.0"
 edition = "2021"
-description = "virtual curve sdk"
+description = "dynamic bonding curve sdk"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "virtual_curve_sdk"
+name = "dynamic_bonding_curve_sdk"
 
 [dependencies]
 anyhow = "1.0.71"
-virtual-curve = { path = "../programs/virtual-curve" }
+dynamic-bonding-curve = { path = "../programs/dynamic-bonding-curve" }
