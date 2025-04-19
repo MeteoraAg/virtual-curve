@@ -27,7 +27,7 @@ jobs:
         uses: tj-actions/changed-files@v18.6
         with:
           files: |
-            programs/virtual-curve
+            programs/dynamic-bonding-curve
 
   anchor_build:
     runs-on: ubuntu-latest
@@ -74,7 +74,7 @@ jobs:
           components: clippy
       # Cache rust, cargo
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --package virtual-curve
+      - run: cargo test --package dynamic-bonding-curve
         shell: bash
 
   integration_test:
