@@ -17,8 +17,8 @@ import {
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
-import { VirtualCurve } from "../../target/types/virtual_curve";
-import VirtualCurveIDL from "../../target/idl/virtual_curve.json";
+import { DynamicBondingCurve as VirtualCurve } from "../../target/types/dynamic_bonding_curve";
+import VirtualCurveIDL from "../../target/idl/dynamic_bonding_curve.json";
 
 import VaultIDL from "../../idls/dynamic_vault.json";
 import { DynamicVault as Vault } from "./idl/dynamic_vault";

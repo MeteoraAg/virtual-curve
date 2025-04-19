@@ -1,5 +1,5 @@
 use anyhow::{ensure, Context, Result};
-use virtual_curve::{
+use dynamic_bonding_curve::{
     activation_handler::ActivationType,
     params::swap::TradeDirection,
     state::{fee::FeeMode, PoolConfig, SwapResult, VirtualPool},
