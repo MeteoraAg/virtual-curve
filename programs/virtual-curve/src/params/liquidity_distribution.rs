@@ -6,9 +6,8 @@ use ruint::aliases::U256;
 use crate::{
     constants::{MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     curve::{
-        get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
-        get_delta_amount_quote_unsigned_256, get_initial_liquidity_from_delta_quote,
-        get_next_sqrt_price_from_input,
+        get_delta_amount_base_unsigned_256, get_delta_amount_quote_unsigned_256,
+        get_initial_liquidity_from_delta_quote, get_next_sqrt_price_from_input,
     },
     safe_math::SafeMath,
     state::{LiquidityDistributionConfig, MigrationOption},
@@ -38,8 +37,8 @@ pub fn get_base_token_for_swap(
     sqrt_start_price: u128,
     sqrt_migration_price: u128,
     curve: &[LiquidityDistributionParameters],
-) -> Result<u64> {
-    let mut total_amount = 0u64;
+) -> Result<U256> {
+    let mut total_amount = U256::ZERO;
     for i in 0..curve.len() {
         let lower_sqrt_price = if i == 0 {
             sqrt_start_price
@@ -47,7 +46,7 @@ pub fn get_base_token_for_swap(
             curve[i - 1].sqrt_price
         };
         if curve[i].sqrt_price > sqrt_migration_price {
-            let delta_amount = get_delta_amount_base_unsigned(
+            let delta_amount = get_delta_amount_base_unsigned_256(
                 lower_sqrt_price,
                 sqrt_migration_price,
                 curve[i].liquidity,
@@ -56,7 +55,7 @@ pub fn get_base_token_for_swap(
             total_amount = total_amount.safe_add(delta_amount)?;
             break;
         } else {
-            let delta_amount = get_delta_amount_base_unsigned(
+            let delta_amount = get_delta_amount_base_unsigned_256(
                 lower_sqrt_price,
                 curve[i].sqrt_price,
                 curve[i].liquidity,

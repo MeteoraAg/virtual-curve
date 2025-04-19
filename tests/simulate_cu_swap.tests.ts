@@ -35,7 +35,7 @@ describe("Simulate CU swap", () => {
 
   it("Simulate CU Swap", async () => {
     const result = [];
-    for (let curve_size = 1; curve_size <= 20; curve_size++) {
+    for (let curve_size = 1; curve_size <= 16; curve_size++) {
       let curves = [];
       for (let i = 1; i <= curve_size; i++) {
         curves.push({

@@ -1,15 +1,17 @@
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
     constants::{
         fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
-        MAX_CURVE_POINT, MAX_SQRT_PRICE, SWAP_BUFFER_PERCENTAGE,
+        MAX_CURVE_POINT_CONFIG, MAX_SQRT_PRICE, SWAP_BUFFER_PERCENTAGE,
     },
     fee_math::get_fee_in_period,
     params::{
-        fee_parameters::PoolFeeParameters, liquidity_distribution::LiquidityDistributionParameters,
+        fee_parameters::PoolFeeParameters,
+        liquidity_distribution::{get_base_token_for_swap, LiquidityDistributionParameters},
     },
     safe_math::SafeMath,
     u128x128_math::Rounding,
@@ -389,7 +391,7 @@ pub struct PoolConfig {
     /// curve, only use 20 point firstly, we can extend that latter
     // each distribution will include curve[i].sqrt_price + curve[i+1].sqrt_price + curve[i+1].liquidity
     // for the first: sqrt_start_price + curve[0].sqrt_price + curve[0].liquidity
-    pub curve: [LiquidityDistributionConfig; MAX_CURVE_POINT],
+    pub curve: [LiquidityDistributionConfig; MAX_CURVE_POINT_CONFIG],
 }
 
 const_assert_eq!(PoolConfig::INIT_SPACE, 1040);
@@ -399,6 +401,15 @@ const_assert_eq!(PoolConfig::INIT_SPACE, 1040);
 pub struct LiquidityDistributionConfig {
     pub sqrt_price: u128,
     pub liquidity: u128,
+}
+
+impl LiquidityDistributionConfig {
+    pub fn to_liquidity_distribution_paramters(&self) -> LiquidityDistributionParameters {
+        LiquidityDistributionParameters {
+            sqrt_price: self.sqrt_price,
+            liquidity: self.liquidity,
+        }
+    }
 }
 
 impl PoolConfig {
@@ -460,7 +471,7 @@ impl PoolConfig {
         self.post_migration_token_supply = post_migration_token_supply;
 
         let curve_length = curve.len();
-        for i in 0..MAX_CURVE_POINT {
+        for i in 0..MAX_CURVE_POINT_CONFIG {
             if i < curve_length {
                 self.curve[i] = curve[i].to_liquidity_distribution_config();
             } else {
@@ -472,37 +483,59 @@ impl PoolConfig {
         }
     }
 
-    pub fn total_amount_with_buffer(
+    pub fn get_swap_amount_with_buffer(
+        swap_base_amount: u64,
+        sqrt_start_price: u128,
+        curve: &[LiquidityDistributionParameters],
+    ) -> Result<u64> {
+        let swap_amount_buffer = u128::from(swap_base_amount)
+            .safe_mul(SWAP_BUFFER_PERCENTAGE.into())?
+            .safe_div(100)?
+            .safe_add(swap_base_amount.into())?;
+        let max_base_amount_on_curve =
+            get_base_token_for_swap(sqrt_start_price, MAX_SQRT_PRICE, &curve)?;
+
+        if U256::from(swap_amount_buffer) < max_base_amount_on_curve {
+            Ok(u64::try_from(swap_amount_buffer).map_err(|_| PoolError::MathOverflow)?)
+        } else {
+            Ok(max_base_amount_on_curve
+                .try_into()
+                .map_err(|_| PoolError::MathOverflow)?)
+        }
+    }
+    pub fn get_total_token_supply(
         swap_base_amount: u64,
         migration_base_threshold: u64,
         locked_vesting_params: &LockedVestingParams,
-        buffer_percentage: u8,
     ) -> Result<u64> {
-        let swap_buffer = u128::from(swap_base_amount)
-            .safe_mul(buffer_percentage.into())?
-            .safe_div(100)?;
-        let swap_amount_with_buffer = swap_buffer.safe_add(swap_base_amount.into())?;
         let total_circulating_amount =
-            swap_amount_with_buffer.safe_add(migration_base_threshold.into())?;
+            swap_base_amount.safe_add(migration_base_threshold.into())?;
         let total_locked_vesting_amount = locked_vesting_params.get_total_amount()?;
         let total_amount = total_circulating_amount.safe_add(total_locked_vesting_amount.into())?;
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
-    }
-
-    pub fn get_minimum_base_supply(&self) -> Result<u64> {
-        PoolConfig::total_amount_with_buffer(
-            self.swap_base_amount,
-            self.migration_base_threshold,
-            &self.locked_vesting_config.to_locked_vesting_params(),
-            SWAP_BUFFER_PERCENTAGE,
-        )
     }
 
     pub fn get_initial_base_supply(&self) -> Result<u64> {
         if self.is_fixed_token_supply() {
             Ok(self.pre_migration_token_supply)
         } else {
-            self.get_minimum_base_supply()
+            let mut curve = vec![];
+            for i in 0..MAX_CURVE_POINT_CONFIG {
+                if self.curve[i].liquidity == 0 {
+                    break;
+                }
+                curve.push(self.curve[i].to_liquidity_distribution_paramters());
+            }
+            let swap_amount_with_buffer = PoolConfig::get_swap_amount_with_buffer(
+                self.swap_base_amount,
+                self.sqrt_start_price,
+                &curve,
+            )?;
+            PoolConfig::get_total_token_supply(
+                swap_amount_with_buffer,
+                self.migration_base_threshold,
+                &self.locked_vesting_config.to_locked_vesting_params(),
+            )
         }
     }
 

@@ -68,11 +68,18 @@ describe("Create locker", () => {
 
             const curves = [];
 
-            for (let i = 1; i <= 20; i++) {
-                curves.push({
-                    sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-                    liquidity: U64_MAX.shln(30 + i),
-                });
+            for (let i = 1; i <= 16; i++) {
+                if (i == 16) {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE,
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                } else {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                }
             }
 
             const instructionParams: ConfigParameters = {
@@ -219,11 +226,18 @@ describe("Create locker", () => {
 
             const curves = [];
 
-            for (let i = 1; i <= 20; i++) {
-                curves.push({
-                    sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-                    liquidity: U64_MAX.shln(30 + i),
-                });
+            for (let i = 1; i <= 16; i++) {
+                if (i == 16) {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE,
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                } else {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                }
             }
 
             const instructionParams: ConfigParameters = {

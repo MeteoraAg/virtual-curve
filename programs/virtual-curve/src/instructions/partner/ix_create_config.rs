@@ -4,7 +4,7 @@ use locker::types::CreateVestingEscrowParameters;
 
 use crate::{
     activation_handler::ActivationType,
-    constants::{MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE, SWAP_BUFFER_PERCENTAGE},
+    constants::{MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     params::{
         fee_parameters::PoolFeeParameters,
         liquidity_distribution::{
@@ -269,7 +269,13 @@ pub fn handle_create_config(
     let sqrt_migration_price =
         get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve)?;
 
-    let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
+    let swap_base_amount_256 =
+        get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
+    let swap_base_amount: u64 = swap_base_amount_256
+        .try_into()
+        .map_err(|_| PoolError::TypeCastFailed)?;
+    let swap_base_amount_buffer =
+        PoolConfig::get_swap_amount_with_buffer(swap_base_amount, sqrt_start_price, &curve)?;
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
@@ -278,18 +284,16 @@ pub fn handle_create_config(
             .map_err(|_| PoolError::InvalidMigrationOption)?,
     )?;
 
-    let minimum_base_supply_with_buffer = PoolConfig::total_amount_with_buffer(
-        swap_base_amount,
+    let minimum_base_supply_with_buffer = PoolConfig::get_total_token_supply(
+        swap_base_amount_buffer,
         migration_base_amount,
         &locked_vesting,
-        SWAP_BUFFER_PERCENTAGE,
     )?;
 
-    let minimum_base_supply_without_buffer = PoolConfig::total_amount_with_buffer(
+    let minimum_base_supply_without_buffer = PoolConfig::get_total_token_supply(
         swap_base_amount,
         migration_base_amount,
         &locked_vesting,
-        0,
     )?;
 
     let (fixed_token_suppply_flag, pre_migration_token_supply, post_migration_token_supply) =
