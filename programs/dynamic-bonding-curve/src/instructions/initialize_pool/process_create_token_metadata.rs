@@ -2,9 +2,9 @@ use anchor_lang::prelude::*;
 use mpl_token_metadata::types::DataV2;
 pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub system_program: AccountInfo<'info>,
-    pub payer: AccountInfo<'info>,          // signer
-    pub pool_authority: AccountInfo<'info>, // signer
-    pub mint: AccountInfo<'info>,           // signer
+    pub payer: AccountInfo<'info>,
+    pub pool_authority: AccountInfo<'info>,
+    pub mint: AccountInfo<'info>,
     pub metadata_program: AccountInfo<'info>,
     pub mint_metadata: AccountInfo<'info>,
     pub creator: AccountInfo<'info>,
