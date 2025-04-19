@@ -3,7 +3,7 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-virtual_curve = "virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD"
+dynamic_bonding_curve = "virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD"
 
 [registry]
 url = "https://api.apr.dev"

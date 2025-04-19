@@ -1,4 +1,4 @@
-name: VIRTUAL_CURVE
+name: DYNAMIC_BONDING_CURVE
 
 on:
   pull_request:
@@ -59,7 +59,7 @@ jobs:
           path: ~/.anchor
           key: anchor-${{ runner.os }}-${{ hashFiles('Anchor.toml') }}
       # Build with nightly toolchain
-      - run: RUSTUP_TOOLCHAIN=${{ env.NIGHTLY_TOOLCHAIN }} anchor build -p virtual_curve --no-idl
+      - run: RUSTUP_TOOLCHAIN=${{ env.NIGHTLY_TOOLCHAIN }} anchor build -p dynamic_bonding_curve --no-idl
         shell: bash
 
   cargo_test:
