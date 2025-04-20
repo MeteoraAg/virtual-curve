@@ -1,6 +1,6 @@
 use std::u64;
 
-use anchor_lang::solana_program::{program::invoke, system_instruction};
+use anchor_lang::solana_program::{program::invoke, program_pack::Pack, system_instruction};
 use anchor_spl::{
     token_2022::{set_authority, spl_token_2022::instruction::AuthorityType, SetAuthority},
     token_interface::{TokenAccount, TokenInterface},
@@ -180,13 +180,12 @@ impl<'info> MigrateDammV2Ctx<'info> {
     ) -> Result<()> {
         let pool_authority_seeds = pool_authority_seeds!(bump);
 
-        // Send some lamport to pool authority to pay rent fee?
-        msg!("transfer lamport to pool_authority");
+        msg!("transfer lamport to pool_authority for init pool");
         invoke(
             &system_instruction::transfer(
                 &self.payer.key(),
                 &self.pool_authority.key(),
-                50_000_000, // TODO calculate correct lamport here
+                calculate_lamport_require_for_init_pool_rent_exemption()?,
             ),
             &[
                 self.payer.to_account_info(),
@@ -280,6 +279,20 @@ impl<'info> MigrateDammV2Ctx<'info> {
         bump: u8,
     ) -> Result<()> {
         let pool_authority_seeds = pool_authority_seeds!(bump);
+        msg!("transfer lamport to pool_authority for create position");
+        invoke(
+            &system_instruction::transfer(
+                &self.payer.key(),
+                &self.pool_authority.key(),
+                calculate_lamport_require_for_new_position()?,
+            ),
+            &[
+                self.payer.to_account_info(),
+                self.pool_authority.to_account_info(),
+                self.system_program.to_account_info(),
+            ],
+        )?;
+
         msg!("create position");
         damm_v2::cpi::create_position(CpiContext::new_with_signer(
             self.amm_program.to_account_info(),
@@ -560,4 +573,48 @@ fn get_liquidity_for_adding_liquidity(
     let liquidity_from_quote =
         get_initial_liquidity_from_delta_quote(quote_amount, MIN_SQRT_PRICE, sqrt_price)?;
     Ok(liquidity_from_base.min(liquidity_from_quote))
+}
+
+// Init pool tx: https://solscan.io/tx/EtskZ6AQcsipqhLyDg2RFHVs36FL6Yn2ufeF8HNwWTuV4wXjEz5c1CjuCnA71kTsEr5Rq5u1g9RaBbp9pjJJmqy
+// Example of mint: https://solscan.io/token/39okSvbDD7HBfcwWgxTV8VqBJb3Vy4xyzqmF5xtqPCLT
+const POSITION_NFT_MINT_SIZE: usize = 465;
+// https://github.com/MeteoraAg/cp-amm/blob/5fe541d665fcd0876393e8878d1497cf89bab6ba/programs/cp-amm/src/state/pool.rs#L146
+const DAMM_V2_POOL_SIZE: usize = 8 + 1104;
+// https://github.com/MeteoraAg/cp-amm/blob/5fe541d665fcd0876393e8878d1497cf89bab6ba/programs/cp-amm/src/state/position.rs#L79
+const DAMM_V2_POSITION_SIZE: usize = 8 + 400;
+
+fn calculate_lamport_require_for_init_pool_rent_exemption() -> Result<u64> {
+    // Init pool require rent for
+    // 1. Pool
+    // 2. NFT mint
+    // 3. NFT token account + 2 token vault
+    // 4. Position
+    let rent = Rent::get()?;
+
+    let token_account_lamports =
+        rent.minimum_balance(anchor_spl::token::spl_token::state::Account::LEN);
+    let position_nft_mint_account_lamports = rent.minimum_balance(POSITION_NFT_MINT_SIZE);
+    let position_account_lamports = rent.minimum_balance(DAMM_V2_POSITION_SIZE);
+    let damm_v2_pool_account_lamports = rent.minimum_balance(DAMM_V2_POOL_SIZE);
+
+    let total_token_account_lamports = token_account_lamports.safe_mul(3)?;
+
+    let total_lamports = position_nft_mint_account_lamports
+        .safe_add(position_account_lamports)?
+        .safe_add(damm_v2_pool_account_lamports)?
+        .safe_add(total_token_account_lamports)?;
+
+    Ok(total_lamports)
+}
+
+fn calculate_lamport_require_for_new_position() -> Result<u64> {
+    let rent = Rent::get()?;
+
+    let token_account_lamports =
+        rent.minimum_balance(anchor_spl::token::spl_token::state::Account::LEN);
+    let position_account_lamports = rent.minimum_balance(DAMM_V2_POSITION_SIZE);
+
+    let total_lamports = token_account_lamports.safe_add(position_account_lamports)?;
+
+    Ok(total_lamports)
 }

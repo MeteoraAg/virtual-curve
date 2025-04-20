@@ -94,7 +94,7 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
         &system_instruction::transfer(
             &ctx.accounts.payer.key(),
             &ctx.accounts.pool_authority.key(),
-            10_000_000, // TODO calculate correct lamport here
+            calculate_lamport_require_for_rent_exemption()?,
         ),
         &[
             ctx.accounts.payer.to_account_info(),
@@ -130,4 +130,13 @@ pub fn handle_create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
     // set progress
     virtual_pool.set_migration_progress(MigrationProgress::LockedVesting.into());
     Ok(())
+}
+
+// https://github.com/jup-ag/jup-lock/blob/c47ac7647c420cb25ad9a7cffae9346c93e13da1/programs/locker/src/state/vesting_escrow.rs#L76
+const DAMM_VESTING_ESCROW_SIZE: usize = 8 + 288;
+
+fn calculate_lamport_require_for_rent_exemption() -> Result<u64> {
+    // Jup lock will initialize only escrow account
+    let vesting_escrow_account_lamports = Rent::get()?.minimum_balance(DAMM_VESTING_ESCROW_SIZE);
+    Ok(vesting_escrow_account_lamports)
 }

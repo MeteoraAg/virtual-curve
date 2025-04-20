@@ -1,4 +1,4 @@
-use anchor_lang::solana_program::{program::invoke, system_instruction};
+use anchor_lang::solana_program::{program::invoke, program_pack::Pack, system_instruction};
 use anchor_spl::token::{Burn, Token, TokenAccount};
 
 use crate::{
@@ -156,7 +156,7 @@ impl<'info> MigrateMeteoraDammCtx<'info> {
             &system_instruction::transfer(
                 &self.payer.key(),
                 &self.pool_authority.key(),
-                50_000_000, // TODO calculate correct lamport here
+                calculate_lamport_require_for_rent_exemption()?,
             ),
             &[
                 self.payer.to_account_info(),
@@ -275,4 +275,33 @@ pub fn handle_migrate_meteora_damm<'info>(
     // TODO emit event
 
     Ok(())
+}
+
+// https://github.com/MeteoraAg/meteora-dynamic-amm/blob/0050cc0d39af4048b3f96f2a153ba60c9fe3f17a/programs/amm/src/state/pool.rs#L145
+const POOL_SIZE: usize = 8 + 944;
+const METAPLEX_FEE_LAMPORTS: u64 = 10_000_000;
+
+fn calculate_lamport_require_for_rent_exemption() -> Result<u64> {
+    // During Meteora DAMM init pool it create:
+    // 1. Pool
+    // 2. Mint
+    // 3. Token account (a_vault_lp + b_vault_lp + payer_pool_lp + protocol_token_fee_a + protocol_token_fee_b)
+    let rent = Rent::get()?;
+
+    let token_account_rent_lamports =
+        rent.minimum_balance(anchor_spl::token::spl_token::state::Account::LEN);
+    let mint_account_rent_lamports =
+        rent.minimum_balance(anchor_spl::token::spl_token::state::Mint::LEN);
+    let pool_account_rent_lamports = rent.minimum_balance(POOL_SIZE);
+    let metaplex_metadata_lamports = rent.minimum_balance(679);
+
+    let total_token_account_rent_lamports = token_account_rent_lamports.safe_mul(5)?;
+
+    let total_lamports = pool_account_rent_lamports
+        .safe_add(mint_account_rent_lamports)?
+        .safe_add(total_token_account_rent_lamports)?
+        .safe_add(metaplex_metadata_lamports)?
+        .safe_add(METAPLEX_FEE_LAMPORTS)?;
+
+    Ok(total_lamports)
 }
