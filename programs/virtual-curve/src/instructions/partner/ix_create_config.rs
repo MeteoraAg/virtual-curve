@@ -37,11 +37,19 @@ pub struct ConfigParameters {
     pub sqrt_start_price: u128,
     pub locked_vesting: LockedVestingParams,
     pub migration_fee_option: u8,
+    pub token_supply: Option<TokenSupplyParams>,
     /// padding for future use
-    pub padding: [u8; 7],
+    pub padding: [u64; 8],
     pub curve: Vec<LiquidityDistributionParameters>,
 }
 
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq)]
+pub struct TokenSupplyParams {
+    /// pre migration token supply
+    pub pre_migration_token_supply: u64,
+    /// post migration token supply
+    pub post_migration_token_supply: u64,
+}
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq)]
 pub struct LockedVestingParams {
     pub amount_per_period: u64,
@@ -137,9 +145,7 @@ impl ConfigParameters {
                 );
             }
             MigrationOption::DammV2 => {
-                // skip that check, we will deploy damm v2 soon
-                // #[cfg(not(feature = "local"))]
-                // return Err(PoolError::InvalidMigrationOption.into());
+                // nothing to check
             }
         }
 
@@ -212,7 +218,6 @@ impl ConfigParameters {
 
 #[event_cpi]
 #[derive(Accounts)]
-#[instruction(config_parameters: ConfigParameters)]
 pub struct CreateConfigCtx<'info> {
     #[account(
         init,
@@ -224,8 +229,8 @@ pub struct CreateConfigCtx<'info> {
 
     /// CHECK: fee_claimer
     pub fee_claimer: UncheckedAccount<'info>,
-    /// CHECK: owner of the config
-    pub owner: UncheckedAccount<'info>,
+    /// CHECK: owner extra base token in case token is fixed supply
+    pub leftover_receiver: UncheckedAccount<'info>,
     /// quote mint
     pub quote_mint: Box<InterfaceAccount<'info, Mint>>,
 
@@ -256,6 +261,7 @@ pub fn handle_create_config(
         sqrt_start_price,
         locked_vesting,
         migration_fee_option,
+        token_supply,
         curve,
         ..
     } = config_parameters;
@@ -263,7 +269,13 @@ pub fn handle_create_config(
     let sqrt_migration_price =
         get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve)?;
 
-    let swap_base_amount = get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
+    let swap_base_amount_256 =
+        get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
+    let swap_base_amount: u64 = swap_base_amount_256
+        .try_into()
+        .map_err(|_| PoolError::TypeCastFailed)?;
+    let swap_base_amount_buffer =
+        PoolConfig::get_swap_amount_with_buffer(swap_base_amount, sqrt_start_price, &curve)?;
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
@@ -272,26 +284,44 @@ pub fn handle_create_config(
             .map_err(|_| PoolError::InvalidMigrationOption)?,
     )?;
 
-    let total_base_with_buffer =
-        PoolConfig::total_amount_with_buffer(swap_base_amount, migration_base_amount)?;
-    let max_supply = PoolConfig::get_max_supply(token_decimal)?;
-    require!(
-        total_base_with_buffer <= max_supply,
-        PoolError::TotalBaseTokenExceedMaxSupply
-    );
+    let minimum_base_supply_with_buffer = PoolConfig::get_total_token_supply(
+        swap_base_amount_buffer,
+        migration_base_amount,
+        &locked_vesting,
+    )?;
 
-    // validate total token is smaller than u64::MAX
-    require!(
-        total_base_with_buffer.safe_add(locked_vesting.get_total_amount()?.into())?
-            <= u64::MAX.into(),
-        PoolError::InvalidVestingParameters
-    );
+    let minimum_base_supply_without_buffer = PoolConfig::get_total_token_supply(
+        swap_base_amount,
+        migration_base_amount,
+        &locked_vesting,
+    )?;
+
+    let (fixed_token_supply_flag, pre_migration_token_supply, post_migration_token_supply) =
+        if let Some(TokenSupplyParams {
+            pre_migration_token_supply,
+            post_migration_token_supply,
+        }) = token_supply
+        {
+            require!(
+                ctx.accounts.leftover_receiver.key() != Pubkey::default(),
+                PoolError::InvalidLeftoverAddress
+            );
+            require!(
+                minimum_base_supply_without_buffer <= post_migration_token_supply
+                    && post_migration_token_supply <= pre_migration_token_supply
+                    && minimum_base_supply_with_buffer <= pre_migration_token_supply,
+                PoolError::InvalidTokenSupply
+            );
+            (1, pre_migration_token_supply, post_migration_token_supply)
+        } else {
+            (0, 0, 0)
+        };
 
     let mut config = ctx.accounts.config.load_init()?;
     config.init(
         &ctx.accounts.quote_mint.key(),
         ctx.accounts.fee_claimer.key,
-        ctx.accounts.owner.key,
+        ctx.accounts.leftover_receiver.key,
         &pool_fees,
         collect_fee_mode,
         migration_option,
@@ -310,6 +340,9 @@ pub fn handle_create_config(
         migration_base_amount,
         sqrt_migration_price,
         sqrt_start_price,
+        fixed_token_supply_flag,
+        pre_migration_token_supply,
+        post_migration_token_supply,
         &curve,
     );
 
@@ -317,7 +350,7 @@ pub fn handle_create_config(
         config: ctx.accounts.config.key(),
         fee_claimer: ctx.accounts.fee_claimer.key(),
         quote_mint: ctx.accounts.quote_mint.key(),
-        owner: ctx.accounts.owner.key(),
+        owner: ctx.accounts.leftover_receiver.key(),
         pool_fees,
         collect_fee_mode,
         migration_option,
@@ -332,6 +365,11 @@ pub fn handle_create_config(
         migration_quote_threshold,
         migration_base_amount,
         sqrt_start_price,
+        fixed_token_supply_flag,
+        pre_migration_token_supply,
+        post_migration_token_supply,
+        locked_vesting,
+        migration_fee_option,
         curve
     });
 

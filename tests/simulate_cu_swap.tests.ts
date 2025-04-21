@@ -35,7 +35,7 @@ describe("Simulate CU swap", () => {
 
   it("Simulate CU Swap", async () => {
     const result = [];
-    for (let curve_size = 1; curve_size <= 20; curve_size++) {
+    for (let curve_size = 1; curve_size <= 16; curve_size++) {
       let curves = [];
       for (let i = 1; i <= curve_size; i++) {
         curves.push({
@@ -78,12 +78,13 @@ describe("Simulate CU swap", () => {
           cliffUnlockAmount: new BN(0),
         },
         migrationFeeOption: 0,
-        padding: [0, 0, 0, 0, 0, 0, 0],
+        tokenSupply: null,
+        padding: [],
         curve: curves,
       };
       const createConfigParams: CreateConfigParams = {
         payer: user,
-        owner: user.publicKey,
+        leftoverReceiver: user.publicKey,
         feeClaimer: user.publicKey,
         quoteMint: NATIVE_MINT,
         instructionParams,

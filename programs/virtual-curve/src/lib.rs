@@ -69,6 +69,7 @@ pub mod virtual_curve {
         instructions::handle_claim_trading_fee(ctx, max_amount_a, max_amount_b)
     }
 
+    // withdraw surplus on quote token
     pub fn partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) -> Result<()> {
         instructions::handle_partner_withdraw_surplus(ctx)
     }
@@ -105,6 +106,12 @@ pub mod virtual_curve {
     pub fn create_locker(ctx: Context<CreateLockerCtx>) -> Result<()> {
         instructions::handle_create_locker(ctx)
     }
+
+    // withdraw leftover on base token, can only call after pool is initialized
+    pub fn withdraw_leftover(ctx: Context<WithdrawLeftoverCtx>) -> Result<()> {
+        instructions::handle_withdraw_leftover(ctx)
+    }
+
     /// migrate damm v1
     pub fn migration_meteora_damm_create_metadata<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, MigrationMeteoraDammCreateMetadataCtx<'info>>,

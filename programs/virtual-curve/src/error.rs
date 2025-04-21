@@ -65,6 +65,9 @@ pub enum PoolError {
     #[msg("Invalid quote threshold")]
     InvalidQuoteThreshold,
 
+    #[msg("Invalid token supply")]
+    InvalidTokenSupply,
+
     #[msg("Invalid curve")]
     InvalidCurve,
 
@@ -80,6 +83,9 @@ pub enum PoolError {
     #[msg("Surplus has been withdraw")]
     SurplusHasBeenWithdraw,
 
+    #[msg("Leftover has been withdraw")]
+    LeftoverHasBeenWithdraw,
+
     #[msg("Total base token is exceeded max supply")]
     TotalBaseTokenExceedMaxSupply,
 
@@ -94,4 +100,7 @@ pub enum PoolError {
 
     #[msg("Invalid vesting parameters")]
     InvalidVestingParameters,
+
+    #[msg("Invalid leftover address")]
+    InvalidLeftoverAddress,
 }

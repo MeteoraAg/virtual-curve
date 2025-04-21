@@ -6,7 +6,7 @@ use crate::{
         fee_parameters::PoolFeeParameters, liquidity_distribution::LiquidityDistributionParameters,
     },
     state::SwapResult,
-    SwapParameters,
+    LockedVestingParams, SwapParameters,
 };
 
 /// Create partner metadata
@@ -43,6 +43,11 @@ pub struct EvtCreateConfig {
     pub migration_quote_threshold: u64,
     pub migration_base_amount: u64,
     pub sqrt_start_price: u128,
+    pub locked_vesting: LockedVestingParams,
+    pub migration_fee_option: u8,
+    pub fixed_token_supply_flag: u8,
+    pub pre_migration_token_supply: u64,
+    pub post_migration_token_supply: u64,
     pub curve: Vec<LiquidityDistributionParameters>,
 }
 
@@ -123,4 +128,11 @@ pub struct EvtProtocolWithdrawSurplus {
 pub struct EvtPartnerWithdrawSurplus {
     pub pool: Pubkey,
     pub surplus_amount: u64,
+}
+
+#[event]
+pub struct EvtWithdrawLeftover {
+    pub pool: Pubkey,
+    pub leftover_receiver: Pubkey,
+    pub leftover_amount: u64,
 }

@@ -1,15 +1,17 @@
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
     constants::{
         fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
-        MAX_CURVE_POINT, MAX_SQRT_PRICE, MAX_TOKEN_SUPPLY,
+        MAX_CURVE_POINT_CONFIG, MAX_SQRT_PRICE, SWAP_BUFFER_PERCENTAGE,
     },
     fee_math::get_fee_in_period,
     params::{
-        fee_parameters::PoolFeeParameters, liquidity_distribution::LiquidityDistributionParameters,
+        fee_parameters::PoolFeeParameters,
+        liquidity_distribution::{get_base_token_for_swap, LiquidityDistributionParameters},
     },
     safe_math::SafeMath,
     u128x128_math::Rounding,
@@ -334,8 +336,8 @@ pub struct PoolConfig {
     pub quote_mint: Pubkey,
     /// Address to get the fee
     pub fee_claimer: Pubkey,
-    /// Owner of that config key
-    pub owner: Pubkey,
+    /// Address to receive extra base token after migration, in case token is fixed supply
+    pub leftover_receiver: Pubkey,
     /// Pool fee
     pub pool_fees: PoolFeesConfig,
     /// Collect fee mode
@@ -362,8 +364,10 @@ pub struct PoolConfig {
     pub creator_lp_percentage: u8,
     /// migration fee option
     pub migration_fee_option: u8,
+    /// flag to indicate whether token is dynamic supply (0) or fixed supply (1)
+    pub fixed_token_supply_flag: u8,
     /// padding 0
-    pub _padding_0: [u8; 4],
+    pub _padding_0: [u8; 3],
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount
@@ -376,14 +380,18 @@ pub struct PoolConfig {
     pub migration_sqrt_price: u128,
     /// locked vesting config
     pub locked_vesting_config: LockedVestingConfig,
+    /// pre migration token supply
+    pub pre_migration_token_supply: u64,
+    /// post migration token supply
+    pub post_migration_token_supply: u64,
     /// padding 2
-    pub _padding_2: [u128; 3],
+    pub _padding_2: [u128; 2],
     /// minimum price
     pub sqrt_start_price: u128,
     /// curve, only use 20 point firstly, we can extend that latter
     // each distribution will include curve[i].sqrt_price + curve[i+1].sqrt_price + curve[i+1].liquidity
     // for the first: sqrt_start_price + curve[0].sqrt_price + curve[0].liquidity
-    pub curve: [LiquidityDistributionConfig; MAX_CURVE_POINT],
+    pub curve: [LiquidityDistributionConfig; MAX_CURVE_POINT_CONFIG],
 }
 
 const_assert_eq!(PoolConfig::INIT_SPACE, 1040);
@@ -395,12 +403,21 @@ pub struct LiquidityDistributionConfig {
     pub liquidity: u128,
 }
 
+impl LiquidityDistributionConfig {
+    pub fn to_liquidity_distribution_parameters(&self) -> LiquidityDistributionParameters {
+        LiquidityDistributionParameters {
+            sqrt_price: self.sqrt_price,
+            liquidity: self.liquidity,
+        }
+    }
+}
+
 impl PoolConfig {
     pub fn init(
         &mut self,
         quote_mint: &Pubkey,
         fee_claimer: &Pubkey,
-        owner: &Pubkey,
+        leftover_receiver: &Pubkey,
         pool_fees: &PoolFeeParameters,
         collect_fee_mode: u8,
         migration_option: u8,
@@ -419,12 +436,15 @@ impl PoolConfig {
         migration_base_threshold: u64,
         migration_sqrt_price: u128,
         sqrt_start_price: u128,
+        fixed_token_supply_flag: u8,
+        pre_migration_token_supply: u64,
+        post_migration_token_supply: u64,
         curve: &Vec<LiquidityDistributionParameters>,
     ) {
         self.version = 0;
         self.quote_mint = *quote_mint;
         self.fee_claimer = *fee_claimer;
-        self.owner = *owner;
+        self.leftover_receiver = *leftover_receiver;
         self.pool_fees = pool_fees.to_pool_fees_config();
         self.collect_fee_mode = collect_fee_mode;
         self.migration_option = migration_option;
@@ -446,9 +466,12 @@ impl PoolConfig {
 
         self.locked_vesting_config = locked_vesting_params.to_locked_vesting_config();
         self.migration_fee_option = migration_fee_option;
+        self.fixed_token_supply_flag = fixed_token_supply_flag;
+        self.pre_migration_token_supply = pre_migration_token_supply;
+        self.post_migration_token_supply = post_migration_token_supply;
 
         let curve_length = curve.len();
-        for i in 0..MAX_CURVE_POINT {
+        for i in 0..MAX_CURVE_POINT_CONFIG {
             if i < curve_length {
                 self.curve[i] = curve[i].to_liquidity_distribution_config();
             } else {
@@ -460,32 +483,80 @@ impl PoolConfig {
         }
     }
 
-    pub fn total_amount_with_buffer(
+    pub fn get_swap_amount_with_buffer(
+        swap_base_amount: u64,
+        sqrt_start_price: u128,
+        curve: &[LiquidityDistributionParameters],
+    ) -> Result<u64> {
+        let swap_amount_buffer = u128::from(swap_base_amount)
+            .safe_mul(SWAP_BUFFER_PERCENTAGE.into())?
+            .safe_div(100)?
+            .safe_add(swap_base_amount.into())?;
+        let max_base_amount_on_curve =
+            get_base_token_for_swap(sqrt_start_price, MAX_SQRT_PRICE, &curve)?;
+
+        if U256::from(swap_amount_buffer) < max_base_amount_on_curve {
+            Ok(u64::try_from(swap_amount_buffer).map_err(|_| PoolError::MathOverflow)?)
+        } else {
+            Ok(max_base_amount_on_curve
+                .try_into()
+                .map_err(|_| PoolError::MathOverflow)?)
+        }
+    }
+    pub fn get_total_token_supply(
         swap_base_amount: u64,
         migration_base_threshold: u64,
-    ) -> Result<u128> {
-        let total_amount: u128 =
-            u128::from(migration_base_threshold).safe_add(swap_base_amount.into())?;
-        let max_amount = 5u128.safe_mul(total_amount.into())?.safe_div(4)?;
-        Ok(max_amount)
-    }
-
-    pub fn get_max_supply(token_decimal: u8) -> Result<u128> {
-        let max_supply = 10u128
-            .pow(token_decimal.into())
-            .safe_mul(MAX_TOKEN_SUPPLY.into())?;
-        Ok(max_supply)
-    }
-
-    pub fn get_initial_base_supply(&self) -> Result<u64> {
-        let total_circulating_amount = PoolConfig::total_amount_with_buffer(
-            self.swap_base_amount,
-            self.migration_base_threshold,
-        )?;
-        let locked_vesting_params = self.locked_vesting_config.to_locked_vesting_params();
+        locked_vesting_params: &LockedVestingParams,
+    ) -> Result<u64> {
+        let total_circulating_amount =
+            swap_base_amount.safe_add(migration_base_threshold.into())?;
         let total_locked_vesting_amount = locked_vesting_params.get_total_amount()?;
         let total_amount = total_circulating_amount.safe_add(total_locked_vesting_amount.into())?;
         Ok(u64::try_from(total_amount).map_err(|_| PoolError::MathOverflow)?)
+    }
+
+    pub fn get_initial_base_supply(&self) -> Result<u64> {
+        if self.is_fixed_token_supply() {
+            Ok(self.pre_migration_token_supply)
+        } else {
+            let mut curve = vec![];
+            for i in 0..MAX_CURVE_POINT_CONFIG {
+                if self.curve[i].liquidity == 0 {
+                    break;
+                }
+                curve.push(self.curve[i].to_liquidity_distribution_parameters());
+            }
+            let swap_amount_with_buffer = PoolConfig::get_swap_amount_with_buffer(
+                self.swap_base_amount,
+                self.sqrt_start_price,
+                &curve,
+            )?;
+            PoolConfig::get_total_token_supply(
+                swap_amount_with_buffer,
+                self.migration_base_threshold,
+                &self.locked_vesting_config.to_locked_vesting_params(),
+            )
+        }
+    }
+
+    fn get_max_burnable_amount_post_migration(&self) -> Result<u64> {
+        if self.is_fixed_token_supply() {
+            Ok(self
+                .pre_migration_token_supply
+                .safe_sub(self.post_migration_token_supply)?)
+        } else {
+            Ok(u64::MAX)
+        }
+    }
+
+    /// leftover is extra base token in base vault after curve is completed
+    pub fn get_burnable_amount_post_migration(&self, leftover: u64) -> Result<u64> {
+        let max_burnable_amount = self.get_max_burnable_amount_post_migration()?;
+        Ok(max_burnable_amount.min(leftover))
+    }
+
+    pub fn is_fixed_token_supply(&self) -> bool {
+        self.fixed_token_supply_flag == 1
     }
 
     pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LiquidityDistributionU64> {

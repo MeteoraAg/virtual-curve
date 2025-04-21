@@ -1,34 +1,38 @@
 import { BN } from "bn.js";
 import { ProgramTestContext } from "solana-bankrun";
-import { unpack } from "@solana/spl-token-metadata";
 import {
     BaseFee,
-    claimProtocolFee,
-    ClaimTradeFeeParams,
-    claimTradingFee,
     ConfigParameters,
-    createClaimFeeOperator,
     createConfig,
     CreateConfigParams,
-    createPoolWithToken2022,
+    createPoolWithSplToken,
     swap,
     SwapParams,
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { fundSol, getMint, startTest } from "./utils";
+import { fundSol, startTest } from "./utils";
 import {
+    createDammConfig,
     createVirtualCurveProgram,
+    derivePoolAuthority,
     MAX_SQRT_PRICE,
     MIN_SQRT_PRICE,
     U64_MAX,
 } from "./utils";
 import { getVirtualPool } from "./utils/fetcher";
-import { ACCOUNT_SIZE, ACCOUNT_TYPE_SIZE, ExtensionType, getExtensionData, NATIVE_MINT } from "@solana/spl-token";
-import { expect } from "chai";
+import { NATIVE_MINT } from "@solana/spl-token";
+import {
+    createMeteoraMetadata,
+    creatorClaimLpDamm,
+    lockLpForCreatorDamm,
+    lockLpForPartnerDamm,
+    MigrateMeteoraParams,
+    migrateToMeteoraDamm,
+    partnerClaimLpDamm,
+} from "./instructions/meteoraMigration";
 
-
-describe("Create pool with token2022", () => {
+describe("Claim lp on meteora dammm", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
@@ -39,7 +43,7 @@ describe("Create pool with token2022", () => {
     let config: PublicKey;
     let virtualPool: PublicKey;
     let virtualPoolState: Pool;
-    let claimFeeOperator: PublicKey;
+    let dammConfig: PublicKey;
 
     before(async () => {
         context = await startTest();
@@ -56,17 +60,8 @@ describe("Create pool with token2022", () => {
         ];
         await fundSol(context.banksClient, admin, receivers);
         program = createVirtualCurveProgram();
-
-        // admin create claimFeeOperator
-        claimFeeOperator = await createClaimFeeOperator(
-            context.banksClient,
-            program,
-            {
-                admin,
-                operator: operator.publicKey,
-            }
-        );
     });
+
 
     it("Partner create config", async () => {
         const baseFee: BaseFee = {
@@ -100,13 +95,13 @@ describe("Create pool with token2022", () => {
             },
             activationType: 0,
             collectFeeMode: 0,
-            migrationOption: 1, // damm v2
-            tokenType: 1, // token 2022
+            migrationOption: 0,
+            tokenType: 0, // spl_token
             tokenDecimal: 6,
             migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
-            partnerLpPercentage: 0,
-            creatorLpPercentage: 0,
-            partnerLockedLpPercentage: 95,
+            partnerLpPercentage: 20,
+            creatorLpPercentage: 20,
+            partnerLockedLpPercentage: 55,
             creatorLockedLpPercentage: 5,
             sqrtStartPrice: MIN_SQRT_PRICE.shln(32),
             lockedVesting: {
@@ -131,19 +126,15 @@ describe("Create pool with token2022", () => {
         config = await createConfig(context.banksClient, program, params);
     });
 
-    it("Create token2022 pool from config", async () => {
-        const name = "test token 2022";
-        const symbol = "TOKEN2022";
-        const uri = "token2022.com";
-
-        virtualPool = await createPoolWithToken2022(context.banksClient, program, {
+    it("Create spl pool from config", async () => {
+        virtualPool = await createPoolWithSplToken(context.banksClient, program, {
             payer: poolCreator,
             quoteMint: NATIVE_MINT,
             config,
             instructionParams: {
-                name,
-                symbol,
-                uri,
+                name: "test token spl",
+                symbol: "TEST",
+                uri: "abc.com",
             },
         });
         virtualPoolState = await getVirtualPool(
@@ -151,25 +142,6 @@ describe("Create pool with token2022", () => {
             program,
             virtualPool
         );
-
-        // validate metadata
-        const tlvData = (
-            await context.banksClient.getAccount(virtualPoolState.baseMint)
-        ).data.slice(ACCOUNT_SIZE + ACCOUNT_TYPE_SIZE);
-        const metadata = unpack(
-            getExtensionData(ExtensionType.TokenMetadata, Buffer.from(tlvData))
-        );
-        expect(metadata.name).eq(name);
-        expect(metadata.symbol).eq(symbol);
-        expect(metadata.uri).eq(uri);
-        expect(metadata.updateAuthority.toString()).eq(poolCreator.publicKey.toString());
-
-        // validate freeze authority
-        const baseMintData = (
-            await getMint(context.banksClient, virtualPoolState.baseMint)
-        );
-        expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
-        expect(baseMintData.mintAuthorityOption).eq(0)
     });
 
     it("Swap", async () => {
@@ -186,20 +158,60 @@ describe("Create pool with token2022", () => {
         await swap(context.banksClient, program, params);
     });
 
-    it("Partner claim trading fee", async () => {
-        const claimTradingFeeParams: ClaimTradeFeeParams = {
-            feeClaimer: partner,
-            pool: virtualPool,
-            maxBaseAmount: new BN(U64_MAX),
-            maxQuoteAmount: new BN(U64_MAX),
-        };
-        await claimTradingFee(context.banksClient, program, claimTradingFeeParams);
-    });
-
-    it("Operator claim protocol fee", async () => {
-        await claimProtocolFee(context.banksClient, program, {
-            pool: virtualPool,
-            operator: operator,
+    it("Create meteora metadata", async () => {
+        await createMeteoraMetadata(context.banksClient, program, {
+            payer: admin,
+            virtualPool,
+            config,
         });
     });
+
+    it("Migrate to Meteora Damm Pool", async () => {
+        const poolAuthority = derivePoolAuthority();
+        dammConfig = await createDammConfig(
+            context.banksClient,
+            admin,
+            poolAuthority
+        );
+        const migrationParams: MigrateMeteoraParams = {
+            payer: admin,
+            virtualPool,
+            dammConfig,
+        };
+
+        await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
+    });
+
+    it("Partner lock LP", async () => {
+        await lockLpForPartnerDamm(context.banksClient, program, {
+            payer: partner,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Creator lock LP", async () => {
+        await lockLpForCreatorDamm(context.banksClient, program, {
+            payer: poolCreator,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Partner claim LP", async () => {
+        await partnerClaimLpDamm(context.banksClient, program, {
+            payer: partner,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
+    it("Creator claim LP", async () => {
+        await creatorClaimLpDamm(context.banksClient, program, {
+            payer: poolCreator,
+            dammConfig,
+            virtualPool,
+        });
+    });
+
 });

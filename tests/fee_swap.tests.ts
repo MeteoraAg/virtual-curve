@@ -58,11 +58,18 @@ describe("Fee Swap test", () => {
 
       const curves = [];
 
-      for (let i = 1; i <= 20; i++) {
-        curves.push({
-          sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-          liquidity: U64_MAX.shln(30 + i),
-        });
+      for (let i = 1; i <= 16; i++) {
+        if (i == 16) {
+          curves.push({
+            sqrtPrice: MAX_SQRT_PRICE,
+            liquidity: U64_MAX.shln(30 + i),
+          });
+        } else {
+          curves.push({
+            sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+            liquidity: U64_MAX.shln(30 + i),
+          });
+        }
       }
 
       const instructionParams: ConfigParameters = {
@@ -89,12 +96,13 @@ describe("Fee Swap test", () => {
           cliffUnlockAmount: new BN(0),
         },
         migrationFeeOption: 0,
-        padding: [0, 0, 0, 0, 0, 0, 0],
+        tokenSupply: null,
+        padding: [],
         curve: curves,
       };
       const params: CreateConfigParams = {
         payer: partner,
-        owner: partner.publicKey,
+        leftoverReceiver: partner.publicKey,
         feeClaimer: partner.publicKey,
         quoteMint: NATIVE_MINT,
         instructionParams,
@@ -375,11 +383,18 @@ describe("Fee Swap test", () => {
 
       const curves = [];
 
-      for (let i = 1; i <= 20; i++) {
-        curves.push({
-          sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-          liquidity: U64_MAX.shln(30 + i),
-        });
+      for (let i = 1; i <= 16; i++) {
+        if (i == 16) {
+          curves.push({
+            sqrtPrice: MAX_SQRT_PRICE,
+            liquidity: U64_MAX.shln(30 + i),
+          });
+        } else {
+          curves.push({
+            sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+            liquidity: U64_MAX.shln(30 + i),
+          });
+        }
       }
 
       const instructionParams: ConfigParameters = {
@@ -406,12 +421,13 @@ describe("Fee Swap test", () => {
           cliffUnlockAmount: new BN(0),
         },
         migrationFeeOption: 0,
-        padding: [0, 0, 0, 0, 0, 0, 0],
+        tokenSupply: null,
+        padding: [],
         curve: curves,
       };
       const params: CreateConfigParams = {
         payer: partner,
-        owner: partner.publicKey,
+        leftoverReceiver: partner.publicKey,
         feeClaimer: partner.publicKey,
         quoteMint: NATIVE_MINT,
         instructionParams,

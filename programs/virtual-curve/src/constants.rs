@@ -1,3 +1,5 @@
+use static_assertions::const_assert;
+
 /// refer raydium clmm
 pub const MIN_SQRT_PRICE: u128 = 4295048016;
 /// refer raydium clmm
@@ -16,9 +18,11 @@ pub const BIN_STEP_BPS_U128_DEFAULT: u128 = 1844674407370955;
 
 // Number of bits to scale. This will decide the position of the radix point.
 
-pub const MAX_CURVE_POINT: usize = 20;
+pub const MAX_CURVE_POINT: usize = 16;
+pub const MAX_CURVE_POINT_CONFIG: usize = 20;
+const_assert!(MAX_CURVE_POINT <= MAX_CURVE_POINT_CONFIG);
 
-pub const MAX_TOKEN_SUPPLY: u64 = 10_000_000_000; // 10 billion
+pub const SWAP_BUFFER_PERCENTAGE: u8 = 25; // 25%
 
 pub const PARTNER_SURPLUS_SHARE: u8 = 90; // 90 %
 

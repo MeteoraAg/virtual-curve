@@ -45,6 +45,7 @@ Partner can specify these parameters when they create a configuration on all the
 - `quote_mint`: the quote mint address that virtual pool will support.
 - `locked_vesting`: locked vesting for creator after token is migrated (token will be migrated to [Jup lock](https://lock.jup.ag/))
 - `migration_fee_option`: allow partner to choose a fee option on graduated pool (currently support 0.25% | 0.3% | 1% | 2%)
+- `token_supply`: when the fields are specified, token will have fixed supply in pre and post migration, leftover will be returned to leftover_receiver (configured in config key)
 - `sqrt_start_price`: square root of min price in the bonding curve for the virtual pools.
 - `curve`: an array of square price and liquidity, that defines the liquidity distribution for the virtual pools.
 

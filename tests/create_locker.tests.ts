@@ -25,7 +25,6 @@ import { getVirtualPool } from "./utils/fetcher";
 import { NATIVE_MINT } from "@solana/spl-token";
 
 import { createMeteoraDammV2Metadata, MigrateMeteoraDammV2Params, migrateToDammV2 } from "./instructions/dammV2Migration";
-import { expect } from "chai";
 
 describe("Create locker", () => {
     describe("Create locker for spl-token", () => {
@@ -69,11 +68,18 @@ describe("Create locker", () => {
 
             const curves = [];
 
-            for (let i = 1; i <= 20; i++) {
-                curves.push({
-                    sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-                    liquidity: U64_MAX.shln(30 + i),
-                });
+            for (let i = 1; i <= 16; i++) {
+                if (i == 16) {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE,
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                } else {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                }
             }
 
             const instructionParams: ConfigParameters = {
@@ -100,12 +106,13 @@ describe("Create locker", () => {
                     cliffUnlockAmount: new BN(1_000_000_000),
                 },
                 migrationFeeOption: 0,
-                padding: [0, 0, 0, 0, 0, 0, 0],
+                tokenSupply: null,
+                padding: [],
                 curve: curves,
             };
             const params: CreateConfigParams = {
                 payer: partner,
-                owner: partner.publicKey,
+                leftoverReceiver: partner.publicKey,
                 feeClaimer: partner.publicKey,
                 quoteMint: NATIVE_MINT,
                 instructionParams,
@@ -219,11 +226,18 @@ describe("Create locker", () => {
 
             const curves = [];
 
-            for (let i = 1; i <= 20; i++) {
-                curves.push({
-                    sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
-                    liquidity: U64_MAX.shln(30 + i),
-                });
+            for (let i = 1; i <= 16; i++) {
+                if (i == 16) {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE,
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                } else {
+                    curves.push({
+                        sqrtPrice: MAX_SQRT_PRICE.muln(i * 5).divn(100),
+                        liquidity: U64_MAX.shln(30 + i),
+                    });
+                }
             }
 
             const instructionParams: ConfigParameters = {
@@ -250,12 +264,13 @@ describe("Create locker", () => {
                     cliffUnlockAmount: new BN(1_000_000_000),
                 },
                 migrationFeeOption: 0,
-                padding: [0, 0, 0, 0, 0, 0, 0],
+                tokenSupply: null,
+                padding: [],
                 curve: curves,
             };
             const params: CreateConfigParams = {
                 payer: partner,
-                owner: partner.publicKey,
+                leftoverReceiver: partner.publicKey,
                 feeClaimer: partner.publicKey,
                 quoteMint: NATIVE_MINT,
                 instructionParams,
