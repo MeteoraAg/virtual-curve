@@ -1,15 +1,15 @@
-import { VirtualCurve } from "../../target/types/virtual_curve";
+import { DynamicBondingCurve } from "../../target/types/dynamic_bonding_curve";
 import { DynamicAmm } from "../utils/idl/dynamic_amm";
 import { IdlAccounts, Program } from "@coral-xyz/anchor";
 
-export type VirtualCurveProgram = Program<VirtualCurve>;
+export type VirtualCurveProgram = Program<DynamicBondingCurve>;
 
-export type Pool = IdlAccounts<VirtualCurve>["virtualPool"];
-export type PoolConfig = IdlAccounts<VirtualCurve>["poolConfig"];
-export type PartnerMetadata = IdlAccounts<VirtualCurve>["partnerMetadata"];
+export type Pool = IdlAccounts<DynamicBondingCurve>["virtualPool"];
+export type PoolConfig = IdlAccounts<DynamicBondingCurve>["poolConfig"];
+export type PartnerMetadata = IdlAccounts<DynamicBondingCurve>["partnerMetadata"];
 export type VirtualPoolMetadata =
-  IdlAccounts<VirtualCurve>["virtualPoolMetadata"];
-export type ClaimFeeOperator = IdlAccounts<VirtualCurve>["claimFeeOperator"];
+  IdlAccounts<DynamicBondingCurve>["virtualPoolMetadata"];
+export type ClaimFeeOperator = IdlAccounts<DynamicBondingCurve>["claimFeeOperator"];
 export type MeteoraDammMigrationMetadata =
-  IdlAccounts<VirtualCurve>["meteoraDammMigrationMetadata"];
+  IdlAccounts<DynamicBondingCurve>["meteoraDammMigrationMetadata"];
 export type LockEscrow = IdlAccounts<DynamicAmm>["lockEscrow"];

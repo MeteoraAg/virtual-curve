@@ -1,7 +1,7 @@
 import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 
-export const VIRTUAL_CURVE_PROGRAM_ID = new PublicKey(
+export const DYNAMIC_BONDING_CURVE_PROGRAM_ID = new PublicKey(
   "virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD"
 );
 

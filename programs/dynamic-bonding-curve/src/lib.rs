@@ -28,7 +28,7 @@ pub const CONST_PROGRAM_ID: Pubkey =
 declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
 
 #[program]
-pub mod virtual_curve {
+pub mod dynamic_bonding_curve {
     use super::*;
 
     /// ADMIN FUNCTIONS ///

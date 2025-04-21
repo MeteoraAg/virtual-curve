@@ -1,8 +1,8 @@
 > The program is still in the process of being audited.
 
-# Virtual Curve
+# Dynamic Bonding Curve
 
-The Virtual Curve program is a launch pool protocol that allows any launch partners to enable their users to launch tokens with customizable virtual curves directly on their platforms. With direct integration into Jupiter and other trading platforms, traders can trade these launch tokens immediately across all these integrations. The Virtual Cuvre program provides a few benefits:
+The Dynamic Bonding Curve program is a launch pool protocol that allows any launch partners to enable their users to launch tokens with customizable virtual curves directly on their platforms. With direct integration into Jupiter and other trading platforms, traders can trade these launch tokens immediately across all these integrations. The Virtual Cuvre program provides a few benefits:
 
 - Launch partners can have different configurations for their launch pools, for example, customizable quote token (SOL/USDC/etc), customizable curve for token graduation, customizable fees, etc.
 - Users on these launch platforms can easily create tokens and launch pools directly with the partners' configurations directly on their partners' UI.
@@ -21,7 +21,7 @@ The Virtual Curve program is a launch pool protocol that allows any launch partn
 ## Customizable Fees
 
 - Virtual pool will collect trading fee evey time user trade with that pool (buy or sell).
-- A percentage of trading fee will be paid to the Virtual Curve protocol. A swap host (Jupiter/Photon/Trading bots) can submit the swap transaction with a referal account to get some referal fee as part of protocol fee. The rest of trading fee belongs to partner.
+- A percentage of trading fee will be paid to the Dynamic Bonding Curve protocol. A swap host (Jupiter/Photon/Trading bots) can submit the swap transaction with a referal account to get some referal fee as part of protocol fee. The rest of trading fee belongs to partner.
 - After token has graduated and is migrated, LP is locked for partner and token creator. The ratio of the locked LP is based on what partner has configured in the configuration. With this, partner and token creator can claim fees based on the locked LP on Meteora DAMM.
 - The last swap will create a surplus on quote token, that will be shared between the partner and the protocol.
 
@@ -55,7 +55,7 @@ A simple constant product `x * y = virtual_base_reserve * virtual_curve_reserve`
 
 `bonding_curve_constant_product = function(l, pa, pb)`
 
-On our virtual curve protocol:
+On our dynamic bonding curve protocol:
 
 `bonding_curve = function([l_i, pa_i, pb_i])`
 
@@ -81,7 +81,7 @@ Then the bonding curve will function of 2 price ranges: `(l = 100, pa = 1, pb = 
 Program
 
 ```
-anchor build -p virtual_curve
+anchor build -p dynamic_bonding_curve
 ```
 
 ### Test
