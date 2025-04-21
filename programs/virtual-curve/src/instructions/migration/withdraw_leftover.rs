@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 use crate::{
-    constants::seeds::POOL_AUTHORITY_PREFIX,
+    const_pda,
     safe_math::SafeMath,
     state::{MigrationProgress, PoolConfig, VirtualPool},
     token::transfer_from_pool,
@@ -14,7 +14,9 @@ use crate::{
 #[derive(Accounts)]
 pub struct WithdrawLeftoverCtx<'info> {
     /// CHECK: pool authority
-    #[account(seeds = [POOL_AUTHORITY_PREFIX.as_ref()], bump)]
+    #[account(
+        address = const_pda::pool_authority::ID
+    )]
     pub pool_authority: UncheckedAccount<'info>,
 
     #[account(has_one=leftover_receiver)]
@@ -83,7 +85,7 @@ pub fn handle_withdraw_leftover(ctx: Context<WithdrawLeftoverCtx>) -> Result<()>
         &ctx.accounts.token_base_account,
         &ctx.accounts.token_base_program,
         leftover_amount,
-        ctx.bumps.pool_authority,
+        const_pda::pool_authority::BUMP,
     )?;
 
     // update partner withdraw leftover

@@ -45,7 +45,7 @@ pub struct EvtCreateConfig {
     pub sqrt_start_price: u128,
     pub locked_vesting: LockedVestingParams,
     pub migration_fee_option: u8,
-    pub fixed_token_suppply_flag: u8,
+    pub fixed_token_supply_flag: u8,
     pub pre_migration_token_supply: u64,
     pub post_migration_token_supply: u64,
     pub curve: Vec<LiquidityDistributionParameters>,

@@ -365,7 +365,7 @@ pub struct PoolConfig {
     /// migration fee option
     pub migration_fee_option: u8,
     /// flag to indicate whether token is dynamic supply (0) or fixed supply (1)
-    pub fixed_token_suppply_flag: u8,
+    pub fixed_token_supply_flag: u8,
     /// padding 0
     pub _padding_0: [u8; 3],
     /// padding 1
@@ -404,7 +404,7 @@ pub struct LiquidityDistributionConfig {
 }
 
 impl LiquidityDistributionConfig {
-    pub fn to_liquidity_distribution_paramters(&self) -> LiquidityDistributionParameters {
+    pub fn to_liquidity_distribution_parameters(&self) -> LiquidityDistributionParameters {
         LiquidityDistributionParameters {
             sqrt_price: self.sqrt_price,
             liquidity: self.liquidity,
@@ -436,7 +436,7 @@ impl PoolConfig {
         migration_base_threshold: u64,
         migration_sqrt_price: u128,
         sqrt_start_price: u128,
-        fixed_token_suppply_flag: u8,
+        fixed_token_supply_flag: u8,
         pre_migration_token_supply: u64,
         post_migration_token_supply: u64,
         curve: &Vec<LiquidityDistributionParameters>,
@@ -466,7 +466,7 @@ impl PoolConfig {
 
         self.locked_vesting_config = locked_vesting_params.to_locked_vesting_config();
         self.migration_fee_option = migration_fee_option;
-        self.fixed_token_suppply_flag = fixed_token_suppply_flag;
+        self.fixed_token_supply_flag = fixed_token_supply_flag;
         self.pre_migration_token_supply = pre_migration_token_supply;
         self.post_migration_token_supply = post_migration_token_supply;
 
@@ -524,7 +524,7 @@ impl PoolConfig {
                 if self.curve[i].liquidity == 0 {
                     break;
                 }
-                curve.push(self.curve[i].to_liquidity_distribution_paramters());
+                curve.push(self.curve[i].to_liquidity_distribution_parameters());
             }
             let swap_amount_with_buffer = PoolConfig::get_swap_amount_with_buffer(
                 self.swap_base_amount,
@@ -556,7 +556,7 @@ impl PoolConfig {
     }
 
     pub fn is_fixed_token_supply(&self) -> bool {
-        self.fixed_token_suppply_flag == 1
+        self.fixed_token_supply_flag == 1
     }
 
     pub fn get_lp_distribution(&self, lp_amount: u64) -> Result<LiquidityDistributionU64> {

@@ -100,4 +100,7 @@ pub enum PoolError {
 
     #[msg("Invalid vesting parameters")]
     InvalidVestingParameters,
+
+    #[msg("Invalid leftover address")]
+    InvalidLeftoverAddress,
 }

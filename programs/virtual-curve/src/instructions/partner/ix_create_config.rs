@@ -296,12 +296,16 @@ pub fn handle_create_config(
         &locked_vesting,
     )?;
 
-    let (fixed_token_suppply_flag, pre_migration_token_supply, post_migration_token_supply) =
+    let (fixed_token_supply_flag, pre_migration_token_supply, post_migration_token_supply) =
         if let Some(TokenSupplyParams {
             pre_migration_token_supply,
             post_migration_token_supply,
         }) = token_supply
         {
+            require!(
+                ctx.accounts.leftover_receiver.key() != Pubkey::default(),
+                PoolError::InvalidLeftoverAddress
+            );
             require!(
                 minimum_base_supply_without_buffer <= post_migration_token_supply
                     && post_migration_token_supply <= pre_migration_token_supply
@@ -336,7 +340,7 @@ pub fn handle_create_config(
         migration_base_amount,
         sqrt_migration_price,
         sqrt_start_price,
-        fixed_token_suppply_flag,
+        fixed_token_supply_flag,
         pre_migration_token_supply,
         post_migration_token_supply,
         &curve,
@@ -361,7 +365,7 @@ pub fn handle_create_config(
         migration_quote_threshold,
         migration_base_amount,
         sqrt_start_price,
-        fixed_token_suppply_flag,
+        fixed_token_supply_flag,
         pre_migration_token_supply,
         post_migration_token_supply,
         locked_vesting,
