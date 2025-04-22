@@ -101,6 +101,7 @@ fn get_constant_product_curve(
         sqrt_start_price,
         &curve,
         locked_vesting,
+        migration_option,
     );
 
     let remaining_amount = total_supply.checked_sub(total_dynamic_supply).unwrap();
@@ -134,6 +135,7 @@ fn get_total_supply_from_curve(
     sqrt_start_price: u128,
     curve: &Vec<LiquidityDistributionParameters>,
     locked_vesting: LockedVestingParams,
+    migration_option: MigrationOption,
 ) -> u64 {
     let sqrt_migration_price =
         get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve).unwrap();
@@ -148,7 +150,7 @@ fn get_total_supply_from_curve(
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
         sqrt_migration_price,
-        MigrationOption::MeteoraDamm,
+        migration_option,
     )
     .unwrap();
 
@@ -183,6 +185,7 @@ fn test_total_supply_without_lock_vesting() {
         sqrt_start_price,
         &curve,
         LockedVestingParams::default(),
+        MigrationOption::DammV2,
     );
     assert!(total_supply_reverse == total_supply);
 }
@@ -216,6 +219,7 @@ fn test_total_supply_with_lock_vesting() {
         sqrt_start_price,
         &curve,
         lock_vesting,
+        MigrationOption::DammV2,
     );
     assert!(total_supply_reverse == total_supply);
 }
@@ -249,6 +253,7 @@ proptest! {
             sqrt_start_price,
             &curve,
             LockedVestingParams::default(),
+            migration_option
         );
         assert!(total_supply_reverse == total_supply);
     }

@@ -16,7 +16,7 @@ import {
 } from "./instructions";
 import { VirtualCurveProgram } from "./utils/types";
 import { Keypair } from "@solana/web3.js";
-import { createDammConfig, designCurveWihoutLockVesting, fundSol, getMint, startTest } from "./utils";
+import { createDammConfig, designCurve, fundSol, getMint, startTest } from "./utils";
 import {
     createVirtualCurveProgram,
     derivePoolAuthority,
@@ -24,8 +24,9 @@ import {
 import { getConfig, getVirtualPool } from "./utils/fetcher";
 
 import { createToken, mintSplTokenTo } from "./utils/token";
+import { expect } from "chai";
 
-describe.skip("Swap Over the Curve", () => {
+describe("Swap Over the Curve", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
@@ -54,16 +55,26 @@ describe.skip("Swap Over the Curve", () => {
     it("Swap over the curve", async () => {
         let totalTokenSupply = 1_000_000_000; // 1 billion
         let percentageSupplyOnMigration = 10; // 10%;
-        let startPrice = new Decimal("0.0005"); // 500k market cap
+        let migrationQuoteThreshold = 300; // 300 sol
         let tokenBaseDecimal = 6;
         let tokenQuoteDecimal = 9;
+        let migrationOption = 0; // damm v1
+        let lockedVesting = {
+            amountPerPeriod: new BN(0),
+            cliffDurationFromMigrationTime: new BN(0),
+            frequency: new BN(0),
+            numberOfPeriod: new BN(0),
+            cliffUnlockAmount: new BN(0),
+        };
         let quoteMint = await createToken(context.banksClient, admin, admin.publicKey, tokenQuoteDecimal);
-        let instructionParams = designCurveWihoutLockVesting(
+        let instructionParams = designCurve(
             totalTokenSupply,
             percentageSupplyOnMigration,
-            startPrice,
+            migrationQuoteThreshold,
+            migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
+            lockedVesting,
         );
 
         const params: CreateConfigParams = {
@@ -96,7 +107,6 @@ describe.skip("Swap Over the Curve", () => {
             program,
             virtualPool
         );
-
 
         // swap
         const swapParams: SwapParams = {
@@ -146,6 +156,13 @@ describe.skip("Swap Over the Curve", () => {
             feeClaimer: partner,
             virtualPool,
         });
+
+
+        const baseMintData = (
+            await getMint(context.banksClient, virtualPoolState.baseMint)
+        );
+
+        expect(baseMintData.supply.toString()).eq(new BN(totalTokenSupply * 10 ** tokenBaseDecimal).toString());
 
     });
 });

@@ -1,6 +1,5 @@
 import BN, { BN } from "bn.js";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
-import Decimal from "decimal.js";
 import {
     createConfig,
     CreateConfigParams,
@@ -14,7 +13,7 @@ import {
 } from "./instructions";
 import { VirtualCurveProgram } from "./utils/types";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { createDammConfig, designCurve, designCurveWihoutLockVesting, fundSol, getMint, startTest } from "./utils";
+import { createDammConfig, designCurve, fundSol, getMint, startTest } from "./utils";
 import {
     createVirtualCurveProgram,
     derivePoolAuthority,
@@ -24,7 +23,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 import { expect } from "chai";
 import { createToken, mintSplTokenTo } from "./utils/token";
 
-describe.skip("Design default curve", () => {
+describe("Design default curve", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
@@ -53,24 +52,26 @@ describe.skip("Design default curve", () => {
     it("Design curve with lock vesting", async () => {
         let totalTokenSupply = 1_000_000_000; // 1 billion
         let percentageSupplyOnMigration = 10; // 10%;
-        let percentageSupplyVesting = 40; // 40%
-        let frequency = 3600; // each 1 hour
-        let numberOfPeriod = 100;
-        let startPrice = new Decimal("0.0005"); // 500k market cap
-        let migrationPrice = new Decimal("0.005"); // 5M market cap
+        let migrationQuoteThreshold = 300; // 300 sol
         let tokenBaseDecimal = 6;
         let tokenQuoteDecimal = 9;
+        let lockedVesting = {
+            amountPerPeriod: new BN(123456),
+            cliffDurationFromMigrationTime: new BN(0),
+            frequency: new BN(1),
+            numberOfPeriod: new BN(120),
+            cliffUnlockAmount: new BN(123456),
+        };
+        let migrationOption = 0;
         let quoteMint = await createToken(context.banksClient, admin, admin.publicKey, tokenQuoteDecimal);
         let instructionParams = designCurve(
             totalTokenSupply,
             percentageSupplyOnMigration,
-            percentageSupplyVesting,
-            frequency,
-            numberOfPeriod,
-            startPrice,
-            migrationPrice,
+            migrationQuoteThreshold,
+            migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
+            lockedVesting
         );
         const params: CreateConfigParams = {
             payer: partner,
@@ -84,57 +85,29 @@ describe.skip("Design default curve", () => {
         await fullFlow(context.banksClient, program, config, poolCreator, user, admin, quoteMint);
     });
 
-    it("Design curve without lock vesting with leftover", async () => {
-        /// NOTE, this case with have leftover, 
-        // because percentageSupplyOnMigration and migrationPrice is fixed -> migrationQuoteThreshold is fixed
-        // startPrice is fixed, migrationPrice is fixed and migrationQuoteThreshold is fixed -> swapAmount is fixed
+    it("Design curve without lock vesting", async () => {
         let totalTokenSupply = 1_000_000_000; // 1 billion
         let percentageSupplyOnMigration = 10; // 10%;
-        let percentageSupplyVesting = 0; // 40%
-        let frequency = 0; // each 1 hour
-        let numberOfPeriod = 0;
-        let startPrice = new Decimal("0.0005"); // 500k market cap
-        let migrationPrice = new Decimal("0.005"); // 5M market cap
+        let migrationQuoteThreshold = 300; // 300 sol
+        let migrationOption = 0;
         let tokenBaseDecimal = 6;
         let tokenQuoteDecimal = 9;
+        let lockedVesting = {
+            amountPerPeriod: new BN(0),
+            cliffDurationFromMigrationTime: new BN(0),
+            frequency: new BN(0),
+            numberOfPeriod: new BN(0),
+            cliffUnlockAmount: new BN(0),
+        };
         let quoteMint = await createToken(context.banksClient, admin, admin.publicKey, tokenQuoteDecimal);
         let instructionParams = designCurve(
             totalTokenSupply,
             percentageSupplyOnMigration,
-            percentageSupplyVesting,
-            frequency,
-            numberOfPeriod,
-            startPrice,
-            migrationPrice,
+            migrationQuoteThreshold,
+            migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
-        );
-        const params: CreateConfigParams = {
-            payer: partner,
-            leftoverReceiver: partner.publicKey,
-            feeClaimer: partner.publicKey,
-            quoteMint,
-            instructionParams,
-        };
-        let config = await createConfig(context.banksClient, program, params);
-        await mintSplTokenTo(context.banksClient, user, quoteMint, admin, user.publicKey, instructionParams.migrationQuoteThreshold.toNumber());
-        await fullFlow(context.banksClient, program, config, poolCreator, user, admin, quoteMint);
-    });
-
-
-    it("Design curve without leftover", async () => {
-        let totalTokenSupply = 1_000_000_000; // 1 billion
-        let percentageSupplyOnMigration = 10; // 10%;
-        let startPrice = new Decimal("0.0005"); // 500k market cap
-        let tokenBaseDecimal = 6;
-        let tokenQuoteDecimal = 9;
-        let quoteMint = await createToken(context.banksClient, admin, admin.publicKey, tokenQuoteDecimal);
-        let instructionParams = designCurveWihoutLockVesting(
-            totalTokenSupply,
-            percentageSupplyOnMigration,
-            startPrice,
-            tokenBaseDecimal,
-            tokenQuoteDecimal,
+            lockedVesting
         );
         const params: CreateConfigParams = {
             payer: partner,
