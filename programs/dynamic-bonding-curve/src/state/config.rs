@@ -153,8 +153,7 @@ impl BaseFeeConfig {
     }
 
     pub fn get_min_base_fee_numerator(&self) -> Result<u64> {
-        // trick to force current_point < activation_point (in order to get the lowest fee)
-        self.get_base_fee_numerator(0, 1)
+        self.get_base_fee_numerator_by_period(self.number_of_period.into())
     }
 
     pub fn get_base_fee_numerator(&self, current_point: u64, activation_point: u64) -> Result<u64> {
@@ -165,6 +164,11 @@ impl BaseFeeConfig {
         let period = current_point
             .safe_sub(activation_point)?
             .safe_div(self.period_frequency)?;
+
+        self.get_base_fee_numerator_by_period(period)
+    }
+
+    fn get_base_fee_numerator_by_period(&self, period: u64) -> Result<u64> {
         let period = period.min(self.number_of_period.into());
 
         let fee_scheduler_mode = FeeSchedulerMode::try_from(self.fee_scheduler_mode)
