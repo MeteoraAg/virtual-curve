@@ -470,11 +470,8 @@ impl PoolConfig {
         self.pre_migration_token_supply = pre_migration_token_supply;
         self.post_migration_token_supply = post_migration_token_supply;
 
-        let curve_length = curve.len();
-        for i in 0..MAX_CURVE_POINT_CONFIG {
-            if i < curve_length {
-                self.curve[i] = curve[i].to_liquidity_distribution_config();
-            }
+        for i in 0..curve.len() {
+            self.curve[i] = curve[i].to_liquidity_distribution_config();
         }
     }
 

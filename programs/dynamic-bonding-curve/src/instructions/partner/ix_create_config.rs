@@ -187,8 +187,9 @@ impl ConfigParameters {
             self.sqrt_start_price >= MIN_SQRT_PRICE && self.sqrt_start_price < MAX_SQRT_PRICE,
             PoolError::InvalidCurve
         );
+        let curve_length = self.curve.len();
         require!(
-            self.curve.len() > 0 && self.curve.len() <= MAX_CURVE_POINT,
+            curve_length > 0 && curve_length <= MAX_CURVE_POINT,
             PoolError::InvalidCurve
         );
         require!(
@@ -198,7 +199,7 @@ impl ConfigParameters {
             PoolError::InvalidCurve
         );
 
-        for i in 1..self.curve.len() {
+        for i in 1..curve_length {
             require!(
                 self.curve[i].sqrt_price > self.curve[i - 1].sqrt_price
                     && self.curve[i].liquidity > 0,
@@ -208,7 +209,7 @@ impl ConfigParameters {
 
         // the last price in curve must be smaller than or equal max price
         require!(
-            self.curve[self.curve.len() - 1].sqrt_price <= MAX_SQRT_PRICE,
+            self.curve[curve_length - 1].sqrt_price <= MAX_SQRT_PRICE,
             PoolError::InvalidCurve
         );
 
