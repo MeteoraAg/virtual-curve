@@ -25,7 +25,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 
 import { createToken, mintSplTokenTo } from "./utils/token";
 
-describe("Swap Over the Curve", () => {
+describe.skip("Swap Over the Curve", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;

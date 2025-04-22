@@ -80,7 +80,11 @@ pub fn get_migration_base_token(
             // base = quote / price
             let price = sqrt_migration_price.safe_mul(sqrt_migration_price)?;
             let quote = U256::from(migration_threshold).safe_shl(128)?;
-            let base = quote.safe_div(price)?;
+            // round up
+            let (mut base, rem) = quote.div_rem(price);
+            if !rem.is_zero() {
+                base = base.safe_add(U256::from(1))?;
+            }
             require!(base <= U256::from(u64::MAX), PoolError::MathOverflow);
             Ok(base.try_into().map_err(|_| PoolError::TypeCastFailed)?)
         }

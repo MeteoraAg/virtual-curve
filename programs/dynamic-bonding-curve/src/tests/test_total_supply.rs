@@ -1,6 +1,7 @@
 use std::ops::Shl;
 
 use crate::{
+    constants::MAX_SQRT_PRICE,
     curve::{get_initial_liquidity_from_delta_base, get_initial_liquidity_from_delta_quote},
     params::liquidity_distribution::{
         get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
@@ -71,24 +72,57 @@ fn get_constant_product_curve(
     total_supply: u64,
     migration_amount: u64,
     migration_quote_threshold: u64,
+    migration_option: MigrationOption,
+    locked_vesting: LockedVestingParams,
 ) -> ConstantProductParams {
     let migration_price = (migration_quote_threshold as f64) / (migration_amount as f64);
     let migration_sqrt_price = get_sqrt_price_from_price(migration_price); //round up to reduce base token
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
         migration_sqrt_price,
-        MigrationOption::MeteoraDamm,
+        migration_option,
     )
     .unwrap();
 
-    let swap_amount = total_supply.checked_sub(migration_base_amount).unwrap();
+    let swap_amount = total_supply
+        .checked_sub(migration_base_amount)
+        .unwrap()
+        .checked_sub(locked_vesting.get_total_amount().unwrap())
+        .unwrap();
 
-    let (sqrt_start_price, curve) = get_first_curve(
+    let (sqrt_start_price, mut curve) = get_first_curve(
         migration_sqrt_price,
         migration_base_amount,
         swap_amount,
         migration_quote_threshold,
     );
+
+    let total_dynamic_supply = get_total_supply_from_curve(
+        migration_quote_threshold,
+        sqrt_start_price,
+        &curve,
+        locked_vesting,
+    );
+
+    let remaining_amount = total_supply.checked_sub(total_dynamic_supply).unwrap();
+
+    let last_liquidity = get_initial_liquidity_from_delta_base(
+        remaining_amount,
+        MAX_SQRT_PRICE,
+        migration_sqrt_price,
+    )
+    .unwrap();
+
+    if last_liquidity != 0 {
+        println!(
+            "last_liquidity {} remaining_amount {}",
+            last_liquidity, remaining_amount
+        );
+        curve.push(LiquidityDistributionParameters {
+            sqrt_price: MAX_SQRT_PRICE,
+            liquidity: last_liquidity,
+        });
+    }
 
     return ConstantProductParams {
         migration_base_amount,
@@ -139,13 +173,53 @@ fn test_total_supply_without_lock_vesting() {
         sqrt_start_price,
         migration_base_amount: _migration_base_amount,
         curve,
-    } = get_constant_product_curve(total_supply, migration_amount, migration_quote_threshold);
+    } = get_constant_product_curve(
+        total_supply,
+        migration_amount,
+        migration_quote_threshold,
+        MigrationOption::DammV2,
+        LockedVestingParams::default(),
+    );
     // reverse
     let total_supply_reverse = get_total_supply_from_curve(
         migration_quote_threshold,
         sqrt_start_price,
         &curve,
         LockedVestingParams::default(),
+    );
+    assert!(total_supply_reverse == total_supply);
+}
+
+#[test]
+fn test_total_supply_with_lock_vesting() {
+    let total_supply: u64 = 1_000_000_345_000_234_123; // 1B with 6 decimals
+    let migration_quote_threshold: u64 = 50_000_000_002; // 50k usdc
+    let migration_percentage: f64 = 34.1231232227;
+    let migration_amount = get_migration_amount(total_supply, migration_percentage);
+    let lock_vesting = LockedVestingParams {
+        amount_per_period: 10012323,
+        cliff_duration_from_migration_time: 0,
+        frequency: 1234,
+        number_of_period: 100,
+        cliff_unlock_amount: 20000,
+    };
+    let ConstantProductParams {
+        sqrt_start_price,
+        migration_base_amount: _migration_base_amount,
+        curve,
+    } = get_constant_product_curve(
+        total_supply,
+        migration_amount,
+        migration_quote_threshold,
+        MigrationOption::DammV2,
+        lock_vesting,
+    );
+    // reverse
+    let total_supply_reverse = get_total_supply_from_curve(
+        migration_quote_threshold,
+        sqrt_start_price,
+        &curve,
+        lock_vesting,
     );
     assert!(total_supply_reverse == total_supply);
 }
@@ -159,15 +233,21 @@ proptest! {
         total_supply in 1_000_000_000u64..=10_000_000_000_000_000_000u64, // 10b of decimal = 9
         migration_quote_threshold in 100_000_000u64..=1_000_000_000_000u64, // 100 usdc to 1M usdc
         migration_percentage in 1u64..=49u64,
+        migration_option in 0u64..=1u64,
     ) {
         let migration_percentage = migration_percentage as f64;
         let migration_amount = get_migration_amount(total_supply, migration_percentage);
+        let migration_option = if migration_option == 0 {
+            MigrationOption::MeteoraDamm
+        }else{
+            MigrationOption::DammV2
+        };
         let ConstantProductParams {
             sqrt_start_price,
             migration_base_amount: _migration_base_amount,
             curve,
         } =
-            get_constant_product_curve(total_supply, migration_amount, migration_quote_threshold);
+            get_constant_product_curve(total_supply, migration_amount, migration_quote_threshold, migration_option, LockedVestingParams::default());
         // reverse
         let total_supply_reverse = get_total_supply_from_curve(
             migration_quote_threshold,

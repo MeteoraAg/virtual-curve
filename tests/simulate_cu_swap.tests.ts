@@ -1,6 +1,5 @@
 import { BN } from "bn.js";
-import * as anchor from "@coral-xyz/anchor";
-import { BanksClient, ProgramTestContext } from "solana-bankrun";
+import { ProgramTestContext } from "solana-bankrun";
 import {
   BaseFee,
   ConfigParameters,
@@ -36,6 +35,7 @@ describe("Simulate CU swap", () => {
   it("Simulate CU Swap", async () => {
     const result = [];
     for (let curve_size = 1; curve_size <= 16; curve_size++) {
+      console.log("curve size: ", curve_size);
       let curves = [];
       for (let i = 1; i <= curve_size; i++) {
         curves.push({

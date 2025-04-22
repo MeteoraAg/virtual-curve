@@ -288,8 +288,8 @@ pub fn handle_create_config(
             .map_err(|_| PoolError::InvalidMigrationOption)?,
     )?;
 
-    // migration base amount and swap_base_amount must be non-zero, otherwise pool migration will be block
     require!(
+        // this is fine to add redundant check
         migration_base_amount > 0 && swap_base_amount > 0,
         PoolError::InvalidCurve
     );

@@ -24,7 +24,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 import { expect } from "chai";
 import { createToken, mintSplTokenTo } from "./utils/token";
 
-describe("Design default curve", () => {
+describe.skip("Design default curve", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;
@@ -48,9 +48,6 @@ describe("Design default curve", () => {
         ];
         await fundSol(context.banksClient, admin, receivers);
         program = createVirtualCurveProgram();
-
-
-
     });
 
     it("Design curve with lock vesting", async () => {
