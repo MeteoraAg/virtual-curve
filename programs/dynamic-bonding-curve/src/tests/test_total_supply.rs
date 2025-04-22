@@ -64,7 +64,6 @@ fn get_first_curve(
 }
 
 pub struct ConstantProductParams {
-    pub migration_base_amount: u64,
     pub sqrt_start_price: u128,
     pub curve: Vec<LiquidityDistributionParameters>,
 }
@@ -125,7 +124,6 @@ fn get_constant_product_curve(
     }
 
     return ConstantProductParams {
-        migration_base_amount,
         sqrt_start_price,
         curve,
     };
@@ -171,7 +169,6 @@ fn test_total_supply_without_lock_vesting() {
     let migration_amount = get_migration_amount(total_supply, migration_percentage);
     let ConstantProductParams {
         sqrt_start_price,
-        migration_base_amount: _migration_base_amount,
         curve,
     } = get_constant_product_curve(
         total_supply,
@@ -205,7 +202,6 @@ fn test_total_supply_with_lock_vesting() {
     };
     let ConstantProductParams {
         sqrt_start_price,
-        migration_base_amount: _migration_base_amount,
         curve,
     } = get_constant_product_curve(
         total_supply,
@@ -244,7 +240,6 @@ proptest! {
         };
         let ConstantProductParams {
             sqrt_start_price,
-            migration_base_amount: _migration_base_amount,
             curve,
         } =
             get_constant_product_curve(total_supply, migration_amount, migration_quote_threshold, migration_option, LockedVestingParams::default());
