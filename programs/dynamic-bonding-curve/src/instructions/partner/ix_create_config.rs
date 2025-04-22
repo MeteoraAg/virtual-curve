@@ -275,8 +275,6 @@ pub fn handle_create_config(
     let swap_base_amount: u64 = swap_base_amount_256
         .try_into()
         .map_err(|_| PoolError::TypeCastFailed)?;
-    let swap_base_amount_buffer =
-        PoolConfig::get_swap_amount_with_buffer(swap_base_amount, sqrt_start_price, &curve)?;
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
@@ -285,24 +283,30 @@ pub fn handle_create_config(
             .map_err(|_| PoolError::InvalidMigrationOption)?,
     )?;
 
-    let minimum_base_supply_with_buffer = PoolConfig::get_total_token_supply(
-        swap_base_amount_buffer,
-        migration_base_amount,
-        &locked_vesting,
-    )?;
-
-    let minimum_base_supply_without_buffer = PoolConfig::get_total_token_supply(
-        swap_base_amount,
-        migration_base_amount,
-        &locked_vesting,
-    )?;
-
     let (fixed_token_supply_flag, pre_migration_token_supply, post_migration_token_supply) =
         if let Some(TokenSupplyParams {
             pre_migration_token_supply,
             post_migration_token_supply,
         }) = token_supply
         {
+            let swap_base_amount_buffer = PoolConfig::get_swap_amount_with_buffer(
+                swap_base_amount,
+                sqrt_start_price,
+                &curve,
+            )?;
+
+            let minimum_base_supply_with_buffer = PoolConfig::get_total_token_supply(
+                swap_base_amount_buffer,
+                migration_base_amount,
+                &locked_vesting,
+            )?;
+
+            let minimum_base_supply_without_buffer = PoolConfig::get_total_token_supply(
+                swap_base_amount,
+                migration_base_amount,
+                &locked_vesting,
+            )?;
+
             require!(
                 ctx.accounts.leftover_receiver.key() != Pubkey::default(),
                 PoolError::InvalidLeftoverAddress
