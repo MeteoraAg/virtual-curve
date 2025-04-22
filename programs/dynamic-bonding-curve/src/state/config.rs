@@ -474,11 +474,6 @@ impl PoolConfig {
         for i in 0..MAX_CURVE_POINT_CONFIG {
             if i < curve_length {
                 self.curve[i] = curve[i].to_liquidity_distribution_config();
-            } else {
-                self.curve[i] = LiquidityDistributionConfig {
-                    sqrt_price: MAX_SQRT_PRICE, // set max
-                    liquidity: 0,
-                }
             }
         }
     }

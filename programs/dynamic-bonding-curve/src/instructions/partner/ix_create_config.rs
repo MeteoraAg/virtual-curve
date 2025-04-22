@@ -206,9 +206,9 @@ impl ConfigParameters {
             );
         }
 
-        // the last price in curve must be max price
+        // the last price in curve must be smaller than or equal max price
         require!(
-            self.curve[self.curve.len() - 1].sqrt_price == MAX_SQRT_PRICE,
+            self.curve[self.curve.len() - 1].sqrt_price <= MAX_SQRT_PRICE,
             PoolError::InvalidCurve
         );
 

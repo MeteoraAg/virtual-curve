@@ -278,6 +278,9 @@ impl VirtualPool {
         let mut current_sqrt_price = self.sqrt_price;
         let mut amount_left = amount_in;
         for i in (0..MAX_CURVE_POINT - 1).rev() {
+            if config.curve[i].sqrt_price == 0 || config.curve[i].liquidity == 0 {
+                continue;
+            }
             if config.curve[i].sqrt_price < current_sqrt_price {
                 let max_amount_in = get_delta_amount_base_unsigned_256(
                     config.curve[i].sqrt_price,
@@ -355,6 +358,9 @@ impl VirtualPool {
         let mut current_sqrt_price = self.sqrt_price;
         let mut amount_left = amount_in;
         for i in 0..MAX_CURVE_POINT {
+            if config.curve[i].sqrt_price == 0 || config.curve[i].liquidity == 0 {
+                break;
+            }
             if config.curve[i].sqrt_price > current_sqrt_price {
                 let max_amount_in = get_delta_amount_quote_unsigned_256(
                     current_sqrt_price,
