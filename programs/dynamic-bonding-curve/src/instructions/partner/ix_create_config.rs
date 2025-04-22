@@ -269,6 +269,11 @@ pub fn handle_create_config(
 
     let sqrt_migration_price =
         get_migration_threshold_price(migration_quote_threshold, sqrt_start_price, &curve)?;
+    // migration price must be smaller than max sqrt price
+    require!(
+        sqrt_migration_price < MAX_SQRT_PRICE,
+        PoolError::InvalidCurve
+    );
 
     let swap_base_amount_256 =
         get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve)?;
@@ -282,6 +287,12 @@ pub fn handle_create_config(
         MigrationOption::try_from(migration_option)
             .map_err(|_| PoolError::InvalidMigrationOption)?,
     )?;
+
+    // migration base amount and swap_base_amount must be non-zero, otherwise pool migration will be block
+    require!(
+        migration_base_amount > 0 && swap_base_amount > 0,
+        PoolError::InvalidCurve
+    );
 
     let (fixed_token_supply_flag, pre_migration_token_supply, post_migration_token_supply) =
         if let Some(TokenSupplyParams {

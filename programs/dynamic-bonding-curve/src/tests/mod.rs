@@ -9,3 +9,6 @@ mod test_swap;
 
 #[cfg(test)]
 mod test_volitility_accumulate;
+
+#[cfg(test)]
+mod test_total_supply;
