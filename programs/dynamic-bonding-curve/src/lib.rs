@@ -24,8 +24,8 @@ pub mod tests;
 pub mod params;
 
 pub const CONST_PROGRAM_ID: Pubkey =
-    Pubkey::from_str_const("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
-declare_id!("virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD");
+    Pubkey::from_str_const("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
+declare_id!("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 #[program]
 pub mod dynamic_bonding_curve {

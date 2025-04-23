@@ -30,7 +30,7 @@ mod tests {
             &[crate::constants::seeds::POOL_AUTHORITY_PREFIX],
             &crate::ID,
         );
-
+        // derived_pool_authority = FhVo3mqL8PW5pH5U2CN4XE33DokiyZnUwuGpH2hmHLuM
         assert_eq!(pool_authority::ID, derived_pool_authority);
         assert_eq!(pool_authority::BUMP, derived_bump);
     }

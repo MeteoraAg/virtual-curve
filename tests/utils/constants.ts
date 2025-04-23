@@ -2,7 +2,7 @@ import { BN } from "@coral-xyz/anchor";
 import { PublicKey } from "@solana/web3.js";
 
 export const DYNAMIC_BONDING_CURVE_PROGRAM_ID = new PublicKey(
-  "virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD"
+  "dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN"
 );
 
 export const METAPLEX_PROGRAM_ID = new PublicKey(

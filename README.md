@@ -93,20 +93,20 @@ pnpm test
 
 ### Program Address
 
-- Mainnet-beta: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
-- Devnet: virEFLZsQm1iFAs8py1XnziJ67gTzW2bfCWhxNPfccD
+- Mainnet-beta: dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN
+- Devnet: dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN
 
 
 ### Config key for migration 
 
 #### Meteora damm (v1):
-- migration_fee_option == 0: EtwbXRxV8b46Vkho5EhMshi9qEU7xv6sMQnPHK3fX8WR
-- migration_fee_option == 1: VEtZapzJXreco3cbzUT8ZszawsRvRRQzGN5GBaCMwWh
-- migration_fee_option == 2: 8z2tYtwiAkby1tMSdf1hG2Ni8MFBk43o9tYey5zegNDh
-- migration_fee_option == 3: 3BuQgW3g75azhKeE3yzaqeWkmwezuDGwF6FT5py3mFrt
+- migration_fee_option == 0: 8f848CEy8eY6PhJ3VcemtBDzPPSD4Vq7aJczLZ3o8MmX
+- migration_fee_option == 1: HBxB8Lf14Yj8pqeJ8C4qDb5ryHL7xwpuykz31BLNYr7S
+- migration_fee_option == 2: 7v5vBdUQHTNeqk1HnduiXcgbvCyVEZ612HLmYkQoAkik
+- migration_fee_option == 3: EkvP7d5yKxovj884d2DwmBQbrHUWRLGK6bympzrkXGja
 
 #### Damm v2:
-- migration_fee_option == 0: 96gRhsiKyBJnXT2GxEnh54b9YLjzpEJ4aTetvLmQ5tWj
-- migration_fee_option == 1: 3GZLmQJ98xPRLNJjofzK3bfvhU11WFCiZJhEuPwgfBHb
-- migration_fee_option == 2: 7aqweHmWjiMJEVzTXjvpEasRiDQSK79GNWPqjbkeWtyL
-- migration_fee_option == 3: 6ym6zMi5RqUH3k2BNdiXUtSdpeypdWMLsxTyRhKqzhz2
+- migration_fee_option == 0: 7F6dnUcRuyM2TwR8myT1dYypFXpPSxqwKNSFNkxyNESd
+- migration_fee_option == 1: 2nHK1kju6XjphBLbNxpM5XRGFj7p9U8vvNzyZiha1z6k
+- migration_fee_option == 2: Hv8Lmzmnju6m7kcokVKvwqz7QPmdX9XfKjJsXz8RXcjp
+- migration_fee_option == 3: 2c4cYd4reUYVRAB9kUUkrq55VPyy2FNQ3FDL4o12JXmq
