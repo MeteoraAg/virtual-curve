@@ -27,8 +27,29 @@ pub struct BaseFeeParameters {
     pub fee_scheduler_mode: u8,
 }
 
+#[derive(Default, PartialEq)]
+struct FeeSchedulerParameters {
+    pub number_of_period: u16,
+    pub period_frequency: u64,
+    pub reduction_factor: u64,
+}
+
+impl FeeSchedulerParameters {
+    fn validate_non_zero(&self) -> Result<()> {
+        require!(
+            self.number_of_period != 0 && self.period_frequency != 0 && self.reduction_factor != 0,
+            PoolError::InvalidFeeScheduler
+        );
+        Ok(())
+    }
+}
+
 impl BaseFeeParameters {
     fn validate(&self) -> Result<()> {
+        let base_fee_scheduler = self.to_base_fee_scheduler();
+        if base_fee_scheduler != FeeSchedulerParameters::default() {
+            base_fee_scheduler.validate_non_zero()?;
+        }
         let base_fee_config = self.to_base_fee_config();
 
         let min_fee_numerator = base_fee_config.get_min_base_fee_numerator()?;
@@ -40,6 +61,14 @@ impl BaseFeeParameters {
             PoolError::ExceedMaxFeeBps
         );
         Ok(())
+    }
+
+    fn to_base_fee_scheduler(&self) -> FeeSchedulerParameters {
+        FeeSchedulerParameters {
+            number_of_period: self.number_of_period,
+            period_frequency: self.period_frequency,
+            reduction_factor: self.reduction_factor,
+        }
     }
 
     pub fn to_base_fee_config(&self) -> BaseFeeConfig {

@@ -106,4 +106,7 @@ pub enum PoolError {
 
     #[msg("Swap amount is over a threshold")]
     SwapAmountIsOverAThreshold,
+
+    #[msg("Invalid fee scheduler")]
+    InvalidFeeScheduler,
 }
