@@ -18,7 +18,7 @@ import {
   MIN_SQRT_PRICE,
   U64_MAX,
 } from "./utils";
-import { getVirtualPool } from "./utils/fetcher";
+import { getClaimFeeOperator, getVirtualPool } from "./utils/fetcher";
 import { getAssociatedTokenAddressSync, NATIVE_MINT } from "@solana/spl-token";
 import { expect } from "chai";
 
@@ -28,6 +28,7 @@ describe("Fee Swap test", () => {
     let admin: Keypair;
     let partner: Keypair;
     let user: Keypair;
+    let operator: Keypair;
     let poolCreator: Keypair;
     let program: VirtualCurveProgram;
     let config: PublicKey;
@@ -40,10 +41,12 @@ describe("Fee Swap test", () => {
       partner = Keypair.generate();
       user = Keypair.generate();
       poolCreator = Keypair.generate();
+      operator = Keypair.generate();
       const receivers = [
         partner.publicKey,
         user.publicKey,
         poolCreator.publicKey,
+        operator.publicKey,
       ];
       await fundSol(context.banksClient, admin, receivers);
       program = createVirtualCurveProgram();
@@ -110,7 +113,8 @@ describe("Fee Swap test", () => {
       config = await createConfig(context.banksClient, program, params);
 
       virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-        payer: poolCreator,
+        poolCreator,
+        payer: operator,
         quoteMint: NATIVE_MINT,
         config,
         instructionParams: {
@@ -215,7 +219,10 @@ describe("Fee Swap test", () => {
       );
 
       expect(preBaseReserve.sub(postBaseReserve).toString()).eq(
-        new BN(userBaseBaseBalance.toString()).add(totalSwapBaseTradingFee).add(totalSwapBaseProtolFee).toString()
+        new BN(userBaseBaseBalance.toString())
+          .add(totalSwapBaseTradingFee)
+          .add(totalSwapBaseProtolFee)
+          .toString()
       );
 
       // assert balance vault changed
@@ -226,7 +233,11 @@ describe("Fee Swap test", () => {
         Number(userBaseBaseBalance)
       );
       expect(Number(preBaseVaultBalance) - Number(postBaseVaultBalance)).eq(
-        (preBaseReserve.sub(postBaseReserve)).sub(totalSwapBaseTradingFee).sub(totalSwapBaseProtolFee).toNumber()
+        preBaseReserve
+          .sub(postBaseReserve)
+          .sub(totalSwapBaseTradingFee)
+          .sub(totalSwapBaseProtolFee)
+          .toNumber()
       );
     });
 
@@ -341,7 +352,13 @@ describe("Fee Swap test", () => {
         (
           Number(preQuoteVaultBalance) - Number(postQuoteVaultBalance)
         ).toString()
-      ).eq(preQuoteReserve.sub(postQuoteReserve).sub(totalSwapQuoteTradingFee).sub(totalSwapQuoteProtocolFee).toString());
+      ).eq(
+        preQuoteReserve
+          .sub(postQuoteReserve)
+          .sub(totalSwapQuoteTradingFee)
+          .sub(totalSwapQuoteProtocolFee)
+          .toString()
+      );
       expect(
         (Number(postBaseVaultBalance) - Number(preBaseVaultBalance)).toString()
       ).eq(inAmount.toString());
@@ -353,6 +370,7 @@ describe("Fee Swap test", () => {
     let admin: Keypair;
     let partner: Keypair;
     let user: Keypair;
+    let operator: Keypair;
     let poolCreator: Keypair;
     let program: VirtualCurveProgram;
     let config: PublicKey;
@@ -365,10 +383,13 @@ describe("Fee Swap test", () => {
       partner = Keypair.generate();
       user = Keypair.generate();
       poolCreator = Keypair.generate();
+      operator = Keypair.generate();
+
       const receivers = [
         partner.publicKey,
         user.publicKey,
         poolCreator.publicKey,
+        operator.publicKey,
       ];
       await fundSol(context.banksClient, admin, receivers);
       program = createVirtualCurveProgram();
@@ -435,7 +456,8 @@ describe("Fee Swap test", () => {
       config = await createConfig(context.banksClient, program, params);
 
       virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-        payer: poolCreator,
+        poolCreator,
+        payer: operator,
         quoteMint: NATIVE_MINT,
         config,
         instructionParams: {
@@ -659,7 +681,13 @@ describe("Fee Swap test", () => {
         (
           Number(preQuoteVaultBalance) - Number(postQuoteVaultBalance)
         ).toString()
-      ).eq(preQuoteReserve.sub(postQuoteReserve).sub(totalSwapQuoteTradingFee).sub(totalSwapQuoteProtocolFee).toString());
+      ).eq(
+        preQuoteReserve
+          .sub(postQuoteReserve)
+          .sub(totalSwapQuoteTradingFee)
+          .sub(totalSwapQuoteProtocolFee)
+          .toString()
+      );
       expect(
         (Number(postBaseVaultBalance) - Number(preBaseVaultBalance)).toString()
       ).eq(inAmount.toString());

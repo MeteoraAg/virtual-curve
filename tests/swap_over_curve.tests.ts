@@ -93,7 +93,8 @@ describe("Swap Over the Curve", () => {
 
         // create pool
         let virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-            payer: poolCreator,
+            poolCreator,
+            payer: operator,
             quoteMint,
             config,
             instructionParams: {

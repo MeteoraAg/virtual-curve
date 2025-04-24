@@ -82,7 +82,7 @@ describe("Design default curve", () => {
         };
         let config = await createConfig(context.banksClient, program, params);
         await mintSplTokenTo(context.banksClient, user, quoteMint, admin, user.publicKey, instructionParams.migrationQuoteThreshold.toNumber());
-        await fullFlow(context.banksClient, program, config, poolCreator, user, admin, quoteMint);
+        await fullFlow(context.banksClient, program, config, operator, poolCreator, user, admin, quoteMint);
     });
 
     it("Design curve without lock vesting", async () => {
@@ -118,7 +118,7 @@ describe("Design default curve", () => {
         };
         let config = await createConfig(context.banksClient, program, params);
         await mintSplTokenTo(context.banksClient, user, quoteMint, admin, user.publicKey, instructionParams.migrationQuoteThreshold.toNumber());
-        await fullFlow(context.banksClient, program, config, poolCreator, user, admin, quoteMint);
+        await fullFlow(context.banksClient, program, config, operator, poolCreator, user, admin, quoteMint);
     });
 });
 
@@ -127,6 +127,7 @@ async function fullFlow(
     banksClient: BanksClient,
     program: VirtualCurveProgram,
     config: PublicKey,
+    operator: Keypair,
     poolCreator: Keypair,
     user: Keypair,
     admin: Keypair,
@@ -134,7 +135,8 @@ async function fullFlow(
 ) {
     // create pool
     let virtualPool = await createPoolWithSplToken(banksClient, program, {
-        payer: poolCreator,
+        poolCreator,
+        payer: operator,
         quoteMint,
         config,
         instructionParams: {

@@ -122,7 +122,8 @@ describe("Create locker", () => {
 
         it("Create spl pool from config", async () => {
             virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-                payer: poolCreator,
+                poolCreator,
+                payer: operator,
                 quoteMint: NATIVE_MINT,
                 config,
                 instructionParams: {
@@ -280,7 +281,8 @@ describe("Create locker", () => {
 
         it("Create spl pool from config", async () => {
             virtualPool = await createPoolWithToken2022(context.banksClient, program, {
-                payer: poolCreator,
+                payer: operator,
+                poolCreator,
                 quoteMint: NATIVE_MINT,
                 config,
                 instructionParams: {

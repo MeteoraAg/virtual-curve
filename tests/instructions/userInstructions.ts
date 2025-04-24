@@ -57,6 +57,7 @@ export type InitializePoolParameters = {
 };
 export type CreatePoolSplTokenParams = {
   payer: Keypair;
+  poolCreator: Keypair;
   quoteMint: PublicKey;
   config: PublicKey;
   instructionParams: InitializePoolParameters;
@@ -69,7 +70,7 @@ export async function createPoolWithSplToken(
   program: VirtualCurveProgram,
   params: CreatePoolSplTokenParams
 ): Promise<PublicKey> {
-  const { payer, quoteMint, config, instructionParams } = params;
+  const { payer, quoteMint, poolCreator, config, instructionParams } = params;
   const configState = await getConfig(banksClient, program, config);
 
   const poolAuthority = derivePoolAuthority();
@@ -90,7 +91,7 @@ export async function createPoolWithSplToken(
       quoteMint,
       pool,
       payer: payer.publicKey,
-      creator: payer.publicKey,
+      creator: poolCreator.publicKey,
       poolAuthority,
       baseVault,
       quoteVault,
@@ -102,7 +103,7 @@ export async function createPoolWithSplToken(
     .transaction();
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
-  transaction.sign(payer, baseMintKP);
+  transaction.sign(payer, baseMintKP, poolCreator);
 
   await processTransactionMaybeThrow(banksClient, transaction);
 
@@ -114,7 +115,7 @@ export async function createPoolWithToken2022(
   program: VirtualCurveProgram,
   params: CreatePoolToken2022Params
 ): Promise<PublicKey> {
-  const { payer, quoteMint, config, instructionParams } = params;
+  const { payer, quoteMint, config, instructionParams, poolCreator } = params;
 
   const poolAuthority = derivePoolAuthority();
   const baseMintKP = Keypair.generate();
@@ -129,7 +130,7 @@ export async function createPoolWithToken2022(
       quoteMint,
       pool,
       payer: payer.publicKey,
-      creator: payer.publicKey,
+      creator: poolCreator.publicKey,
       poolAuthority,
       baseVault,
       quoteVault,
@@ -139,7 +140,7 @@ export async function createPoolWithToken2022(
     .transaction();
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
-  transaction.sign(payer, baseMintKP);
+  transaction.sign(payer, baseMintKP, poolCreator);
 
   await processTransactionMaybeThrow(banksClient, transaction);
 

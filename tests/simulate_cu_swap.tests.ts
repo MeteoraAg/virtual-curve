@@ -96,6 +96,7 @@ describe("Simulate CU swap", () => {
       );
 
       const pool = await createPoolWithSplToken(context.banksClient, program, {
+        poolCreator: user,
         payer: user,
         quoteMint: NATIVE_MINT,
         config,

@@ -112,7 +112,8 @@ describe("Create virtual pool metadata", () => {
 
     it("Create spl pool from config", async () => {
         virtualPool = await createPoolWithSplToken(context.banksClient, program, {
-            payer: poolCreator,
+            poolCreator,
+            payer: operator,
             quoteMint: NATIVE_MINT,
             config,
             instructionParams: {
