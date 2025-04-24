@@ -46,8 +46,7 @@ pub struct InitializeVirtualPoolWithSplTokenCtx<'info> {
     )]
     pub pool_authority: AccountInfo<'info>,
 
-    /// CHECK: Pool creator
-    pub creator: UncheckedAccount<'info>,
+    pub creator: Signer<'info>,
 
     #[account(
         init,

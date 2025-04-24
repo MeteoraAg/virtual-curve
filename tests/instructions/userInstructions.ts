@@ -37,7 +37,11 @@ import {
   processTransactionMaybeThrow,
   VAULT_PROGRAM_ID,
 } from "../utils";
-import { getConfig, getVirtualPool, getVirtualPoolMetadata } from "../utils/fetcher";
+import {
+  getConfig,
+  getVirtualPool,
+  getVirtualPoolMetadata,
+} from "../utils/fetcher";
 import {
   getOrCreateAssociatedTokenAccount,
   getTokenAccount,
@@ -138,7 +142,6 @@ export async function createPoolWithToken2022(
   transaction.sign(payer, baseMintKP);
 
   await processTransactionMaybeThrow(banksClient, transaction);
-
 
   return pool;
 }
@@ -387,18 +390,16 @@ export async function swapSimulate(
   };
 }
 
-
 export async function createVirtualPoolMetadata(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: {
-    virtualPool: PublicKey,
-    name: string,
-    website: string,
-    logo: string,
-    creator: Keypair,
-    payer: Keypair
-
+    virtualPool: PublicKey;
+    name: string;
+    website: string;
+    logo: string;
+    creator: Keypair;
+    payer: Keypair;
   }
 ) {
   const { virtualPool, creator, payer, name, website, logo } = params;
@@ -424,7 +425,11 @@ export async function createVirtualPoolMetadata(
 
   await processTransactionMaybeThrow(banksClient, transaction);
   //
-  const metadataState = await getVirtualPoolMetadata(banksClient, program, virtualPoolMetadata);
+  const metadataState = await getVirtualPoolMetadata(
+    banksClient,
+    program,
+    virtualPoolMetadata
+  );
   expect(metadataState.virtualPool.toString()).equal(virtualPool.toString());
   expect(metadataState.name.toString()).equal(name.toString());
   expect(metadataState.website.toString()).equal(website.toString());
