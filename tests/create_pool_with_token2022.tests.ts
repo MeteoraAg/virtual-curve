@@ -1,4 +1,4 @@
-import { BN } from "bn.js";
+import BN from "bn.js";
 import { ProgramTestContext } from "solana-bankrun";
 import { unpack } from "@solana/spl-token-metadata";
 import {

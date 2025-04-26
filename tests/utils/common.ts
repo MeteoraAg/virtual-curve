@@ -382,7 +382,7 @@ export async function createDammV2Config(
   );
   const transaction = await program.methods
     .createConfig(params)
-    .accounts({
+    .accountsPartial({
       config,
       admin: payer.publicKey,
     })
