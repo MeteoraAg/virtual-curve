@@ -1,4 +1,4 @@
-import BN, { BN } from "bn.js";
+import BN from "bn.js";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import {
     createConfig,
