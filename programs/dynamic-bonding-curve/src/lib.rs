@@ -18,6 +18,7 @@ pub mod utils;
 pub use utils::*;
 pub mod math;
 pub use math::*;
+pub mod base_fee;
 pub mod curve;
 pub mod tests;
 

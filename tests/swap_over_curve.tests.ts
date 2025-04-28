@@ -1,5 +1,4 @@
-import { BanksClient, ProgramTestContext } from "solana-bankrun";
-import Decimal from "decimal.js";
+import { ProgramTestContext } from "solana-bankrun";
 import {
     createConfig,
     CreateConfigParams,

@@ -219,10 +219,11 @@ impl VirtualPool {
                 referral_fee,
             } = config.pool_fees.get_fee_on_amount(
                 &self.volatility_tracker,
-                amount_in,
                 fee_mode.has_referral,
+                amount_in,
                 current_point,
                 self.activation_point,
+                trade_direction,
             )?;
 
             actual_protocol_fee = protocol_fee;
@@ -256,10 +257,11 @@ impl VirtualPool {
                 referral_fee,
             } = config.pool_fees.get_fee_on_amount(
                 &self.volatility_tracker,
-                output_amount,
                 fee_mode.has_referral,
+                output_amount,
                 current_point,
                 self.activation_point,
+                trade_direction,
             )?;
 
             actual_protocol_fee = protocol_fee;
