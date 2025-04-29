@@ -248,7 +248,7 @@ pub fn handle_migrate_meteora_damm<'info>(
         .accounts
         .base_vault
         .amount
-        .safe_sub(virtual_pool.get_protocol_and_partner_base_fee()?)?;
+        .safe_sub(virtual_pool.get_protocol_and_trading_base_fee()?)?;
 
     let burnable_amount = config.get_burnable_amount_post_migration(left_base_token)?;
     if burnable_amount > 0 {

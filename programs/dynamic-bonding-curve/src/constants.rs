@@ -22,7 +22,9 @@ const_assert!(MAX_CURVE_POINT <= MAX_CURVE_POINT_CONFIG);
 
 pub const SWAP_BUFFER_PERCENTAGE: u8 = 25; // 25%
 
-pub const PARTNER_SURPLUS_SHARE: u8 = 80; // 80 %
+pub const PARTNER_AND_CREATOR_SURPLUS_SHARE: u8 = 80; // 80 %
+
+static_assertions::const_assert!(PARTNER_AND_CREATOR_SURPLUS_SHARE <= 100);
 
 pub const MAX_SWALLOW_PERCENTAGE: u8 = 20; // 20 %
 

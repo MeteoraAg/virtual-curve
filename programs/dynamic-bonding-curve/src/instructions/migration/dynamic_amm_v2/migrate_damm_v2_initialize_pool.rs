@@ -137,7 +137,9 @@ impl<'info> MigrateDammV2Ctx<'info> {
             MigrationFeeOption::FixedBps25
             | MigrationFeeOption::FixedBps30
             | MigrationFeeOption::FixedBps100
-            | MigrationFeeOption::FixedBps200 => {
+            | MigrationFeeOption::FixedBps200
+            | MigrationFeeOption::FixedBps400
+            | MigrationFeeOption::FixedBps600 => {
                 require!(
                     damm_config.pool_fees.base_fee.period_frequency == 0,
                     PoolError::InvalidConfigAccount
@@ -425,7 +427,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     let initial_quote_vault_amount = ctx.accounts.quote_vault.amount;
     let initial_base_vault_amount = ctx.accounts.base_vault.amount;
 
-    let protocol_and_partner_base_fee = virtual_pool.get_protocol_and_partner_base_fee()?;
+    let protocol_and_partner_base_fee = virtual_pool.get_protocol_and_trading_base_fee()?;
     let migration_sqrt_price = config.migration_sqrt_price;
     let quote_threshold = config.migration_quote_threshold;
     let excluded_fee_base_reserve =

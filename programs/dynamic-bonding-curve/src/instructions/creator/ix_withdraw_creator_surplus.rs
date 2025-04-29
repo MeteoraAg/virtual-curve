@@ -5,26 +5,27 @@ use crate::{
     const_pda,
     state::{PoolConfig, VirtualPool},
     token::transfer_from_pool,
-    EvtPartnerWithdrawSurplus, PoolError,
+    EvtCreatorWithdrawSurplus, PoolError,
 };
 
-/// Accounts for partner withdraw surplus
+/// Accounts for creator withdraw surplus
 #[event_cpi]
 #[derive(Accounts)]
-pub struct PartnerWithdrawSurplusCtx<'info> {
+pub struct CreatorWithdrawSurplusCtx<'info> {
     /// CHECK: pool authority
     #[account(
         address = const_pda::pool_authority::ID
     )]
     pub pool_authority: UncheckedAccount<'info>,
 
-    #[account(has_one = quote_mint, has_one=fee_claimer)]
+    #[account(has_one = quote_mint)]
     pub config: AccountLoader<'info, PoolConfig>,
 
     #[account(
         mut,
         has_one = quote_vault,
         has_one = config,
+        has_one = creator,
     )]
     pub virtual_pool: AccountLoader<'info, VirtualPool>,
 
@@ -39,13 +40,13 @@ pub struct PartnerWithdrawSurplusCtx<'info> {
     /// The mint of quote token
     pub quote_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub fee_claimer: Signer<'info>,
+    pub creator: Signer<'info>,
 
     /// Token b program
     pub token_quote_program: Interface<'info, TokenInterface>,
 }
 
-pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) -> Result<()> {
+pub fn handle_creator_withdraw_surplus(ctx: Context<CreatorWithdrawSurplusCtx>) -> Result<()> {
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.virtual_pool.load_mut()?;
 
@@ -55,13 +56,13 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
         PoolError::NotPermitToDoThisAction
     );
 
-    // Ensure the partner has never been withdrawn
+    // Ensure the creator has never been withdrawn
     require!(
-        pool.is_partner_withdraw_surplus == 0,
+        pool.is_creator_withdraw_surplus == 0,
         PoolError::SurplusHasBeenWithdraw
     );
     let total_surplus = pool.get_total_surplus(config.migration_quote_threshold)?;
-    let partner_surplus_amount = pool.get_partner_surplus(&config, total_surplus)?;
+    let creator_surplus_amount = pool.get_creator_surplus(&config, total_surplus)?;
 
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),
@@ -69,16 +70,16 @@ pub fn handle_partner_withdraw_surplus(ctx: Context<PartnerWithdrawSurplusCtx>) 
         &ctx.accounts.quote_vault,
         &ctx.accounts.token_quote_account,
         &ctx.accounts.token_quote_program,
-        partner_surplus_amount,
+        creator_surplus_amount,
         const_pda::pool_authority::BUMP,
     )?;
 
-    // update partner withdraw surplus
-    pool.update_partner_withdraw_surplus();
+    // update creator withdraw surplus
+    pool.update_creator_withdraw_surplus();
 
-    emit_cpi!(EvtPartnerWithdrawSurplus {
+    emit_cpi!(EvtCreatorWithdrawSurplus {
         pool: ctx.accounts.virtual_pool.key(),
-        surplus_amount: partner_surplus_amount
+        surplus_amount: creator_surplus_amount
     });
     Ok(())
 }

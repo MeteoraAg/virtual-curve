@@ -311,6 +311,8 @@ pub enum MigrationFeeOption {
     FixedBps30,  // 0.3%
     FixedBps100, // 1%
     FixedBps200, // 2%
+    FixedBps400, // 4%
+    FixedBps600, // 6%
 }
 
 impl MigrationFeeOption {
@@ -327,6 +329,12 @@ impl MigrationFeeOption {
             }
             MigrationFeeOption::FixedBps200 => {
                 require!(base_fee_bps == 200, PoolError::InvalidMigrationFeeOption);
+            }
+            MigrationFeeOption::FixedBps400 => {
+                require!(base_fee_bps == 400, PoolError::InvalidMigrationFeeOption);
+            }
+            MigrationFeeOption::FixedBps600 => {
+                require!(base_fee_bps == 600, PoolError::InvalidMigrationFeeOption);
             }
         }
         Ok(())
@@ -370,8 +378,10 @@ pub struct PoolConfig {
     pub migration_fee_option: u8,
     /// flag to indicate whether token is dynamic supply (0) or fixed supply (1)
     pub fixed_token_supply_flag: u8,
+    /// creator trading fee percentage
+    pub creator_trading_fee_percentage: u8,
     /// padding 0
-    pub _padding_0: [u8; 3],
+    pub _padding_0: [u8; 2],
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount
@@ -423,6 +433,7 @@ impl PoolConfig {
         fee_claimer: &Pubkey,
         leftover_receiver: &Pubkey,
         pool_fees: &PoolFeeParameters,
+        creator_trading_fee_percentage: u8,
         collect_fee_mode: u8,
         migration_option: u8,
         activation_type: u8,
@@ -450,6 +461,7 @@ impl PoolConfig {
         self.fee_claimer = *fee_claimer;
         self.leftover_receiver = *leftover_receiver;
         self.pool_fees = pool_fees.to_pool_fees_config();
+        self.creator_trading_fee_percentage = creator_trading_fee_percentage;
         self.collect_fee_mode = collect_fee_mode;
         self.migration_option = migration_option;
         self.activation_type = activation_type;
@@ -619,6 +631,32 @@ impl PoolConfig {
         )?;
         Ok(max_swallow_amount)
     }
+
+    pub fn split_partner_and_creator_fee(&self, fee: u64) -> Result<PartnerAndCreatorSplitFee> {
+        // early return
+        if self.creator_trading_fee_percentage == 0 {
+            return Ok(PartnerAndCreatorSplitFee {
+                partner_fee: fee,
+                creator_fee: 0,
+            });
+        }
+        let creator_fee = safe_mul_div_cast_u64(
+            fee,
+            self.creator_trading_fee_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
+        let partner_fee = fee.safe_sub(creator_fee)?;
+        Ok(PartnerAndCreatorSplitFee {
+            partner_fee,
+            creator_fee,
+        })
+    }
+}
+
+pub struct PartnerAndCreatorSplitFee {
+    pub partner_fee: u64,
+    pub creator_fee: u64,
 }
 
 pub struct LiquidityDistributionU64 {

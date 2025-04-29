@@ -96,6 +96,19 @@ pub mod dynamic_bonding_curve {
         instructions::handle_create_virtual_pool_metadata(ctx, metadata)
     }
 
+    pub fn claim_creator_trading_fee(
+        ctx: Context<ClaimCreatorTradingFeesCtx>,
+        max_base_amount: u64,
+        max_quote_amount: u64,
+    ) -> Result<()> {
+        instructions::handle_claim_creator_trading_fee(ctx, max_base_amount, max_quote_amount)
+    }
+
+    // withdraw surplus on quote token
+    pub fn creator_withdraw_surplus(ctx: Context<CreatorWithdrawSurplusCtx>) -> Result<()> {
+        instructions::handle_creator_withdraw_surplus(ctx)
+    }
+
     /// TRADING BOTS FUNCTIONS ////
     pub fn swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> {
         instructions::handle_swap(ctx, params)

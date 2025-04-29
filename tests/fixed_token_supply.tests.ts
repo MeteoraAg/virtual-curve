@@ -107,12 +107,12 @@ describe("Fixed token supply", () => {
                 cliffUnlockAmount: new BN(0),
             },
             migrationFeeOption: 0,
-            // amount with buffer: 2_329_141_247
-            // amount without buffer: 1_953_584_046
             tokenSupply: {
                 preMigrationTokenSupply,
                 postMigrationTokenSupply,
             },
+            creatorTradingFeePercentage: 0,
+            padding0: [],
             padding: [],
             curve: curves,
         };
