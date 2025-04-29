@@ -79,6 +79,8 @@ describe("Simulate CU swap", () => {
         },
         migrationFeeOption: 0,
         tokenSupply: null,
+        creatorTradingFeePercentage: 0,
+        padding0: [],
         padding: [],
         curve: curves,
       };

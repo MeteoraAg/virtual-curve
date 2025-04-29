@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import {
     createConfig,
@@ -22,6 +21,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 
 import { expect } from "chai";
 import { createToken, mintSplTokenTo } from "./utils/token";
+import { BN } from "bn.js";
 
 describe("Design default curve", () => {
     let context: ProgramTestContext;
@@ -71,6 +71,8 @@ describe("Design default curve", () => {
             migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
+            0,
+            1,
             lockedVesting
         );
         const params: CreateConfigParams = {
@@ -107,6 +109,8 @@ describe("Design default curve", () => {
             migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
+            0,
+            1,
             lockedVesting
         );
         const params: CreateConfigParams = {

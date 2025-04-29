@@ -69,7 +69,7 @@ pub fn handle_claim_trading_fee(
 ) -> Result<()> {
     let mut pool = ctx.accounts.pool.load_mut()?;
     let (token_base_amount, token_quote_amount) =
-        pool.claim_trading_fee(max_base_amount, max_quote_amount)?;
+        pool.claim_partner_trading_fee(max_base_amount, max_quote_amount)?;
 
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),

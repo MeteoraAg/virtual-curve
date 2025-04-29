@@ -109,4 +109,7 @@ pub enum PoolError {
 
     #[msg("Invalid fee scheduler")]
     InvalidFeeScheduler,
+
+    #[msg("Invalid creator trading fee percentage")]
+    InvalidCreatorTradingFeePercentage,
 }

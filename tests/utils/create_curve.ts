@@ -297,6 +297,8 @@ export function designCurve(
     migrationOption: number,
     tokenBaseDecimal: number,
     tokenQuoteDecimal: number,
+    creatorTradingFeePercentage: number,
+    collectFeeMode: number,
     lockedVesting: LockedVestingParams,
 ): ConfigParameters {
     let migrationBaseSupply = new BN(totalTokenSupply).mul(new BN(percentageSupplyOnMigration)).div(new BN(100));
@@ -347,7 +349,7 @@ export function designCurve(
             dynamicFee: null,
         },
         activationType: 0,
-        collectFeeMode: 1,
+        collectFeeMode,
         migrationOption,
         tokenType: 0, // spl_token
         tokenDecimal: tokenBaseDecimal,
@@ -363,6 +365,8 @@ export function designCurve(
             preMigrationTokenSupply: totalSupply,
             postMigrationTokenSupply: totalSupply,
         },
+        creatorTradingFeePercentage,
+        padding0: [],
         padding: [],
         curve,
     };

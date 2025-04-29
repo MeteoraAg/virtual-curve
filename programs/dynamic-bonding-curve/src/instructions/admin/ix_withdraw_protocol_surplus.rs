@@ -59,7 +59,7 @@ pub fn handle_protocol_withdraw_surplus(ctx: Context<ProtocolWithdrawSurplusCtx>
 
     // Ensure the protocol has never been withdrawn
     require!(
-        pool.is_procotol_withdraw_surplus == 0,
+        pool.is_protocol_withdraw_surplus == 0,
         PoolError::SurplusHasBeenWithdraw
     );
 

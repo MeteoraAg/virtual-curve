@@ -8,3 +8,5 @@ pub mod partner;
 pub use partner::*;
 pub mod migration;
 pub use migration::*;
+pub mod creator;
+pub use creator::*;

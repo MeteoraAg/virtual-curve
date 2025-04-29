@@ -4,7 +4,7 @@ use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
-    constants::PARTNER_SURPLUS_SHARE,
+    constants::PARTNER_AND_CREATOR_SURPLUS_SHARE,
     curve::{
         get_delta_amount_base_unsigned, get_delta_amount_base_unsigned_256,
         get_delta_amount_quote_unsigned, get_delta_amount_quote_unsigned_256,
@@ -12,11 +12,16 @@ use crate::{
     },
     params::swap::TradeDirection,
     safe_math::SafeMath,
-    state::fee::{FeeMode, FeeOnAmountResult, VolatilityTracker},
-    state::PoolConfig,
+    state::{
+        fee::{FeeMode, FeeOnAmountResult, VolatilityTracker},
+        PoolConfig,
+    },
     u128x128_math::Rounding,
+    utils_math::safe_mul_div_cast_u64,
     PoolError,
 };
+
+use super::PartnerAndCreatorSplitFee;
 
 /// collect fee mode
 #[repr(u8)]
@@ -100,10 +105,10 @@ pub struct VirtualPool {
     pub protocol_base_fee: u64,
     /// protocol quote fee
     pub protocol_quote_fee: u64,
-    /// trading base fee
-    pub trading_base_fee: u64,
+    /// partner base fee
+    pub partner_base_fee: u64,
     /// trading quote fee
-    pub trading_quote_fee: u64,
+    pub partner_quote_fee: u64,
     /// current price
     pub sqrt_price: u128,
     /// Activation point
@@ -115,19 +120,25 @@ pub struct VirtualPool {
     /// is partner withdraw surplus
     pub is_partner_withdraw_surplus: u8,
     /// is protocol withdraw surplus
-    pub is_procotol_withdraw_surplus: u8,
+    pub is_protocol_withdraw_surplus: u8,
     /// migration progress
     pub migration_progress: u8,
     /// is withdraw leftover
     pub is_withdraw_leftover: u8,
+    /// is creator withdraw surplus
+    pub is_creator_withdraw_surplus: u8,
     /// padding
-    pub _padding_0: [u8; 2],
+    pub _padding_0: [u8; 1],
     /// pool metrics
     pub metrics: PoolMetrics,
     /// The time curve is finished
     pub finish_curve_timestamp: u64,
+    /// creator base fee
+    pub creator_base_fee: u64,
+    /// creator quote fee
+    pub creator_quote_fee: u64,
     /// Padding for further use
-    pub _padding_1: [u64; 9],
+    pub _padding_1: [u64; 7],
 }
 
 const_assert_eq!(VirtualPool::INIT_SPACE, 416);
@@ -439,15 +450,20 @@ impl VirtualPool {
         let old_sqrt_price = self.sqrt_price;
         self.sqrt_price = next_sqrt_price;
 
+        let PartnerAndCreatorSplitFee {
+            partner_fee,
+            creator_fee,
+        } = config.split_partner_and_creator_fee(trading_fee)?;
         if fee_mode.fees_on_base_token {
-            self.trading_base_fee = self.trading_base_fee.safe_add(trading_fee)?;
+            self.partner_base_fee = self.partner_base_fee.safe_add(partner_fee)?;
             self.protocol_base_fee = self.protocol_base_fee.safe_add(protocol_fee)?;
+            self.creator_base_fee = self.creator_base_fee.safe_add(creator_fee)?;
             self.metrics
                 .accumulate_fee(protocol_fee, trading_fee, true)?;
         } else {
-            self.trading_quote_fee = self.trading_quote_fee.safe_add(trading_fee)?;
+            self.partner_quote_fee = self.partner_quote_fee.safe_add(partner_fee)?;
             self.protocol_quote_fee = self.protocol_quote_fee.safe_add(protocol_fee)?;
-
+            self.creator_quote_fee = self.creator_quote_fee.safe_add(creator_fee)?;
             self.metrics
                 .accumulate_fee(protocol_fee, trading_fee, false)?;
         }
@@ -516,20 +532,35 @@ impl VirtualPool {
         (token_base_amount, token_quote_amount)
     }
 
-    pub fn claim_trading_fee(
+    pub fn claim_partner_trading_fee(
         &mut self,
         max_base_amount: u64,
         max_quote_amount: u64,
     ) -> Result<(u64, u64)> {
-        let token_base_amount = self.trading_base_fee.min(max_base_amount);
-        let token_quote_amount = self.trading_quote_fee.min(max_quote_amount);
-        self.trading_base_fee = self.trading_base_fee.safe_sub(token_base_amount)?;
-        self.trading_quote_fee = self.trading_quote_fee.safe_sub(token_quote_amount)?;
+        let token_base_amount = self.partner_base_fee.min(max_base_amount);
+        let token_quote_amount = self.partner_quote_fee.min(max_quote_amount);
+        self.partner_base_fee = self.partner_base_fee.safe_sub(token_base_amount)?;
+        self.partner_quote_fee = self.partner_quote_fee.safe_sub(token_quote_amount)?;
         Ok((token_base_amount, token_quote_amount))
     }
 
-    pub fn get_protocol_and_partner_base_fee(&self) -> Result<u64> {
-        Ok(self.trading_base_fee.safe_add(self.protocol_base_fee)?)
+    pub fn claim_creator_trading_fee(
+        &mut self,
+        max_base_amount: u64,
+        max_quote_amount: u64,
+    ) -> Result<(u64, u64)> {
+        let token_base_amount = self.creator_base_fee.min(max_base_amount);
+        let token_quote_amount = self.creator_quote_fee.min(max_quote_amount);
+        self.creator_base_fee = self.creator_base_fee.safe_sub(token_base_amount)?;
+        self.creator_quote_fee = self.creator_quote_fee.safe_sub(token_quote_amount)?;
+        Ok((token_base_amount, token_quote_amount))
+    }
+
+    pub fn get_protocol_and_trading_base_fee(&self) -> Result<u64> {
+        Ok(self
+            .partner_base_fee
+            .safe_add(self.protocol_base_fee)?
+            .safe_add(self.creator_base_fee)?)
     }
 
     pub fn is_curve_complete(&self, migration_threshold: u64) -> bool {
@@ -544,18 +575,37 @@ impl VirtualPool {
         Ok(self.quote_reserve.safe_sub(migration_threshold)?)
     }
 
-    pub fn get_partner_surplus(&self, total_surplus: u64) -> Result<u64> {
-        let partner_surplus: u128 = u128::from(total_surplus)
-            .safe_mul(PARTNER_SURPLUS_SHARE.into())?
-            .safe_div(100u128)?;
+    fn get_partner_and_creator_surplus(&self, total_surplus: u64) -> Result<u64> {
+        let partner_and_creator_surplus = safe_mul_div_cast_u64(
+            total_surplus,
+            PARTNER_AND_CREATOR_SURPLUS_SHARE.into(),
+            100,
+            Rounding::Down,
+        )?;
+        Ok(partner_and_creator_surplus)
+    }
 
-        Ok(u64::try_from(partner_surplus).map_err(|_| PoolError::MathOverflow)?)
+    pub fn get_partner_surplus(&self, config: &PoolConfig, total_surplus: u64) -> Result<u64> {
+        let partner_and_creator_surplus = self.get_partner_and_creator_surplus(total_surplus)?;
+
+        let PartnerAndCreatorSplitFee { partner_fee, .. } =
+            config.split_partner_and_creator_fee(partner_and_creator_surplus)?;
+
+        Ok(partner_fee)
+    }
+
+    pub fn get_creator_surplus(&self, config: &PoolConfig, total_surplus: u64) -> Result<u64> {
+        let partner_and_creator_surplus = self.get_partner_and_creator_surplus(total_surplus)?;
+
+        let PartnerAndCreatorSplitFee { creator_fee, .. } =
+            config.split_partner_and_creator_fee(partner_and_creator_surplus)?;
+
+        Ok(creator_fee)
     }
 
     pub fn get_protocol_surplus(&self, migration_threshold: u64) -> Result<u64> {
         let total_surplus: u64 = self.get_total_surplus(migration_threshold)?;
-        let partner_surplus_amount = self.get_partner_surplus(total_surplus)?;
-
+        let partner_surplus_amount = self.get_partner_and_creator_surplus(total_surplus)?;
         Ok(total_surplus.safe_sub(partner_surplus_amount)?)
     }
 
@@ -563,8 +613,12 @@ impl VirtualPool {
         self.is_partner_withdraw_surplus = 1;
     }
 
+    pub fn update_creator_withdraw_surplus(&mut self) {
+        self.is_creator_withdraw_surplus = 1;
+    }
+
     pub fn update_protocol_withdraw_surplus(&mut self) {
-        self.is_procotol_withdraw_surplus = 1;
+        self.is_protocol_withdraw_surplus = 1;
     }
 
     pub fn update_withdraw_leftover(&mut self) {

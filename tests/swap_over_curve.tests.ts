@@ -1,4 +1,3 @@
-import BN from "bn.js";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import Decimal from "decimal.js";
 import {
@@ -25,6 +24,7 @@ import { getConfig, getVirtualPool } from "./utils/fetcher";
 
 import { createToken, mintSplTokenTo } from "./utils/token";
 import { expect } from "chai";
+import { BN } from "bn.js";
 
 describe("Swap Over the Curve", () => {
     let context: ProgramTestContext;
@@ -74,6 +74,8 @@ describe("Swap Over the Curve", () => {
             migrationOption,
             tokenBaseDecimal,
             tokenQuoteDecimal,
+            0,
+            1,
             lockedVesting,
         );
 
