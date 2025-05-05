@@ -6,6 +6,7 @@ use anchor_spl::{
     token_interface::{TokenAccount, TokenInterface},
 };
 use damm_v2::types::{AddLiquidityParameters, InitializePoolParameters};
+use ruint::aliases::U512;
 
 use crate::{
     const_pda,
@@ -566,5 +567,11 @@ fn get_liquidity_for_adding_liquidity(
         get_initial_liquidity_from_delta_base(base_amount, MAX_SQRT_PRICE, sqrt_price)?;
     let liquidity_from_quote =
         get_initial_liquidity_from_delta_quote(quote_amount, MIN_SQRT_PRICE, sqrt_price)?;
-    Ok(liquidity_from_base.min(liquidity_from_quote))
+    if liquidity_from_base > U512::from(liquidity_from_quote) {
+        Ok(liquidity_from_quote)
+    } else {
+        Ok(liquidity_from_base
+            .try_into()
+            .map_err(|_| PoolError::TypeCastFailed)?)
+    }
 }

@@ -30,15 +30,13 @@ pub fn get_initial_liquidity_from_delta_base(
     base_amount: u64,
     sqrt_max_price: u128,
     sqrt_price: u128,
-) -> Result<u128> {
+) -> Result<U512> {
     let price_delta = U512::from(sqrt_max_price.safe_sub(sqrt_price)?);
     let prod = U512::from(base_amount)
         .safe_mul(U512::from(sqrt_price))?
         .safe_mul(U512::from(sqrt_max_price))?;
     let liquidity = prod.safe_div(price_delta)?; // round down
-    return Ok(liquidity
-        .try_into()
-        .map_err(|_| PoolError::TypeCastFailed)?);
+    Ok(liquidity)
 }
 
 // Δb = L (√P_upper - √P_lower) => L = Δb / (√P_upper - √P_lower)
