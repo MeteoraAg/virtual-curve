@@ -215,7 +215,13 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 
         let required_base_balance = config
             .migration_base_threshold
-            .safe_add(pool.get_protocol_and_trading_base_fee()?)?;
+            .safe_add(pool.get_protocol_and_trading_base_fee()?)?
+            .safe_add(
+                config
+                    .locked_vesting_config
+                    .to_locked_vesting_params()
+                    .get_total_amount()?,
+            )?;
 
         require!(
             base_vault_balance >= required_base_balance,

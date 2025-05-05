@@ -49,7 +49,7 @@ pub struct CreateLockerCtx<'info> {
     #[account(mut)]
     pub escrow: UncheckedAccount<'info>,
 
-    /// CHECK: escrow token
+    /// CHECK: ATA escrow token, needs to be pre-created by the caller
     #[account(mut)]
     pub escrow_token: UncheckedAccount<'info>,
 
