@@ -112,4 +112,10 @@ pub enum PoolError {
 
     #[msg("Invalid creator trading fee percentage")]
     InvalidCreatorTradingFeePercentage,
+
+    #[msg("Invalid base fee mode")]
+    InvalidBaseFeeMode,
+
+    #[msg("Invalid fee rate limiter")]
+    InvalidFeeRateLimiter,
 }

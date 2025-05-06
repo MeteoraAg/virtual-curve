@@ -16,10 +16,10 @@ import { NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/sp
 
 export type BaseFee = {
   cliffFeeNumerator: BN;
-  numberOfPeriod: number;
-  periodFrequency: BN;
-  reductionFactor: BN;
-  feeSchedulerMode: number;
+  firstFactor: number;
+  secondFactor: BN;
+  thirdFactor: BN;
+  baseFeeMode: number;
 };
 
 export type DynamicFee = {

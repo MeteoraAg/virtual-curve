@@ -12,3 +12,6 @@ mod test_volitility_accumulate;
 
 #[cfg(test)]
 mod test_total_supply;
+
+#[cfg(test)]
+mod test_rate_limiter;
