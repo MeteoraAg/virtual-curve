@@ -1,5 +1,5 @@
 import BN from "bn.js";
-import { ConfigParameters, LiquidityDistributionParameters, LockedVestingParams } from "../instructions";
+import { BaseFee, ConfigParameters, LiquidityDistributionParameters, LockedVestingParams } from "../instructions";
 import Decimal from "decimal.js";
 import { MAX_SQRT_PRICE, MIN_SQRT_PRICE } from "./constants";
 import { assert } from "chai";
@@ -400,6 +400,7 @@ export function designGraphCurve(
     lockedVesting: LockedVestingParams,
     leftOver: number,
     kFactor: number,
+    baseFee: BaseFee
 ): ConfigParameters {
     // 1. finding Pmax and Pmin
     let pMin = getSqrtPriceFromMarketCap(initialMarketCap, totalTokenSupply, tokenBaseDecimal, tokenQuoteDecimal);
@@ -456,9 +457,6 @@ export function designGraphCurve(
     let swapBaseAmountBuffer =
         getSwapAmountWithBuffer(swapBaseAmount, pMin, curve);
 
-    // for (let i = 0; i < 16; i++) {
-    //     console.log("sqrtPrice %d liquidity %d", curve[i].sqrtPrice.toString(), curve[i].liquidity.toString());
-    // }
     let migrationAmount = totalSwapAndMigrationAmount.sub(swapBaseAmountBuffer);
 
     // calculate migration threshold
@@ -484,13 +482,7 @@ export function designGraphCurve(
 
     const instructionParams: ConfigParameters = {
         poolFees: {
-            baseFee: {
-                cliffFeeNumerator: new BN(2_500_000),
-                numberOfPeriod: 0,
-                reductionFactor: new BN(0),
-                periodFrequency: new BN(0),
-                feeSchedulerMode: 0,
-            },
+            baseFee,
             dynamicFee: null,
         },
         activationType: 0,

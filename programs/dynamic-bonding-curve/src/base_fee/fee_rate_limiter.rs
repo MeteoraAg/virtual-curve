@@ -1,5 +1,5 @@
 use crate::{
-    constants::fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
+    constants::fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR},
     params::{fee_parameters::to_numerator, swap::TradeDirection},
     safe_math::SafeMath,
     state::CollectFeeMode,
@@ -11,7 +11,19 @@ use crate::{
 use super::BaseFeeHandler;
 use anchor_lang::prelude::*;
 use num::Integer;
+use ruint::aliases::U256;
 
+/// we denote reference_amount = x0, cliff_fee_numerator = c, fee_increment = i
+/// if input_amount <= x0, then fee = input_amount * c
+///
+/// if input_amount > x0, then input_amount = x0 + (a * x0 + b)
+/// if a < max_index
+/// then fee = x0 * c + x0 * (c + i) + .... + x0 * (c + i*a) + b * (c + i * (a+1))
+/// then fee = x0 * (c + c*a + i*a*(a+1)/2) + b * (c + i * (a+1))
+///
+/// if a >= max_index
+/// if a = max_index + d, input_amount = x0 + max_index * x0 + (d * x0 + b)
+/// then fee = x0 * (c + c*max_index + i*max_index*(max_index+1)/2) + (d * x0 + b) * MAX_FEE
 #[derive(Debug, Default)]
 pub struct FeeRateLimiter {
     pub cliff_fee_numerator: u64,
@@ -29,31 +41,65 @@ impl FeeRateLimiter {
         self.reference_amount != 0 && self.max_limiter_duration != 0 && self.fee_increment_bps != 0
     }
 
-    fn get_max_index(&self) -> Result<u64> {
+    pub fn get_max_index(&self) -> Result<u64> {
         let delta_numerator = MAX_FEE_NUMERATOR.safe_sub(self.cliff_fee_numerator)?;
-        let fee_increment_numetator =
+        let fee_increment_numerator =
             to_numerator(self.fee_increment_bps.into(), FEE_DENOMINATOR.into())?;
-        let max_index = delta_numerator.safe_div(fee_increment_numetator)?;
+        let max_index = delta_numerator.safe_div(fee_increment_numerator)?;
         Ok(max_index)
     }
 
-    fn get_fee_on_amount(&self, input_amount: u64) -> Result<u64> {
-        let (count_index, left_amount) = input_amount.div_rem(&self.reference_amount);
-        let trading_fee: u64 = if count_index == 0 {
-            safe_mul_div_cast_u64(
-                input_amount,
-                self.cliff_fee_numerator,
-                FEE_DENOMINATOR,
-                Rounding::Up,
-            )?
+    // export function for testing
+    pub fn get_fee_numerator_from_amount(&self, input_amount: u64) -> Result<u64> {
+        let fee_numerator = if input_amount <= self.reference_amount {
+            self.cliff_fee_numerator
         } else {
-            let max_index = self.get_max_index()?;
-            if count_index > max_index {
+            let c = U256::from(self.cliff_fee_numerator);
+            let (a, b) = input_amount
+                .safe_sub(self.reference_amount)?
+                .div_rem(&self.reference_amount);
+            let a = U256::from(a);
+            let b = U256::from(b);
+            let max_index = U256::from(self.get_max_index()?);
+            let i = U256::from(to_numerator(
+                self.fee_increment_bps.into(),
+                FEE_DENOMINATOR.into(),
+            )?);
+            let x0 = U256::from(self.reference_amount);
+            let one = U256::ONE;
+            let two = U256::from(2);
+            let denominator = U256::from(FEE_DENOMINATOR);
+            // because we all calculate in U256, so it is safe to avoid safe math
+            let trading_fee: u64 = if a < max_index {
+                let numerator_1 = c + c * a + i * a * (a + one) / two;
+                let numerator_2 = c + i * (a + one);
+                let first_fee = (x0 * numerator_1 + denominator - one) / denominator;
+                let second_fee = (b * numerator_2 + denominator - one) / denominator;
+                (first_fee + second_fee)
+                    .try_into()
+                    .map_err(|_| PoolError::TypeCastFailed)?
             } else {
-                // 0 < count index <= max_index
-            }
+                let numerator_1 = c + c * max_index + i * max_index * (max_index + one) / two;
+                let numerator_2 = U256::from(MAX_FEE_NUMERATOR);
+                let first_fee = (x0 * numerator_1 + denominator - one) / denominator;
+
+                let d = a - max_index;
+                let left_amount = d * x0 + b;
+                let second_fee = (left_amount * numerator_2 + denominator - one) / denominator;
+                (first_fee + second_fee)
+                    .try_into()
+                    .map_err(|_| PoolError::TypeCastFailed)?
+            };
+
+            // reverse to fee numerator
+            // input_amount * numerator / FEE_DENOMINATOR = trading_fee
+            // then numerator = trading_fee * FEE_DENOMINATOR / input_amount
+            let fee_numerator =
+                safe_mul_div_cast_u64(trading_fee, FEE_DENOMINATOR, input_amount, Rounding::Up)?;
+            fee_numerator
         };
-        Ok(0)
+
+        Ok(fee_numerator)
     }
 }
 
@@ -67,13 +113,36 @@ impl BaseFeeHandler for FeeRateLimiter {
             PoolError::InvalidFeeRateLimiter
         );
 
-        if !self.is_zero_rate_limiter() {
-            require!(
-                self.is_non_zero_rate_limiter(),
-                PoolError::InvalidFeeRateLimiter
-            );
+        if self.is_zero_rate_limiter() {
+            return Ok(());
         }
-        // todo add more validation here
+
+        require!(
+            self.is_non_zero_rate_limiter(),
+            PoolError::InvalidFeeRateLimiter
+        );
+
+        let fee_increment_numerator =
+            to_numerator(self.fee_increment_bps.into(), FEE_DENOMINATOR.into())?;
+        require!(
+            fee_increment_numerator < FEE_DENOMINATOR,
+            PoolError::InvalidFeeRateLimiter
+        );
+
+        // that condition is redundant, but is is safe to add this
+        require!(
+            self.cliff_fee_numerator >= MIN_FEE_NUMERATOR
+                && self.cliff_fee_numerator <= MAX_FEE_NUMERATOR,
+            PoolError::InvalidFeeRateLimiter
+        );
+
+        // validate max fee (more amount, then more fee)
+        let min_fee_numerator = self.get_fee_numerator_from_amount(0)?;
+        let max_fee_numerator = self.get_fee_numerator_from_amount(u64::MAX)?;
+        require!(
+            min_fee_numerator >= MIN_FEE_NUMERATOR && max_fee_numerator <= MAX_FEE_NUMERATOR,
+            PoolError::InvalidFeeRateLimiter
+        );
         Ok(())
     }
     fn get_base_fee_numerator(
@@ -98,6 +167,6 @@ impl BaseFeeHandler for FeeRateLimiter {
             return Ok(self.cliff_fee_numerator);
         }
 
-        self.get_fee_on_amount(input_amount)
+        self.get_fee_numerator_from_amount(input_amount)
     }
 }

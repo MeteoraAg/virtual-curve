@@ -594,11 +594,24 @@ impl PoolConfig {
     }
 
     pub fn get_liquidity_distribution(&self, liquidity: u128) -> Result<LiquidityDistribution> {
-        let partner_locked_lp =
-            safe_mul_div_cast_u128(liquidity, self.partner_locked_lp_percentage.into(), 100)?;
-        let partner_lp = safe_mul_div_cast_u128(liquidity, self.partner_lp_percentage.into(), 100)?;
-        let creator_locked_lp =
-            safe_mul_div_cast_u128(liquidity, self.creator_locked_lp_percentage.into(), 100)?;
+        let partner_locked_lp = safe_mul_div_cast_u128(
+            liquidity,
+            self.partner_locked_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
+        let partner_lp = safe_mul_div_cast_u128(
+            liquidity,
+            self.partner_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
+        let creator_locked_lp = safe_mul_div_cast_u128(
+            liquidity,
+            self.creator_locked_lp_percentage.into(),
+            100,
+            Rounding::Down,
+        )?;
 
         let creator_lp = liquidity
             .safe_sub(partner_locked_lp)?

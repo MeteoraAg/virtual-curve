@@ -78,6 +78,13 @@ describe("Build graph curve", () => {
             lockedVesting,
             leftOver,
             kFactor,
+            {
+                cliffFeeNumerator: new BN(2_500_000),
+                firstFactor: 0,
+                secondFactor: new BN(0),
+                thirdFactor: new BN(0),
+                baseFeeMode: 0,
+            }
         );
         const params: CreateConfigParams = {
             payer: partner,
@@ -121,6 +128,13 @@ describe("Build graph curve", () => {
             lockedVesting,
             leftOver,
             kFactor,
+            {
+                cliffFeeNumerator: new BN(2_500_000),
+                firstFactor: 0,
+                secondFactor: new BN(0),
+                thirdFactor: new BN(0),
+                baseFeeMode: 0,
+            }
         );
         const params: CreateConfigParams = {
             payer: partner,
