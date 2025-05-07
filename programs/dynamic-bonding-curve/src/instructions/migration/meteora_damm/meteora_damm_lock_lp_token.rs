@@ -1,12 +1,12 @@
-use std::u64;
-
 use crate::{
     const_pda,
     state::{MigrationProgress, VirtualPool},
     *,
 };
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_spl::token::{Mint, Token, TokenAccount};
 use dynamic_amm::accounts::LockEscrow;
+use dynamic_amm::accounts::Pool;
+use dynamic_vault::accounts::Vault;
 
 /// create lock escrow must be before that transaction
 #[derive(Accounts)]
@@ -25,16 +25,23 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     pub pool_authority: AccountInfo<'info>,
 
     /// CHECK: pool
-    #[account(mut)]
-    pub pool: UncheckedAccount<'info>,
+    #[account(
+        mut,
+        has_one = lp_mint @ PoolError::InvalidMigrationAccounts,
+        has_one = a_vault @ PoolError::InvalidMigrationAccounts,
+        has_one = b_vault @ PoolError::InvalidMigrationAccounts,
+        has_one = a_vault_lp @ PoolError::InvalidMigrationAccounts,
+        has_one = b_vault_lp @ PoolError::InvalidMigrationAccounts,
+    )]
+    pub pool: Box<Account<'info, Pool>>,
 
     /// CHECK: lp_mint
-    pub lp_mint: UncheckedAccount<'info>,
+    pub lp_mint: Box<Account<'info, Mint>>,
 
     #[account(
         mut,
-        has_one=pool,
-        has_one=owner,
+        has_one = pool,
+        has_one = owner,
     )]
     pub lock_escrow: Box<Account<'info, LockEscrow>>,
 
@@ -57,18 +64,24 @@ pub struct MigrateMeteoraDammLockLpTokenCtx<'info> {
     #[account(address = dynamic_amm::ID)]
     pub amm_program: UncheckedAccount<'info>,
 
-    /// CHECK: Vault account for token a. token a of the pool will be deposit / withdraw from this vault account.
-    pub a_vault: UncheckedAccount<'info>,
-    /// CHECK: Vault account for token b. token b of the pool will be deposit / withdraw from this vault account.
-    pub b_vault: UncheckedAccount<'info>,
-    /// CHECK: LP token account of vault A. Used to receive/burn the vault LP upon deposit/withdraw from the vault.
-    pub a_vault_lp: UncheckedAccount<'info>,
-    /// CHECK: LP token account of vault B. Used to receive/burn the vault LP upon deposit/withdraw from the vault.
-    pub b_vault_lp: UncheckedAccount<'info>,
-    /// CHECK: LP token mint of vault a
-    pub a_vault_lp_mint: UncheckedAccount<'info>,
-    /// CHECK: LP token mint of vault b
-    pub b_vault_lp_mint: UncheckedAccount<'info>,
+    /// Vault account for token a. token a of the pool will be deposit / withdraw from this vault account.
+    pub a_vault: Box<Account<'info, Vault>>,
+    /// Vault account for token b. token b of the pool will be deposit / withdraw from this vault account.
+    pub b_vault: Box<Account<'info, Vault>>,
+    /// LP token account of vault A. Used to receive/burn the vault LP upon deposit/withdraw from the vault.
+    #[account(
+        token::mint = a_vault_lp_mint.key()
+    )]
+    pub a_vault_lp: Box<Account<'info, TokenAccount>>,
+    /// LP token account of vault B. Used to receive/burn the vault LP upon deposit/withdraw from the vault.
+    #[account(
+        token::mint = b_vault_lp_mint.key()
+    )]
+    pub b_vault_lp: Box<Account<'info, TokenAccount>>,
+    /// LP token mint of vault a
+    pub a_vault_lp_mint: Box<Account<'info, Mint>>,
+    /// LP token mint of vault b
+    pub b_vault_lp_mint: Box<Account<'info, Mint>>,
 
     /// token_program
     pub token_program: Program<'info, Token>,
@@ -119,10 +132,27 @@ pub fn handle_migrate_meteora_damm_lock_lp_token<'info>(
     let is_partner = ctx.accounts.owner.key() == migration_metadata.partner;
     let is_creator = ctx.accounts.owner.key() == migration_metadata.pool_creator;
 
+    let damm_migration_accounts = DammAccounts {
+        lp_mint: &ctx.accounts.lp_mint,
+        a_vault: &ctx.accounts.a_vault,
+        b_vault: &ctx.accounts.b_vault,
+        a_vault_lp: &ctx.accounts.a_vault_lp,
+        b_vault_lp: &ctx.accounts.b_vault_lp,
+        a_vault_lp_mint: &ctx.accounts.a_vault_lp_mint,
+        b_vault_lp_mint: &ctx.accounts.b_vault_lp_mint,
+    };
+
+    let mut version_migration_metadata = migration_metadata.get_versioned_migration_metadata()?;
+
     let lp_to_lock = match (is_partner, is_creator) {
-        (true, true) => migration_metadata.lock_as_self_partnered_creator()?,
-        (true, false) => migration_metadata.lock_as_partner()?,
-        (false, true) => migration_metadata.lock_as_creator()?,
+        (true, true) => version_migration_metadata
+            .validate_and_lock_as_self_partnered_creator(damm_migration_accounts)?,
+        (true, false) => {
+            version_migration_metadata.validate_and_lock_as_partner(damm_migration_accounts)?
+        }
+        (false, true) => {
+            version_migration_metadata.validate_and_lock_as_creator(damm_migration_accounts)?
+        }
         (false, false) => return Err(PoolError::InvalidOwnerAccount.into()),
     };
 

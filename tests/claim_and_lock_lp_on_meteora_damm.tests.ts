@@ -1,9 +1,18 @@
 import {
+  createAssociatedTokenAccountIdempotentInstruction,
+  createSyncNativeInstruction,
   getAssociatedTokenAddressSync,
   NATIVE_MINT,
+  TOKEN_PROGRAM_ID,
   unpackAccount,
 } from "@solana/spl-token";
-import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import { BN } from "bn.js";
 import { expect } from "chai";
 import { BanksClient, ProgramTestContext } from "solana-bankrun";
@@ -33,10 +42,12 @@ import {
   deriveLpMintAddress,
   derivePoolAuthority,
   fundSol,
+  getDynamicVault,
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
   startTest,
   U64_MAX,
+  VAULT_PROGRAM_ID,
 } from "./utils";
 import {
   getConfig,
@@ -44,7 +55,134 @@ import {
   getMeteoraDammMigrationMetadata,
   getVirtualPool,
 } from "./utils/fetcher";
-import { VirtualCurveProgram } from "./utils/types";
+import { DammPool, VirtualCurveProgram } from "./utils/types";
+
+async function generateSwapFeesOnDamm(
+  banksClient: BanksClient,
+  pool: PublicKey,
+  userKeypair: Keypair
+) {
+  const dammProgram = createDammProgram();
+
+  const poolAccount = await banksClient.getAccount(pool);
+
+  const poolState: DammPool = dammProgram.coder.accounts.decode(
+    "pool",
+    Buffer.from(poolAccount.data)
+  );
+
+  const vaultAState = await getDynamicVault(banksClient, poolState.aVault);
+  const vaultBState = await getDynamicVault(banksClient, poolState.bVault);
+
+  const swapDirection = [1, 0];
+
+  for (const direction of swapDirection) {
+    const bToA = direction == 1;
+
+    const [
+      userSourceToken,
+      sourceMint,
+      userDestinationToken,
+      destinationMint,
+      protocolTokenFee,
+    ] = bToA
+      ? [
+          getAssociatedTokenAddressSync(
+            poolState.tokenBMint,
+            userKeypair.publicKey
+          ),
+          poolState.tokenBMint,
+          getAssociatedTokenAddressSync(
+            poolState.tokenAMint,
+            userKeypair.publicKey
+          ),
+          poolState.tokenAMint,
+          poolState.protocolTokenBFee,
+        ]
+      : [
+          getAssociatedTokenAddressSync(
+            poolState.tokenAMint,
+            userKeypair.publicKey
+          ),
+          poolState.tokenAMint,
+          getAssociatedTokenAddressSync(
+            poolState.tokenBMint,
+            userKeypair.publicKey
+          ),
+          poolState.tokenBMint,
+          poolState.protocolTokenAFee,
+        ];
+
+    const initUserSourceIx = createAssociatedTokenAccountIdempotentInstruction(
+      userKeypair.publicKey,
+      userSourceToken,
+      userKeypair.publicKey,
+      sourceMint,
+      TOKEN_PROGRAM_ID
+    );
+
+    const initUserDestinationIx =
+      createAssociatedTokenAccountIdempotentInstruction(
+        userKeypair.publicKey,
+        userDestinationToken,
+        userKeypair.publicKey,
+        destinationMint,
+        TOKEN_PROGRAM_ID
+      );
+
+    const preInstructions = [initUserSourceIx, initUserDestinationIx];
+
+    let inAmount = new BN(0);
+    if (bToA) {
+      inAmount = new BN(100_000_000);
+      preInstructions.push(
+        SystemProgram.transfer({
+          fromPubkey: userKeypair.publicKey,
+          toPubkey: userSourceToken,
+          lamports: BigInt(inAmount.toString()),
+        }),
+        createSyncNativeInstruction(userSourceToken)
+      );
+    } else {
+      const sourceTokenAccount = await banksClient.getAccount(userSourceToken);
+      const sourceTokenState = unpackAccount(
+        userSourceToken,
+        sourceTokenAccount as any
+      );
+
+      inAmount = new BN(sourceTokenState.amount.toString());
+    }
+
+    const swapIx = await dammProgram.methods
+      .swap(inAmount, new BN(0))
+      .accountsPartial({
+        pool,
+        user: userKeypair.publicKey,
+        aVault: poolState.aVault,
+        bVault: poolState.bVault,
+        aVaultLp: poolState.aVaultLp,
+        bVaultLp: poolState.bVaultLp,
+        aTokenVault: vaultAState.tokenVault,
+        bTokenVault: vaultBState.tokenVault,
+        aVaultLpMint: vaultAState.lpMint,
+        bVaultLpMint: vaultBState.lpMint,
+        userSourceToken,
+        userDestinationToken,
+        protocolTokenFee,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        vaultProgram: VAULT_PROGRAM_ID,
+      })
+      .instruction();
+
+    let transaction = new Transaction();
+    const [recentBlockhash] = await banksClient.getLatestBlockhash();
+    transaction.recentBlockhash = recentBlockhash;
+    transaction.add(...preInstructions, swapIx);
+    transaction.sign(userKeypair);
+
+    await banksClient.processTransaction(transaction);
+  }
+}
 
 async function createPartnerConfig(
   payer: Keypair,
@@ -129,6 +267,7 @@ async function setupPrerequisite(
   virtualPool: PublicKey;
   dammConfig: PublicKey;
   migrationMetadata: PublicKey;
+  dammPoolAddress: PublicKey;
 }> {
   const virtualPool = await createPoolWithSplToken(banksClient, program, {
     payer,
@@ -175,12 +314,17 @@ async function setupPrerequisite(
     dammConfig,
   };
 
-  await migrateToMeteoraDamm(banksClient, program, migrationParams);
+  const dammPoolAddress = await migrateToMeteoraDamm(
+    banksClient,
+    program,
+    migrationParams
+  );
 
   return {
     virtualPool,
     dammConfig,
     migrationMetadata,
+    dammPoolAddress,
   };
 }
 
@@ -231,6 +375,7 @@ describe("Claim and lock lp on meteora dammm", () => {
   let virtualPool: PublicKey;
   let dammConfig: PublicKey;
   let migrationMetadata: PublicKey;
+  let dammPoolAddress: PublicKey;
 
   describe("Self partnered creator", () => {
     before(async () => {
@@ -264,6 +409,7 @@ describe("Claim and lock lp on meteora dammm", () => {
         dammConfig: innerDammConfig,
         virtualPool: innerVirtualPool,
         migrationMetadata: innerMigrationMetadata,
+        dammPoolAddress: innerDammPoolAddress,
       } = await setupPrerequisite(
         context.banksClient,
         program,
@@ -274,9 +420,19 @@ describe("Claim and lock lp on meteora dammm", () => {
         config
       );
 
+      const migrationMetadataState = await getMeteoraDammMigrationMetadata(
+        context.banksClient,
+        program,
+        innerMigrationMetadata
+      );
+      expect(migrationMetadataState.version).to.be.equal(1);
+
       dammConfig = innerDammConfig;
       virtualPool = innerVirtualPool;
       migrationMetadata = innerMigrationMetadata;
+      dammPoolAddress = innerDammPoolAddress;
+
+      await generateSwapFeesOnDamm(context.banksClient, dammPoolAddress, user);
     });
 
     it("Self partnered creator lock LP", async () => {
@@ -314,9 +470,21 @@ describe("Claim and lock lp on meteora dammm", () => {
         lockEscrowKey
       );
 
-      const expectedTotalLockLp = beforeMigrationMetadata.creatorLockedLp.add(
-        beforeMigrationMetadata.partnerLockedLp
-      );
+      expect(
+        afterMigrationMetadata.actualCreatorLockedLp.lt(
+          afterMigrationMetadata.creatorLockedLp
+        )
+      ).to.be.true;
+      expect(
+        afterMigrationMetadata.actualPartnerLockedLp.lt(
+          afterMigrationMetadata.partnerLockedLp
+        )
+      ).to.be.true;
+
+      const expectedTotalLockLp =
+        afterMigrationMetadata.actualCreatorLockedLp.add(
+          afterMigrationMetadata.actualPartnerLockedLp
+        );
 
       const totalLockLp = lockEscrowState.totalLockedAmount;
 
@@ -332,13 +500,7 @@ describe("Claim and lock lp on meteora dammm", () => {
         virtualPool
       );
 
-      const dammPool = deriveDammPoolAddress(
-        dammConfig,
-        virtualPoolState.baseMint,
-        configState.quoteMint
-      );
-
-      const lpMint = deriveLpMintAddress(dammPool);
+      const lpMint = deriveLpMintAddress(dammPoolAddress);
       const creatorLpAta = getAssociatedTokenAddressSync(
         lpMint,
         poolCreator.publicKey
@@ -377,9 +539,17 @@ describe("Claim and lock lp on meteora dammm", () => {
       expect(afterMigrationMetadata.creatorClaimStatus).equal(Number(true));
       expect(afterMigrationMetadata.partnerClaimStatus).equal(Number(true));
 
-      const expectedLpToClaim = beforeMigrationMetadata.creatorLp.add(
-        beforeMigrationMetadata.partnerLp
-      );
+      const nonLockedLpToClaim = beforeMigrationMetadata.creatorLockedLp
+        .add(beforeMigrationMetadata.partnerLockedLp)
+        .sub(
+          beforeMigrationMetadata.actualCreatorLockedLp.add(
+            beforeMigrationMetadata.actualPartnerLockedLp
+          )
+        );
+
+      const expectedLpToClaim = beforeMigrationMetadata.creatorLp
+        .add(beforeMigrationMetadata.partnerLp)
+        .add(nonLockedLpToClaim);
 
       expect(expectedLpToClaim.toString()).equal(
         creatorLpTokenState.amount.toString()
@@ -419,6 +589,7 @@ describe("Claim and lock lp on meteora dammm", () => {
         dammConfig: innerDammConfig,
         virtualPool: innerVirtualPool,
         migrationMetadata: innerMigrationMetadata,
+        dammPoolAddress: innerDammPoolAddress,
       } = await setupPrerequisite(
         context.banksClient,
         program,
@@ -432,6 +603,9 @@ describe("Claim and lock lp on meteora dammm", () => {
       dammConfig = innerDammConfig;
       virtualPool = innerVirtualPool;
       migrationMetadata = innerMigrationMetadata;
+      dammPoolAddress = innerDammPoolAddress;
+
+      await generateSwapFeesOnDamm(context.banksClient, dammPoolAddress, user);
     });
 
     it("Creator lock LP", async () => {
@@ -470,7 +644,16 @@ describe("Claim and lock lp on meteora dammm", () => {
         lockEscrowKey
       );
 
-      const expectedTotalLockLp = beforeMigrationMetadata.creatorLockedLp;
+      expect(afterMigrationMetadata.creatorLockedStatus).equal(Number(true));
+      expect(afterMigrationMetadata.partnerLockedStatus).equal(Number(false));
+
+      expect(
+        afterMigrationMetadata.actualCreatorLockedLp.lt(
+          afterMigrationMetadata.creatorLockedLp
+        )
+      ).to.be.true;
+
+      const expectedTotalLockLp = afterMigrationMetadata.actualCreatorLockedLp;
       const totalLockLp = lockEscrowState.totalLockedAmount;
 
       expect(expectedTotalLockLp.toString()).equal(totalLockLp.toString());
@@ -512,7 +695,16 @@ describe("Claim and lock lp on meteora dammm", () => {
         lockEscrowKey
       );
 
-      const expectedTotalLockLp = beforeMigrationMetadata.partnerLockedLp;
+      expect(afterMigrationMetadata.creatorLockedStatus).equal(Number(true));
+      expect(afterMigrationMetadata.partnerLockedStatus).equal(Number(true));
+
+      expect(
+        afterMigrationMetadata.actualPartnerLockedLp.lt(
+          afterMigrationMetadata.partnerLockedLp
+        )
+      ).to.be.true;
+
+      const expectedTotalLockLp = afterMigrationMetadata.actualPartnerLockedLp;
       const totalLockLp = lockEscrowState.totalLockedAmount;
 
       expect(expectedTotalLockLp.toString()).equal(totalLockLp.toString());
@@ -573,7 +765,13 @@ describe("Claim and lock lp on meteora dammm", () => {
         afterMigrationMetadata.partnerClaimStatus
       );
 
-      const expectedLpToClaim = beforeMigrationMetadata.creatorLp;
+      const nonLockedFeeLpToClaim = beforeMigrationMetadata.creatorLockedLp.sub(
+        beforeMigrationMetadata.actualCreatorLockedLp
+      );
+
+      const expectedLpToClaim = beforeMigrationMetadata.creatorLp.add(
+        nonLockedFeeLpToClaim
+      );
 
       expect(expectedLpToClaim.toString()).equal(
         creatorLpTokenState.amount.toString()
@@ -635,7 +833,13 @@ describe("Claim and lock lp on meteora dammm", () => {
         afterMigrationMetadata.creatorClaimStatus
       );
 
-      const expectedLpToClaim = beforeMigrationMetadata.partnerLp;
+      const nonLockedFeeLpToClaim = beforeMigrationMetadata.partnerLockedLp.sub(
+        beforeMigrationMetadata.actualPartnerLockedLp
+      );
+
+      const expectedLpToClaim = beforeMigrationMetadata.partnerLp.add(
+        nonLockedFeeLpToClaim
+      );
 
       expect(expectedLpToClaim.toString()).equal(
         partnerLpTokenState.amount.toString()

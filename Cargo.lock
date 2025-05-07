@@ -868,6 +868,7 @@ dependencies = [
  "const-crypto",
  "damm-v2",
  "dynamic-amm",
+ "dynamic-vault",
  "locker",
  "mpl-token-metadata",
  "num",
@@ -885,6 +886,13 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "dynamic-bonding-curve",
+]
+
+[[package]]
+name = "dynamic-vault"
+version = "0.0.1"
+dependencies = [
+ "anchor-lang",
 ]
 
 [[package]]

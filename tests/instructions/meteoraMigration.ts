@@ -70,7 +70,7 @@ export async function migrateToMeteoraDamm(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: MigrateMeteoraParams
-): Promise<any> {
+): Promise<PublicKey> {
   const { payer, virtualPool, dammConfig } = params;
   const virtualPoolState = await getVirtualPool(
     banksClient,
@@ -171,6 +171,8 @@ export async function migrateToMeteoraDamm(
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer);
   await processTransactionMaybeThrow(banksClient, transaction);
+
+  return dammPool;
 }
 
 export type LockLPDammForCreatorParams = {
@@ -183,7 +185,7 @@ export async function lockLpForCreatorDamm(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: LockLPDammForCreatorParams
-): Promsie<PublicKey> {
+): Promise<PublicKey> {
   const { payer, virtualPool, dammConfig } = params;
   const virtualPoolState = await getVirtualPool(
     banksClient,
@@ -287,6 +289,8 @@ export async function lockLpForCreatorDamm(
 }
 
 export type LockLPDammForPartnerParams = LockLPDammForCreatorParams;
+export type ClaimFeeLpForCreatorParams = LockLPDammForCreatorParams;
+export type ClaimFeeLpForPartnerParams = ClaimFeeLpForCreatorParams;
 
 export async function lockLpForPartnerDamm(
   banksClient: BanksClient,

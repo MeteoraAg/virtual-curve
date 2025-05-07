@@ -8,3 +8,5 @@ pub mod meteora_damm_metadata_state;
 pub use meteora_damm_metadata_state::*;
 pub mod meteora_damm_claim_lp_token;
 pub use meteora_damm_claim_lp_token::*;
+
+mod utils;

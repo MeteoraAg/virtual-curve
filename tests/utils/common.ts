@@ -303,7 +303,7 @@ export async function getDynamicVault(
 ): Promise<DynamicVault> {
   const program = createVaultProgram();
   const account = await banksClient.getAccount(vault);
-  return program.coder.accounts.decode("Vault", Buffer.from(account.data));
+  return program.coder.accounts.decode("vault", Buffer.from(account.data));
 }
 
 export async function createDammConfig(
@@ -382,7 +382,7 @@ export async function createDammV2Config(
   );
   const transaction = await program.methods
     .createConfig(params)
-    .accounts({
+    .accountsPartial({
       config,
       admin: payer.publicKey,
     })

@@ -47,9 +47,11 @@ pub fn handle_migration_meteora_damm_create_metadata(
         PoolError::InvalidMigrationOption
     );
     let mut migration_metadata = ctx.accounts.migration_metadata.load_init()?;
-    migration_metadata.virtual_pool = ctx.accounts.virtual_pool.key();
-    migration_metadata.pool_creator = virtual_pool.creator;
-    migration_metadata.partner = config.fee_claimer;
+    migration_metadata.initialize(
+        ctx.accounts.virtual_pool.key(),
+        virtual_pool.creator,
+        config.fee_claimer,
+    );
 
     emit_cpi!(EvtCreateMeteoraMigrationMetadata {
         virtual_pool: ctx.accounts.virtual_pool.key(),
