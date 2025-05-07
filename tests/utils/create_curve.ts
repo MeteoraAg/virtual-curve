@@ -21,7 +21,7 @@ function getBaseTokenForSwap(
     let totalAmount = new BN(0);
     for (let i = 0; i < curve.length; i++) {
         let lowerSqrtPrice = i == 0 ? sqrtStartPrice : curve[i - 1].sqrtPrice;
-        if (curve[i].sqrtPrice > sqrtMigrationPrice) {
+        if (curve[i].sqrtPrice.gt(sqrtMigrationPrice)) {
             let deltaAmount = getDeltaAmountBase(
                 lowerSqrtPrice,
                 sqrtMigrationPrice,
@@ -233,8 +233,9 @@ const getMigrationThresholdPrice = (migrationThreshold: BN, sqrtStartPrice: BN, 
             }
         }
         if (!amountLeft.isZero()) {
-            console.log("migrationThreshold: ", migrationThreshold.toString());
-            throw Error("Not enough liquidity, amountLeft: " + amountLeft.toString())
+            let migrationThresholdStr = migrationThreshold.toString();
+            let amountLeftStr = amountLeft.toString();
+            throw Error(`Not enough liquidity, migrationThreshold: ${migrationThresholdStr}  amountLeft: ${amountLeftStr}`)
         }
     }
     return nextSqrtPrice;
@@ -399,7 +400,7 @@ export function designGraphCurve(
     collectFeeMode: number,
     lockedVesting: LockedVestingParams,
     leftOver: number,
-    kFactor: number,
+    liquidityWeights: number[],
 ): ConfigParameters {
     // 1. finding Pmax and Pmin
     let pMin = getSqrtPriceFromMarketCap(initialMarketCap, totalTokenSupply, tokenBaseDecimal, tokenQuoteDecimal);
@@ -423,26 +424,24 @@ export function designGraphCurve(
 
     let totalSwapAndMigrationAmount = totalSupply.sub(totalVestingAmount).sub(totalLeftover);
 
-    let kDecimal = new Decimal(kFactor);
     let sumFactor = new Decimal(0);
     let pmaxWeight = new Decimal(pMax.toString());
     for (let i = 1; i < 17; i++) {
         let pi = new Decimal(sqrtPrices[i].toString());
         let piMinus = new Decimal(sqrtPrices[i - 1].toString());
-        let k = kDecimal.pow(new Decimal(i - 1));
-        let w1 = pi.sub(piMinus).div(pi.mul(piMinus));
-        let w2 = pi.sub(piMinus).div(pmaxWeight.mul(pmaxWeight));
+        let k = new Decimal(liquidityWeights[i - 1])
+        let w1 = (pi.sub(piMinus)).div(pi.mul(piMinus));
+        let w2 = (pi.sub(piMinus)).div(pmaxWeight.mul(pmaxWeight));
         let weight = k.mul(w1.add(w2));
         sumFactor = sumFactor.add(weight);
     }
 
     let l1 = new Decimal(totalSwapAndMigrationAmount.toString()).div(sumFactor);
 
-
     // construct curve
     let curve = [];
     for (let i = 0; i < 16; i++) {
-        let k = kDecimal.pow(new Decimal(i));
+        let k = new Decimal(liquidityWeights[i])
         let liquidity = fromDecimalToBN(l1.mul(k));
         let sqrtPrice = i < 15 ? sqrtPrices[i + 1] : pMax;
         curve.push({
@@ -456,11 +455,10 @@ export function designGraphCurve(
     let swapBaseAmountBuffer =
         getSwapAmountWithBuffer(swapBaseAmount, pMin, curve);
 
-    // for (let i = 0; i < 16; i++) {
-    //     console.log("sqrtPrice %d liquidity %d", curve[i].sqrtPrice.toString(), curve[i].liquidity.toString());
-    // }
     let migrationAmount = totalSwapAndMigrationAmount.sub(swapBaseAmountBuffer);
-
+    let percentate = migrationAmount.mul(new BN(100)).div(totalSupply)
+    // console.log("swapBaseAmount %d swapBaseAmountBuffer %d", swapBaseAmount.div(new BN(10 ** tokenBaseDecimal)).toString(), swapBaseAmountBuffer.div(new BN(10 ** tokenBaseDecimal)).toString())
+    console.log("migration percentate %d migrationAmount: %d", percentate.toString(), migrationAmount.div(new BN(10 ** tokenBaseDecimal)).toString());
     // calculate migration threshold
     let migrationQuoteThreshold = migrationAmount.mul(pMax).mul(pMax).shrn(128);
 
