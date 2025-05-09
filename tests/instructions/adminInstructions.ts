@@ -32,7 +32,7 @@ export async function createClaimFeeOperator(
   const claimFeeOperator = deriveClaimFeeOperatorAddress(operator);
   const transaction = await program.methods
     .createClaimFeeOperator()
-    .accounts({
+    .accountsPartial({
       claimFeeOperator,
       operator,
       admin: admin.publicKey,
@@ -62,7 +62,7 @@ export async function closeClaimFeeOperator(
 ): Promise<any> {
   const transaction = await program.methods
     .closeClaimFeeOperator()
-    .accounts({
+    .accountsPartial({
       claimFeeOperator,
       rentReceiver: admin.publicKey,
       admin: admin.publicKey,
@@ -103,8 +103,6 @@ export async function claimProtocolFee(
     poolState.quoteVault
   );
 
-
-
   const tokenBaseProgram =
     configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
 
@@ -139,7 +137,7 @@ export async function claimProtocolFee(
 
   const transaction = await program.methods
     .claimProtocolFee()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       pool,
@@ -206,7 +204,7 @@ export async function protocolWithdrawSurplus(
 
   const transaction = await program.methods
     .protocolWithdrawSurplus()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       virtualPool,
