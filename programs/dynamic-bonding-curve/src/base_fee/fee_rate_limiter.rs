@@ -68,28 +68,29 @@ impl FeeRateLimiter {
             let x0 = U256::from(self.reference_amount);
             let one = U256::ONE;
             let two = U256::from(2);
-            let denominator = U256::from(FEE_DENOMINATOR);
             // because we all calculate in U256, so it is safe to avoid safe math
-            let trading_fee: u64 = if a < max_index {
+            let trading_fee_numerator = if a < max_index {
                 let numerator_1 = c + c * a + i * a * (a + one) / two;
                 let numerator_2 = c + i * (a + one);
-                let first_fee = (x0 * numerator_1 + denominator - one) / denominator;
-                let second_fee = (b * numerator_2 + denominator - one) / denominator;
-                (first_fee + second_fee)
-                    .try_into()
-                    .map_err(|_| PoolError::TypeCastFailed)?
+                let first_fee = x0 * numerator_1;
+                let second_fee = b * numerator_2;
+                first_fee + second_fee
             } else {
                 let numerator_1 = c + c * max_index + i * max_index * (max_index + one) / two;
                 let numerator_2 = U256::from(MAX_FEE_NUMERATOR);
-                let first_fee = (x0 * numerator_1 + denominator - one) / denominator;
+                let first_fee = x0 * numerator_1;
 
                 let d = a - max_index;
                 let left_amount = d * x0 + b;
-                let second_fee = (left_amount * numerator_2 + denominator - one) / denominator;
-                (first_fee + second_fee)
-                    .try_into()
-                    .map_err(|_| PoolError::TypeCastFailed)?
+                let second_fee = left_amount * numerator_2;
+                first_fee + second_fee
             };
+
+            let denominator = U256::from(FEE_DENOMINATOR);
+            let trading_fee = (trading_fee_numerator + denominator - one) / denominator;
+            let trading_fee = trading_fee
+                .try_into()
+                .map_err(|_| PoolError::TypeCastFailed)?;
 
             // reverse to fee numerator
             // input_amount * numerator / FEE_DENOMINATOR = trading_fee
