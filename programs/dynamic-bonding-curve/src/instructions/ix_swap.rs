@@ -272,7 +272,7 @@ pub fn validate_single_swap_instruction<'c, 'info>(
         .get(0)
         .ok_or_else(|| PoolError::FailToValidateSingleSwapInstruction)?;
 
-    // get number of instructions
+    // get current index of instruction
     let current_index =
         sysvar::instructions::load_current_index_checked(instruction_sysvar_account_info)?;
     if current_index == 0 {
