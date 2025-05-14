@@ -33,6 +33,29 @@ pub struct FeeRateLimiter {
 }
 
 impl FeeRateLimiter {
+    pub fn is_rate_limiter_applied(
+        &self,
+        current_point: u64,
+        activation_point: u64,
+        trade_direction: TradeDirection,
+    ) -> Result<bool> {
+        if self.is_zero_rate_limiter() {
+            return Ok(false);
+        }
+
+        // only handle for the case quote to base and collect fee mode in quote token
+        if trade_direction == TradeDirection::BaseToQuote {
+            return Ok(false);
+        }
+
+        let last_effective_rate_limiter_point =
+            u128::from(activation_point).safe_add(self.max_limiter_duration.into())?;
+        if u128::from(current_point) > last_effective_rate_limiter_point {
+            return Ok(false);
+        }
+        Ok(true)
+    }
+
     fn is_zero_rate_limiter(&self) -> bool {
         self.reference_amount == 0 && self.max_limiter_duration == 0 && self.fee_increment_bps == 0
     }

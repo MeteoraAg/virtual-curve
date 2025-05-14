@@ -4,7 +4,7 @@ use ruint::aliases::U256;
 use static_assertions::const_assert_eq;
 
 use crate::{
-    base_fee::get_base_fee_handler,
+    base_fee::{get_base_fee_handler, FeeRateLimiter},
     constants::{
         fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR},
         MAX_CURVE_POINT_CONFIG, MAX_SQRT_PRICE, MAX_SWALLOW_PERCENTAGE, SWAP_BUFFER_PERCENTAGE,
@@ -162,6 +162,20 @@ pub struct BaseFeeConfig {
 const_assert_eq!(BaseFeeConfig::INIT_SPACE, 32);
 
 impl BaseFeeConfig {
+    pub fn get_fee_rate_limiter(&self) -> Result<FeeRateLimiter> {
+        let base_fee_mode =
+            BaseFeeMode::try_from(self.base_fee_mode).map_err(|_| PoolError::InvalidBaseFeeMode)?;
+        if base_fee_mode == BaseFeeMode::RateLimiter {
+            Ok(FeeRateLimiter {
+                cliff_fee_numerator: self.cliff_fee_numerator,
+                reference_amount: self.third_factor,
+                max_limiter_duration: self.second_factor,
+                fee_increment_bps: self.first_factor,
+            })
+        } else {
+            Err(PoolError::InvalidFeeRateLimiter.into())
+        }
+    }
     pub fn get_base_fee_numerator(
         &self,
         current_point: u64,

@@ -118,4 +118,7 @@ pub enum PoolError {
 
     #[msg("Invalid fee rate limiter")]
     InvalidFeeRateLimiter,
+
+    #[msg("Fail to validate single swap instruction in rate limiter")]
+    FailToValidateSingleSwapInstruction,
 }
