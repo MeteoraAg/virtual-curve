@@ -11,7 +11,10 @@ use crate::{
     EvtSwap, PoolError,
 };
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::sysvar;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+
+use crate::instruction::Swap as SwapInstruction;
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct SwapParameters {
@@ -122,6 +125,20 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.pool.load_mut()?;
 
+    let current_point = get_current_point(config.activation_type)?;
+
+    // another validation to prevent snipers to craft multiple swap instructions in 1 tx
+    // (if we dont do this, they are able to concat 16 swap instructions in 1 tx)
+    if let Ok(rate_limiter) = config.pool_fees.base_fee.get_fee_rate_limiter() {
+        if rate_limiter.is_rate_limiter_applied(
+            current_point,
+            pool.activation_point,
+            trade_direction,
+        )? {
+            validate_single_swap_instruction(ctx.remaining_accounts)?;
+        }
+    }
+
     // validate if it is over threshold
     require!(
         !pool.is_curve_complete(config.migration_quote_threshold),
@@ -132,7 +149,6 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let current_timestamp = Clock::get()?.unix_timestamp as u64;
     pool.update_pre_swap(&config, current_timestamp)?;
 
-    let current_point = get_current_point(config.activation_type)?;
     let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
 
     let swap_result =
@@ -244,6 +260,37 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
             base_reserve: pool.base_reserve,
             quote_reserve: pool.quote_reserve,
         })
+    }
+
+    Ok(())
+}
+
+pub fn validate_single_swap_instruction<'c, 'info>(
+    remaining_accounts: &'c [AccountInfo<'info>],
+) -> Result<()> {
+    let instruction_sysvar_account_info = remaining_accounts
+        .get(0)
+        .ok_or_else(|| PoolError::FailToValidateSingleSwapInstruction)?;
+
+    // get current index of instruction
+    let current_index =
+        sysvar::instructions::load_current_index_checked(instruction_sysvar_account_info)?;
+    if current_index == 0 {
+        // skip for first instruction
+        return Ok(());
+    }
+    for i in 0..current_index {
+        let instruction = sysvar::instructions::load_instruction_at_checked(
+            i.into(),
+            instruction_sysvar_account_info,
+        )?;
+
+        if instruction.program_id == crate::ID
+            && instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR)
+        {
+            msg!("Multiple swaps not allowed");
+            return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+        }
     }
 
     Ok(())
