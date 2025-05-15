@@ -61,7 +61,7 @@ impl PoolFeesConfig {
     /// Calculates the total trading fee numerator by combining base fee and dynamic fee.
     /// The base fee is determined by the fee scheduler mode (linear or exponential) and time period.
     /// The dynamic fee is based on price volatility and is only applied if dynamic fees are enabled.
-    /// The total fee is capped at MAX_FEE_NUMERATOR (50%) to ensure reasonable trading costs.
+    /// The total fee is capped at MAX_FEE_NUMERATOR (99%) to ensure reasonable trading costs.
     ///
     /// Returns the total fee numerator that will be used to calculate actual trading fees.
     pub fn get_total_trading_fee(
