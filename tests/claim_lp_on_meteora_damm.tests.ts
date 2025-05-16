@@ -115,10 +115,13 @@ describe("Claim lp on meteora dammm", () => {
             tokenSupply: null,
             creatorTradingFeePercentage: 0,
             tokenUpdateAuthority: 0,
+<<<<<<< HEAD
             migrationFee: {
                 feePercentage: 0,
                 creatorFeePercentage: 0,
             },
+=======
+>>>>>>> 05e3cb0 (update pool creator, immutable authority option)
             padding0: [],
             padding: [],
             curve: curves,

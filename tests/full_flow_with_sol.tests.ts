@@ -136,7 +136,7 @@ describe("Full flow with spl-token", () => {
         creatorFeePercentage: 0,
       },
       padding0: [],
-      padding: [],
+      padding1: [],
       curve: curves,
     };
     const params: CreateConfigParams = {
