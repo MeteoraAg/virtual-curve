@@ -11,6 +11,9 @@ use crate::{
     EvtSwap, PoolError,
 };
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::instruction::{
+    get_processed_sibling_instruction, get_stack_height,
+};
 use anchor_lang::solana_program::sysvar;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
@@ -135,7 +138,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
             pool.activation_point,
             trade_direction,
         )? {
-            validate_single_swap_instruction(ctx.remaining_accounts)?;
+            validate_single_swap_instruction(&ctx.accounts.pool.key(), ctx.remaining_accounts)?;
         }
     }
 
@@ -266,6 +269,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 }
 
 pub fn validate_single_swap_instruction<'c, 'info>(
+    pool: &Pubkey,
     remaining_accounts: &'c [AccountInfo<'info>],
 ) -> Result<()> {
     let instruction_sysvar_account_info = remaining_accounts
@@ -275,6 +279,27 @@ pub fn validate_single_swap_instruction<'c, 'info>(
     // get current index of instruction
     let current_index =
         sysvar::instructions::load_current_index_checked(instruction_sysvar_account_info)?;
+    let current_instruction =
+        sysvar::instructions::load_instruction_at_checked(0, instruction_sysvar_account_info)?;
+
+    if current_instruction.program_id != crate::ID {
+        // check if current instruction is CPI
+        // disable any stack height greater than 2
+        if get_stack_height() > 2 {
+            return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+        }
+        // check for any sibling instruction
+        let mut sibling_index = 0;
+        while let Some(sibling_instruction) = get_processed_sibling_instruction(sibling_index) {
+            if sibling_instruction.program_id == crate::ID
+                && sibling_instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR)
+            {
+                return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+            }
+            sibling_index = sibling_index.safe_add(1)?;
+        }
+    }
+
     if current_index == 0 {
         // skip for first instruction
         return Ok(());
@@ -285,9 +310,16 @@ pub fn validate_single_swap_instruction<'c, 'info>(
             instruction_sysvar_account_info,
         )?;
 
-        if instruction.program_id == crate::ID
-            && instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR)
-        {
+        if instruction.program_id != crate::ID {
+            // we treat any instruction including that pool address is other swap ix
+            for i in 0..instruction.accounts.len() {
+                if instruction.accounts[i].pubkey.eq(pool) && instruction.accounts[i].is_writable {
+                    msg!("Multiple swaps not allowed");
+                    return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+                }
+            }
+        } else if instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR) {
+            // otherwise, we just need to search swap instruction discriminator, so creator can still bundle initialzing pool and swap at 1 tx
             msg!("Multiple swaps not allowed");
             return Err(PoolError::FailToValidateSingleSwapInstruction.into());
         }
