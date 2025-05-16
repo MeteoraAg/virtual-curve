@@ -273,6 +273,24 @@ impl LockedVestingConfig {
     TryFromPrimitive,
     AnchorDeserialize,
     AnchorSerialize,
+    Default,
+)]
+pub enum TokenUpdateAuthorityOption {
+    #[default]
+    Mutable,
+    Immutable,
+}
+
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
 )]
 pub enum MigrationOption {
     MeteoraDamm,
@@ -380,8 +398,10 @@ pub struct PoolConfig {
     pub fixed_token_supply_flag: u8,
     /// creator trading fee percentage
     pub creator_trading_fee_percentage: u8,
+    /// token update authority
+    pub token_update_authority: u8,
     /// padding 0
-    pub _padding_0: [u8; 2],
+    pub _padding_0: [u8; 1],
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount
@@ -434,6 +454,7 @@ impl PoolConfig {
         leftover_receiver: &Pubkey,
         pool_fees: &PoolFeeParameters,
         creator_trading_fee_percentage: u8,
+        token_update_authority: u8,
         collect_fee_mode: u8,
         migration_option: u8,
         activation_type: u8,
@@ -462,6 +483,7 @@ impl PoolConfig {
         self.leftover_receiver = *leftover_receiver;
         self.pool_fees = pool_fees.to_pool_fees_config();
         self.creator_trading_fee_percentage = creator_trading_fee_percentage;
+        self.token_update_authority = token_update_authority;
         self.collect_fee_mode = collect_fee_mode;
         self.migration_option = migration_option;
         self.activation_type = activation_type;
@@ -491,6 +513,12 @@ impl PoolConfig {
         }
     }
 
+    pub fn get_token_update_authority(&self) -> Result<TokenUpdateAuthorityOption> {
+        let token_update_authority =
+            TokenUpdateAuthorityOption::try_from(self.token_update_authority)
+                .map_err(|_| PoolError::InvalidTokenUpdateAuthorityOption)?;
+        Ok(token_update_authority)
+    }
     pub fn get_swap_amount_with_buffer(
         swap_base_amount: u64,
         sqrt_start_price: u128,

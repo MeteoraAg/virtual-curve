@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 use mpl_token_metadata::types::DataV2;
+
+use crate::state::TokenUpdateAuthorityOption;
 pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub system_program: AccountInfo<'info>,
     pub payer: AccountInfo<'info>,
@@ -12,6 +14,7 @@ pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub symbol: &'a str,
     pub uri: &'a str,
     pub pool_authority_bump: u8,
+    pub update_authority: TokenUpdateAuthorityOption,
 }
 
 pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -> Result<()> {
@@ -24,8 +27,14 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.mint(&params.mint);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
-    builder.is_mutable(true);
-    builder.update_authority(&params.creator, false);
+    if params.update_authority == TokenUpdateAuthorityOption::Mutable {
+        builder.is_mutable(true);
+        builder.update_authority(&params.creator, false);
+    } else {
+        builder.is_mutable(false);
+        builder.update_authority(&params.system_program, false);
+    }
+
     builder.payer(&params.payer);
     builder.system_program(&params.system_program);
     let data = DataV2 {

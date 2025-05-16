@@ -1,5 +1,6 @@
 use super::InitializePoolParameters;
 use super::{max_key, min_key};
+use crate::state::TokenUpdateAuthorityOption;
 use crate::{
     activation_handler::get_current_point,
     const_pda,
@@ -148,7 +149,12 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    // transfer update authority to creator
+    let token_update_authority =
+        if config.get_token_update_authority()? == TokenUpdateAuthorityOption::Mutable {
+            Some(ctx.accounts.creator.key())
+        } else {
+            None
+        };
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -159,7 +165,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MetadataPointer,
-        Some(ctx.accounts.creator.key()),
+        token_update_authority,
     )?;
 
     let config = ctx.accounts.config.load()?;

@@ -160,6 +160,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         symbol: &symbol,
         uri: &uri,
         pool_authority_bump: const_pda::pool_authority::BUMP,
+        update_authority: config.get_token_update_authority()?,
     })?;
 
     // mint token
