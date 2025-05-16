@@ -401,7 +401,7 @@ pub struct PoolConfig {
     /// token update authority
     pub token_update_authority: u8,
     /// padding 0
-    pub _padding_0: [u8; 1],
+    pub _padding_0: u8,
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount

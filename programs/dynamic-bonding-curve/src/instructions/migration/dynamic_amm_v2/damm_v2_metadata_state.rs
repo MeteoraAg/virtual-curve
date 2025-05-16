@@ -6,8 +6,8 @@ use static_assertions::const_assert_eq;
 pub struct MeteoraDammV2Metadata {
     /// pool
     pub virtual_pool: Pubkey,
-    /// pool creator
-    pub pool_creator: Pubkey,
+    /// !!! BE CAREFUL to use tomestone field, previous is pool creator
+    pub padding_0: [u8; 32],
     /// partner
     pub partner: Pubkey,
     /// Reserve
