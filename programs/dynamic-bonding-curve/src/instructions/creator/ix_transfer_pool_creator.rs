@@ -30,8 +30,8 @@ pub fn handle_transfer_pool_creator(ctx: Context<TransferPoolCreatorCtx>) -> Res
     let migration_progress = pool.get_migration_progress()?;
     // avoid pool creator to do update between 2 periods
     require!(
-        migration_progress != MigrationProgress::PreBondingCurve
-            || migration_progress != MigrationProgress::CreatedPool,
+        migration_progress == MigrationProgress::PreBondingCurve
+            || migration_progress == MigrationProgress::CreatedPool,
         PoolError::NotPermitToDoThisAction
     );
 
