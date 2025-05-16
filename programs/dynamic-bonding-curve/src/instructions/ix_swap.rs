@@ -279,8 +279,10 @@ pub fn validate_single_swap_instruction<'c, 'info>(
     // get current index of instruction
     let current_index =
         sysvar::instructions::load_current_index_checked(instruction_sysvar_account_info)?;
-    let current_instruction =
-        sysvar::instructions::load_instruction_at_checked(0, instruction_sysvar_account_info)?;
+    let current_instruction = sysvar::instructions::load_instruction_at_checked(
+        current_index.into(),
+        instruction_sysvar_account_info,
+    )?;
 
     if current_instruction.program_id != crate::ID {
         // check if current instruction is CPI
