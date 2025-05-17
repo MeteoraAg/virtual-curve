@@ -74,6 +74,12 @@ pub mod dynamic_bonding_curve {
         instructions::handle_partner_withdraw_surplus(ctx)
     }
 
+    pub fn partner_withdraw_migration_fee(
+        ctx: Context<PartnerWithdrawMigrationFeeCtx>,
+    ) -> Result<()> {
+        instructions::handle_partner_withdraw_migration_fee(ctx)
+    }
+
     /// POOL CREATOR FUNCTIONS ////
     pub fn initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         ctx: Context<'_, '_, 'c, 'info, InitializeVirtualPoolWithSplTokenCtx<'info>>,
@@ -107,6 +113,12 @@ pub mod dynamic_bonding_curve {
     // withdraw surplus on quote token
     pub fn creator_withdraw_surplus(ctx: Context<CreatorWithdrawSurplusCtx>) -> Result<()> {
         instructions::handle_creator_withdraw_surplus(ctx)
+    }
+
+    pub fn creator_withdraw_migration_fee(
+        ctx: Context<CreatorWithdrawMigrationFeeCtx>,
+    ) -> Result<()> {
+        instructions::handle_creator_withdraw_migration_fee(ctx)
     }
 
     pub fn transfer_pool_creator(ctx: Context<TransferPoolCreatorCtx>) -> Result<()> {

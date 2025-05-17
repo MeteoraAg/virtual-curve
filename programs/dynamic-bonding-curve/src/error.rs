@@ -118,4 +118,10 @@ pub enum PoolError {
 
     #[msg("Invalid token update authority option")]
     InvalidTokenUpdateAuthorityOption,
+
+    #[msg("Invalid migrator fee percentage")]
+    InvalidMigratorFeePercentage,
+
+    #[msg("Migration fee has been withdraw")]
+    MigrationFeeHasBeenWithdraw,
 }
