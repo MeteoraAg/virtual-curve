@@ -103,6 +103,7 @@ async function createPartnerConfig(
     migrationFeeOption: 0,
     tokenSupply: null,
     creatorTradingFeePercentage: 0,
+    tokenUpdateAuthority: 0,
     padding0: [],
     padding: [],
     curve: curves,

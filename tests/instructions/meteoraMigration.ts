@@ -10,7 +10,7 @@ import {
   DAMM_PROGRAM_ID,
   deriveDammPoolAddress,
   deriveLpMintAddress,
-  deriveMetadatAccount,
+  deriveMetadataAccount,
   deriveMigrationMetadataAddress,
   derivePoolAuthority,
   deriveProtocolFeeAddress,
@@ -92,7 +92,7 @@ export async function migrateToMeteoraDamm(
 
   const lpMint = deriveLpMintAddress(dammPool);
 
-  const mintMetadata = deriveMetadatAccount(lpMint);
+  const mintMetadata = deriveMetadataAccount(lpMint);
 
   const [protocolTokenAFee, protocolTokenBFee] = [
     deriveProtocolFeeAddress(virtualPoolState.baseMint, dammPool),

@@ -38,7 +38,6 @@ pub struct MigrationDammV2CreateMetadataCtx<'info> {
 pub fn handle_migration_damm_v2_create_metadata(
     ctx: Context<MigrationDammV2CreateMetadataCtx>,
 ) -> Result<()> {
-    let virtual_pool = ctx.accounts.virtual_pool.load()?;
     let config = ctx.accounts.config.load()?;
     let migration_option = MigrationOption::try_from(config.migration_option)
         .map_err(|_| PoolError::InvalidMigrationOption)?;
@@ -48,7 +47,6 @@ pub fn handle_migration_damm_v2_create_metadata(
     );
     let mut migration_metadata = ctx.accounts.migration_metadata.load_init()?;
     migration_metadata.virtual_pool = ctx.accounts.virtual_pool.key();
-    migration_metadata.pool_creator = virtual_pool.creator;
     migration_metadata.partner = config.fee_claimer;
 
     emit_cpi!(EvtCreateDammV2MigrationMetadata {

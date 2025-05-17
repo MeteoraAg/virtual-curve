@@ -458,13 +458,13 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
             partner_liquidity_distribution,
             creator_liquidity_distribution,
             migration_metadata.partner,
-            migration_metadata.pool_creator,
+            virtual_pool.creator,
         )
     } else {
         (
             creator_liquidity_distribution,
             partner_liquidity_distribution,
-            migration_metadata.pool_creator,
+            virtual_pool.creator,
             migration_metadata.partner,
         )
     };

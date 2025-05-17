@@ -15,7 +15,7 @@ use crate::{
     safe_math::SafeMath,
     state::{
         CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
-        TokenType,
+        TokenType, TokenUpdateAuthorityOption,
     },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
@@ -39,7 +39,8 @@ pub struct ConfigParameters {
     pub migration_fee_option: u8,
     pub token_supply: Option<TokenSupplyParams>,
     pub creator_trading_fee_percentage: u8, // percentage of trading fee creator can share with partner
-    pub padding_0: [u8; 7],
+    pub token_update_authority: u8,
+    pub padding_0: [u8; 6],
     /// padding for future use
     pub padding_1: [u64; 7],
     pub curve: Vec<LiquidityDistributionParameters>,
@@ -165,6 +166,12 @@ impl ConfigParameters {
             PoolError::InvalidActivationType
         );
 
+        // validate token update authority
+        require!(
+            TokenUpdateAuthorityOption::try_from(self.token_update_authority).is_ok(),
+            PoolError::InvalidTokenUpdateAuthorityOption
+        );
+
         // validate token decimals
         require!(
             self.token_decimal >= 6 && self.token_decimal <= 9,
@@ -275,6 +282,7 @@ pub fn handle_create_config(
         token_supply,
         curve,
         creator_trading_fee_percentage,
+        token_update_authority,
         ..
     } = config_parameters;
 
@@ -351,6 +359,7 @@ pub fn handle_create_config(
         ctx.accounts.leftover_receiver.key,
         &pool_fees,
         creator_trading_fee_percentage,
+        token_update_authority,
         collect_fee_mode,
         migration_option,
         activation_type,

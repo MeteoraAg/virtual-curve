@@ -149,3 +149,10 @@ pub struct EvtWithdrawLeftover {
     pub leftover_receiver: Pubkey,
     pub leftover_amount: u64,
 }
+
+#[event]
+pub struct EvtUpdatePoolCreator {
+    pub pool: Pubkey,
+    pub creator: Pubkey,
+    pub new_creator: Pubkey,
+}

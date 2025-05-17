@@ -1,4 +1,9 @@
-import { Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { VirtualCurveProgram } from "../utils/types";
 import { BanksClient } from "solana-bankrun";
@@ -10,8 +15,11 @@ import {
   getTokenAccount,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
-import { NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
+import {
+  NATIVE_MINT,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
 
 export type ClaimCreatorTradeFeeParams = {
   creator: Keypair;
@@ -145,6 +153,26 @@ export async function creatorWithdrawSurplus(
     .postInstructions(postInstructions)
     .transaction();
 
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(creator);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export async function transferCreator(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  virtualPool: PublicKey,
+  creator: Keypair,
+  newCreator: PublicKey
+): Promise<void> {
+  const transaction = await program.methods
+    .transferPoolCreator()
+    .accountsPartial({
+      virtualPool,
+      newCreator,
+      creator: creator.publicKey,
+    })
+    .transaction();
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(creator);
   await processTransactionMaybeThrow(banksClient, transaction);

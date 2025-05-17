@@ -109,6 +109,10 @@ pub mod dynamic_bonding_curve {
         instructions::handle_creator_withdraw_surplus(ctx)
     }
 
+    pub fn transfer_pool_creator(ctx: Context<TransferPoolCreatorCtx>) -> Result<()> {
+        instructions::handle_transfer_pool_creator(ctx)
+    }
+
     /// TRADING BOTS FUNCTIONS ////
     pub fn swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> {
         instructions::handle_swap(ctx, params)
