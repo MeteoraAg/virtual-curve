@@ -381,6 +381,10 @@ export function designCurve(
         },
         creatorTradingFeePercentage,
         tokenUpdateAuthority: 0,
+        migrationFee: {
+            feePercentage: 0,
+            creatorFeePercentage: 0,
+        },
         padding0: [],
         padding: [],
         curve,
@@ -513,6 +517,10 @@ export function designGraphCurve(
             postMigrationTokenSupply: totalSupply,
         },
         creatorTradingFeePercentage,
+        migrationFee: {
+            feePercentage: 0,
+            creatorFeePercentage: 0,
+        },
         padding0: [],
         padding: [],
         curve,

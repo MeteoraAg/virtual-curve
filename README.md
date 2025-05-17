@@ -48,6 +48,7 @@ Partner can specify these parameters when they create a configuration on all the
 - `token_supply`: when the fields are specified, token will have fixed supply in pre and post migration, leftover will be returned to leftover_receiver (configured in config key)
 - `creator_trading_fee_percentage`: the percentage of trading fee and surplus pool creator can get for a pool
 - `token_update_authority`: the option to allow creator to update token metadata, 0: mutable, 1: immutable
+- `migration_fee`: the option to allow partner can config migration fee from migration quote threshold. Migration fee can be shared between partner and creator
 - `sqrt_start_price`: square root of min price in the bonding curve for the virtual pools.
 - `curve`: an array of square price and liquidity, that defines the liquidity distribution for the virtual pools.
 
