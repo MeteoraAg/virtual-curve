@@ -156,3 +156,15 @@ pub struct EvtUpdatePoolCreator {
     pub creator: Pubkey,
     pub new_creator: Pubkey,
 }
+
+#[event]
+pub struct EvtCreatorWithdrawMigrationFee {
+    pub pool: Pubkey,
+    pub fee: u64,
+}
+
+#[event]
+pub struct EvtPartnerWithdrawMigrationFee {
+    pub pool: Pubkey,
+    pub fee: u64,
+}

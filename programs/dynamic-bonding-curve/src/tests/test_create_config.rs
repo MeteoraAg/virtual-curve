@@ -28,6 +28,7 @@ fn test_create_config() {
         get_base_token_for_swap(sqrt_start_price, sqrt_migration_price, &curve).unwrap();
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
+        0,
         sqrt_migration_price,
         MigrationOption::MeteoraDamm,
     )

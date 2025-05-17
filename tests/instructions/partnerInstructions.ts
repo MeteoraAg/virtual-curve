@@ -73,6 +73,10 @@ export type ConfigParameters = {
   tokenSupply: TokenSupplyParams | null;
   creatorTradingFeePercentage: number;
   tokenUpdateAuthority: number;
+  migrationFee: {
+    feePercentage: number,
+    creatorFeePercentage: number,
+  };
   padding0: number[];
   padding: BN[];
   curve: Array<LiquidityDistributionParameters>;

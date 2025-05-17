@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use locker::types::CreateVestingEscrowParameters;
+use static_assertions::const_assert_eq;
 
 use crate::{
     activation_handler::ActivationType,
@@ -40,10 +41,39 @@ pub struct ConfigParameters {
     pub token_supply: Option<TokenSupplyParams>,
     pub creator_trading_fee_percentage: u8, // percentage of trading fee creator can share with partner
     pub token_update_authority: u8,
-    pub padding_0: [u8; 6],
+    pub migration_fee: MigrationFee,
+    pub padding_0: [u8; 4],
     /// padding for future use
     pub padding_1: [u64; 7],
     pub curve: Vec<LiquidityDistributionParameters>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq, InitSpace)]
+pub struct MigrationFee {
+    pub fee_percentage: u8,
+    pub creator_fee_percentage: u8,
+}
+const_assert_eq!(MigrationFee::INIT_SPACE, 2);
+
+impl MigrationFee {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.fee_percentage <= 50,
+            PoolError::InvalidMigratorFeePercentage
+        );
+        if self.fee_percentage == 0 {
+            require!(
+                self.creator_fee_percentage == 0,
+                PoolError::InvalidMigratorFeePercentage
+            );
+        } else {
+            require!(
+                self.creator_fee_percentage <= 100,
+                PoolError::InvalidMigratorFeePercentage
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -132,6 +162,8 @@ impl ConfigParameters {
             self.creator_trading_fee_percentage <= 100,
             PoolError::InvalidCreatorTradingFeePercentage
         );
+
+        self.migration_fee.validate()?;
 
         // validate collect fee mode
         require!(
@@ -283,6 +315,7 @@ pub fn handle_create_config(
         curve,
         creator_trading_fee_percentage,
         token_update_authority,
+        migration_fee,
         ..
     } = config_parameters;
 
@@ -302,6 +335,7 @@ pub fn handle_create_config(
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
+        migration_fee.fee_percentage,
         sqrt_migration_price,
         MigrationOption::try_from(migration_option)
             .map_err(|_| PoolError::InvalidMigrationOption)?,
@@ -360,6 +394,7 @@ pub fn handle_create_config(
         &pool_fees,
         creator_trading_fee_percentage,
         token_update_authority,
+        migration_fee,
         collect_fee_mode,
         migration_option,
         activation_type,
