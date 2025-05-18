@@ -315,7 +315,7 @@ pub fn validate_single_swap_instruction<'c, 'info>(
         if instruction.program_id != crate::ID {
             // we treat any instruction including that pool address is other swap ix
             for i in 0..instruction.accounts.len() {
-                if instruction.accounts[i].pubkey.eq(pool) && instruction.accounts[i].is_writable {
+                if instruction.accounts[i].pubkey.eq(pool) {
                     msg!("Multiple swaps not allowed");
                     return Err(PoolError::FailToValidateSingleSwapInstruction.into());
                 }
