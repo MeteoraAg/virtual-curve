@@ -12,7 +12,7 @@ import {
 } from "./instructions";
 import { VirtualCurveProgram } from "./utils/types";
 import { Keypair, PublicKey } from "@solana/web3.js";
-import { createDammConfig, designCurve, fundSol, getMint, startTest } from "./utils";
+import { createDammConfig, designCurve, designCurveWithInitialMarketCap, fundSol, getMint, startTest } from "./utils";
 import {
     createVirtualCurveProgram,
     derivePoolAuthority,
@@ -123,6 +123,48 @@ describe("Design default curve", () => {
         let config = await createConfig(context.banksClient, program, params);
         await mintSplTokenTo(context.banksClient, user, quoteMint, admin, user.publicKey, instructionParams.migrationQuoteThreshold.toNumber());
         await fullFlow(context.banksClient, program, config, operator, poolCreator, user, admin, quoteMint);
+    });
+
+
+    it.only("Design curve with initial market cap", async () => {
+        let totalTokenSupply = 1_000_000_000; // 1 billion
+        let percentageSupplyOnMigration = 20; // 20%;
+        let initialMarketCap = 20; // 10 sol
+        let migrationMarketCap = 320; // 320 sol
+        let migrationOption = 1;
+        let tokenBaseDecimal = 6;
+        let tokenQuoteDecimal = 9;
+        let lockedVesting = {
+            amountPerPeriod: new BN(0),
+            cliffDurationFromMigrationTime: new BN(0),
+            frequency: new BN(0),
+            numberOfPeriod: new BN(0),
+            cliffUnlockAmount: new BN(0),
+        };
+        let leftOver = 350_000_000;
+        let quoteMint = await createToken(context.banksClient, admin, admin.publicKey, tokenQuoteDecimal);
+        let instructionParams = designCurveWithInitialMarketCap(
+            totalTokenSupply,
+            initialMarketCap,
+            migrationMarketCap,
+            percentageSupplyOnMigration,
+            migrationOption,
+            tokenBaseDecimal,
+            tokenQuoteDecimal,
+            0,
+            1,
+            lockedVesting,
+            leftOver,
+        );
+        const params: CreateConfigParams = {
+            payer: partner,
+            leftoverReceiver: partner.publicKey,
+            feeClaimer: partner.publicKey,
+            quoteMint,
+            instructionParams,
+        };
+        console.log(instructionParams);
+        await createConfig(context.banksClient, program, params);
     });
 });
 
