@@ -61,7 +61,7 @@ pub fn handle_partner_withdraw_migration_fee(
 
     // Ensure the partner has never been withdrawn
     require!(
-        pool.is_withdraw_migration_fee(mask),
+        pool.is_not_withdraw_migration_fee(mask),
         PoolError::MigrationFeeHasBeenWithdraw
     );
 

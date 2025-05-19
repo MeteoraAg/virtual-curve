@@ -630,8 +630,8 @@ impl VirtualPool {
         self.is_withdraw_leftover = 1;
     }
 
-    pub fn is_withdraw_migration_fee(&self, mask: u8) -> bool {
-        self.migration_fee_withdraw_status.bitand(mask) != 0
+    pub fn is_not_withdraw_migration_fee(&self, mask: u8) -> bool {
+        self.migration_fee_withdraw_status.bitand(mask) == 0
     }
     pub fn update_withdraw_migration_fee(&mut self, mask: u8) {
         self.migration_fee_withdraw_status = self.migration_fee_withdraw_status.bitxor(mask)
