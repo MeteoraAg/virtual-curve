@@ -4,14 +4,14 @@ use crate::state::{VirtualPool, CREATOR_MASK, PARTNER_MASK};
 fn test_migration_claim_fee_status() {
     let mut pool = VirtualPool::default();
 
-    assert_eq!(pool.is_withdraw_migration_fee(PARTNER_MASK), false);
-    assert_eq!(pool.is_withdraw_migration_fee(CREATOR_MASK), false);
+    assert_eq!(pool.is_not_withdraw_migration_fee(PARTNER_MASK), true);
+    assert_eq!(pool.is_not_withdraw_migration_fee(CREATOR_MASK), true);
 
     pool.update_withdraw_migration_fee(PARTNER_MASK);
-    assert_eq!(pool.is_withdraw_migration_fee(PARTNER_MASK), true);
-    assert_eq!(pool.is_withdraw_migration_fee(CREATOR_MASK), false);
+    assert_eq!(pool.is_not_withdraw_migration_fee(PARTNER_MASK), false);
+    assert_eq!(pool.is_not_withdraw_migration_fee(CREATOR_MASK), true);
 
     pool.update_withdraw_migration_fee(CREATOR_MASK);
-    assert_eq!(pool.is_withdraw_migration_fee(PARTNER_MASK), true);
-    assert_eq!(pool.is_withdraw_migration_fee(CREATOR_MASK), true);
+    assert_eq!(pool.is_not_withdraw_migration_fee(PARTNER_MASK), false);
+    assert_eq!(pool.is_not_withdraw_migration_fee(CREATOR_MASK), false);
 }
