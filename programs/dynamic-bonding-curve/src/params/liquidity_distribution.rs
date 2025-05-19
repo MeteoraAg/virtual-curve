@@ -73,10 +73,8 @@ pub fn get_migration_base_token(
     sqrt_migration_price: u128,
     migration_option: MigrationOption,
 ) -> Result<u64> {
-    let MigrationAmount {
-        quote_amount,
-        fee: _fee,
-    } = PoolConfig::get_migration_quote_amount(migration_threshold, migration_fee_percentage)?;
+    let MigrationAmount { quote_amount, .. } =
+        PoolConfig::get_migration_quote_amount(migration_threshold, migration_fee_percentage)?;
     match migration_option {
         MigrationOption::MeteoraDamm => {
             // constant product

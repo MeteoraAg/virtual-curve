@@ -431,10 +431,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     let protocol_and_partner_base_fee = virtual_pool.get_protocol_and_trading_base_fee()?;
     let migration_sqrt_price = config.migration_sqrt_price;
 
-    let MigrationAmount {
-        quote_amount,
-        fee: _fee,
-    } = config.get_migration_quote_amount_for_config()?;
+    let MigrationAmount { quote_amount, .. } = config.get_migration_quote_amount_for_config()?;
     let excluded_fee_base_reserve =
         initial_base_vault_amount.safe_sub(protocol_and_partner_base_fee)?;
 

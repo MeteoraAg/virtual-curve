@@ -546,19 +546,19 @@ impl PoolConfig {
     }
 
     pub fn get_migration_fee_distribution(&self) -> Result<MigrationFeeDistribution> {
-        let MigrationAmount {
-            quote_amount: _quote_amount,
-            fee,
-        } = self.get_migration_quote_amount_for_config()?;
+        let MigrationAmount { fee, .. } = self.get_migration_quote_amount_for_config()?;
 
-        let creator = safe_mul_div_cast_u64(
+        let creator_migration_fee = safe_mul_div_cast_u64(
             fee,
             self.creator_migration_fee_percentage.into(),
             100,
             Rounding::Down,
         )?;
-        let partner = fee.safe_sub(creator)?;
-        Ok(MigrationFeeDistribution { partner, creator })
+        let partner_migration_fee = fee.safe_sub(creator_migration_fee)?;
+        Ok(MigrationFeeDistribution {
+            partner: partner_migration_fee,
+            creator: creator_migration_fee,
+        })
     }
 
     pub fn get_swap_amount_with_buffer(

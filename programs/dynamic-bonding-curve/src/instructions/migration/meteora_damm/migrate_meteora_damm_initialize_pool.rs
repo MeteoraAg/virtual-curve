@@ -238,10 +238,7 @@ pub fn handle_migrate_meteora_damm<'info>(
         PoolError::InvalidMigrationOption
     );
     let base_reserve = config.migration_base_threshold;
-    let MigrationAmount {
-        quote_amount,
-        fee: _fee,
-    } = config.get_migration_quote_amount_for_config()?;
+    let MigrationAmount { quote_amount, .. } = config.get_migration_quote_amount_for_config()?;
 
     ctx.accounts
         .create_pool(base_reserve, quote_amount, const_pda::pool_authority::BUMP)?;

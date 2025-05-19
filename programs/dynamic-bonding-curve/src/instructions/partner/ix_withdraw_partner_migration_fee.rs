@@ -61,14 +61,11 @@ pub fn handle_partner_withdraw_migration_fee(
 
     // Ensure the partner has never been withdrawn
     require!(
-        pool.is_not_withdraw_migration_fee(mask),
+        pool.eligible_to_withdraw_migration_fee(mask),
         PoolError::MigrationFeeHasBeenWithdraw
     );
 
-    let MigrationFeeDistribution {
-        partner: fee,
-        creator: _,
-    } = config.get_migration_fee_distribution()?;
+    let MigrationFeeDistribution { partner: fee, .. } = config.get_migration_fee_distribution()?;
 
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),

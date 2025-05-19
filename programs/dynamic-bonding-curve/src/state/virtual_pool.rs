@@ -129,7 +129,7 @@ pub struct VirtualPool {
     pub is_withdraw_leftover: u8,
     /// is creator withdraw surplus
     pub is_creator_withdraw_surplus: u8,
-    /// migration fee withdraw status, first bit is for partner, second bit is for creator, third bit is for protocol
+    /// migration fee withdraw status, first bit is for partner, second bit is for creator
     pub migration_fee_withdraw_status: u8,
     /// pool metrics
     pub metrics: PoolMetrics,
@@ -630,7 +630,7 @@ impl VirtualPool {
         self.is_withdraw_leftover = 1;
     }
 
-    pub fn is_not_withdraw_migration_fee(&self, mask: u8) -> bool {
+    pub fn eligible_to_withdraw_migration_fee(&self, mask: u8) -> bool {
         self.migration_fee_withdraw_status.bitand(mask) == 0
     }
     pub fn update_withdraw_migration_fee(&mut self, mask: u8) {
