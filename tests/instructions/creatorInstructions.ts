@@ -13,6 +13,7 @@ import {
   getOrCreateAssociatedTokenAccount,
   unwrapSOLInstruction,
   getTokenAccount,
+  deriveMigrationMetadataAddress,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
 import {
@@ -165,13 +166,23 @@ export async function transferCreator(
   creator: Keypair,
   newCreator: PublicKey
 ): Promise<void> {
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
   const transaction = await program.methods
     .transferPoolCreator()
     .accountsPartial({
       virtualPool,
       newCreator,
+      config: poolState.config,
       creator: creator.publicKey,
-    })
+    }).remainingAccounts(
+      [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: migrationMetadata,
+        }]
+    )
     .transaction();
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(creator);

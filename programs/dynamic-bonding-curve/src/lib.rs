@@ -109,7 +109,9 @@ pub mod dynamic_bonding_curve {
         instructions::handle_creator_withdraw_surplus(ctx)
     }
 
-    pub fn transfer_pool_creator(ctx: Context<TransferPoolCreatorCtx>) -> Result<()> {
+    pub fn transfer_pool_creator<'c: 'info, 'info>(
+        ctx: Context<'_, '_, 'c, 'info, TransferPoolCreatorCtx>,
+    ) -> Result<()> {
         instructions::handle_transfer_pool_creator(ctx)
     }
 

@@ -118,4 +118,7 @@ pub enum PoolError {
 
     #[msg("Invalid token update authority option")]
     InvalidTokenUpdateAuthorityOption,
+
+    #[msg("Invalid account for the instruction")]
+    InvalidAccount,
 }

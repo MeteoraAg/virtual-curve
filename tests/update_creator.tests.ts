@@ -23,6 +23,7 @@ import {
 import { getConfig, getVirtualPool } from "./utils/fetcher";
 import {
   createMeteoraMetadata,
+  lockLpForPartnerDamm,
   MigrateMeteoraParams,
   migrateToMeteoraDamm,
 } from "./instructions/meteoraMigration";
@@ -341,6 +342,12 @@ async function fullFlowUpdateCreatorPoolCreated(
     });
   }
   await migrateToMeteoraDamm(banksClient, program, migrationParams);
+
+  await lockLpForPartnerDamm(banksClient, program, {
+    payer: admin,
+    dammConfig,
+    virtualPool,
+  });
 
   virtualPoolState = await getVirtualPool(banksClient, program, virtualPool);
 
