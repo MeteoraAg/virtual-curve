@@ -26,9 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Add new endpoint `transfer_pool_creator` to allow pool creator to transfer to new creator
 - When creating config, partner can specify the field `token_update_authority`. 0: creator can update token metadata, 1: creator can't update token metadata
+- Allow partner to config migration fee, add new endpoint `withdraw_migration_fee`, so partner and creator can withdraw migration fee
 
 ### Changed
-- Config state add a new field: `token_update_authority`
+- Config state add a new field: `token_update_authority`, `migration_fee_percentage` and `creator_migration_fee_percentage` 
 
 ## dynamic_bonding_curve [0.1.1] [PR #71](https://github.com/MeteoraAg/dynamic-bonding-curve/pull/71)
 
