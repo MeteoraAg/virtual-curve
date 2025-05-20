@@ -124,7 +124,7 @@ impl ConfigParameters {
         );
 
         // validate fee
-        self.pool_fees.validate()?;
+        self.pool_fees.validate(self.collect_fee_mode)?;
 
         // validate creator trading fee percentage
         require!(

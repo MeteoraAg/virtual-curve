@@ -32,7 +32,7 @@ export async function createClaimFeeOperator(
   const claimFeeOperator = deriveClaimFeeOperatorAddress(operator);
   const transaction = await program.methods
     .createClaimFeeOperator()
-    .accounts({
+    .accountsPartial({
       claimFeeOperator,
       operator,
       admin: admin.publicKey,
@@ -139,7 +139,7 @@ export async function claimProtocolFee(
 
   const transaction = await program.methods
     .claimProtocolFee()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       pool,
@@ -206,7 +206,7 @@ export async function protocolWithdrawSurplus(
 
   const transaction = await program.methods
     .protocolWithdrawSurplus()
-    .accounts({
+    .accountsPartial({
       poolAuthority,
       config: poolState.config,
       virtualPool,

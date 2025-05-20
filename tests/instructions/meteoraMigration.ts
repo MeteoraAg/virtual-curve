@@ -183,7 +183,7 @@ export async function lockLpForCreatorDamm(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
   params: LockLPDammForCreatorParams
-): Promsie<PublicKey> {
+): Promise<PublicKey> {
   const { payer, virtualPool, dammConfig } = params;
   const virtualPoolState = await getVirtualPool(
     banksClient,
