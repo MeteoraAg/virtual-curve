@@ -556,8 +556,8 @@ impl PoolConfig {
         )?;
         let partner_migration_fee = fee.safe_sub(creator_migration_fee)?;
         Ok(MigrationFeeDistribution {
-            partner: partner_migration_fee,
-            creator: creator_migration_fee,
+            partner_migration_fee,
+            creator_migration_fee,
         })
     }
 
@@ -759,6 +759,6 @@ pub struct MigrationAmount {
 
 // TODO, do we need a haircut for protocol?
 pub struct MigrationFeeDistribution {
-    pub partner: u64,
-    pub creator: u64,
+    pub partner_migration_fee: u64,
+    pub creator_migration_fee: u64,
 }
