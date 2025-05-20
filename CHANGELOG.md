@@ -31,7 +31,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Config state add a new field: `token_update_authority`, `migration_fee_percentage` and `creator_migration_fee_percentage` 
 
-
 ## dynamic_bonding_curve [0.1.1] [PR #71](https://github.com/MeteoraAg/dynamic-bonding-curve/pull/71)
 
 ### Added
