@@ -14,13 +14,16 @@ import {
   unwrapSOLInstruction,
   getTokenAccount,
   deriveMigrationMetadataAddress,
+  getTokenProgram,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
 import {
+  getAssociatedTokenAddressSync,
   NATIVE_MINT,
   TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
+import { expect } from "chai";
 
 export type ClaimCreatorTradeFeeParams = {
   creator: Keypair;
@@ -184,6 +187,59 @@ export async function transferCreator(
         }]
     )
     .transaction();
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(creator);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export type CreatorWithdrawMigrationFeeParams = {
+  creator: Keypair;
+  virtualPool: PublicKey;
+};
+export async function creatorWithdrawMigrationFee(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: CreatorWithdrawMigrationFeeParams
+): Promise<void> {
+  const { creator, virtualPool } = params;
+  const poolAuthority = derivePoolAuthority();
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const configState = await getConfig(banksClient, program, poolState.config);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const postInstructions: TransactionInstruction[] = [];
+  const { ata: tokenQuoteAccount, ix: createQuoteTokenAccountIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      creator,
+      configState.quoteMint,
+      creator.publicKey,
+      getTokenProgram(configState.quoteTokenFlag)
+    );
+
+  createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
+
+  if (configState.quoteMint.equals(NATIVE_MINT)) {
+    const unrapSOLIx = unwrapSOLInstruction(creator.publicKey);
+    unrapSOLIx && postInstructions.push(unrapSOLIx);
+  }
+
+  const transaction = await program.methods
+    .withdrawMigrationFee(1)
+    .accountsPartial({
+      poolAuthority,
+      config: poolState.config,
+      virtualPool,
+      tokenQuoteAccount,
+      quoteVault: poolState.quoteVault,
+      quoteMint: configState.quoteMint,
+      sender: creator.publicKey,
+      tokenQuoteProgram: getTokenProgram(configState.quoteTokenFlag),
+    })
+    .preInstructions(preInstructions)
+    .postInstructions(postInstructions)
+    .transaction();
+
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(creator);
   await processTransactionMaybeThrow(banksClient, transaction);

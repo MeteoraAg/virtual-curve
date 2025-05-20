@@ -14,6 +14,7 @@ import {
   getAssociatedTokenAddressSync,
   MintLayout,
   NATIVE_MINT,
+  TOKEN_2022_PROGRAM_ID,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
@@ -504,4 +505,8 @@ export async function fundUsdc(
   transaction.sign(LOCAL_ADMIN_KEYPAIR);
 
   await banksClient.processTransaction(transaction);
+}
+
+export function getTokenProgram(flag: number): PublicKey {
+  return flag == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
 }

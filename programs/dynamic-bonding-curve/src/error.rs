@@ -121,4 +121,10 @@ pub enum PoolError {
 
     #[msg("Invalid account for the instruction")]
     InvalidAccount,
+
+    #[msg("Invalid migrator fee percentage")]
+    InvalidMigratorFeePercentage,
+
+    #[msg("Migration fee has been withdraw")]
+    MigrationFeeHasBeenWithdraw,
 }

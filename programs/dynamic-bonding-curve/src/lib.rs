@@ -115,6 +115,11 @@ pub mod dynamic_bonding_curve {
         instructions::handle_transfer_pool_creator(ctx)
     }
 
+    /// BOTH partner and creator FUNCTIONS ///
+    pub fn withdraw_migration_fee(ctx: Context<WithdrawMigrationFeeCtx>, flag: u8) -> Result<()> {
+        instructions::handle_withdraw_migration_fee(ctx, flag)
+    }
+
     /// TRADING BOTS FUNCTIONS ////
     pub fn swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> {
         instructions::handle_swap(ctx, params)

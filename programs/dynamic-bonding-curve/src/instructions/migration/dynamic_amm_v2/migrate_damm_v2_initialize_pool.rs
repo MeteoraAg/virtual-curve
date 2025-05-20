@@ -15,8 +15,8 @@ use crate::{
     params::fee_parameters::to_bps,
     safe_math::SafeMath,
     state::{
-        LiquidityDistribution, MigrationFeeOption, MigrationOption, MigrationProgress, PoolConfig,
-        VirtualPool,
+        LiquidityDistribution, MigrationAmount, MigrationFeeOption, MigrationOption,
+        MigrationProgress, PoolConfig, VirtualPool,
     },
     *,
 };
@@ -430,14 +430,15 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     let protocol_and_partner_base_fee = virtual_pool.get_protocol_and_trading_base_fee()?;
     let migration_sqrt_price = config.migration_sqrt_price;
-    let quote_threshold = config.migration_quote_threshold;
+
+    let MigrationAmount { quote_amount, .. } = config.get_migration_quote_amount_for_config()?;
     let excluded_fee_base_reserve =
         initial_base_vault_amount.safe_sub(protocol_and_partner_base_fee)?;
 
     // calculate initial liquidity
     let initial_liquidity = get_liquidity_for_adding_liquidity(
         excluded_fee_base_reserve,
-        quote_threshold,
+        quote_amount,
         migration_sqrt_price,
     )?;
 
@@ -500,7 +501,7 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     let updated_excluded_fee_base_reserve =
         excluded_fee_base_reserve.safe_sub(deposited_base_amount)?;
-    let updated_quote_threshold = quote_threshold.safe_sub(deposited_quote_amount)?;
+    let updated_quote_threshold = quote_amount.safe_sub(deposited_quote_amount)?;
     let liquidity_for_second_position = get_liquidity_for_adding_liquidity(
         updated_excluded_fee_base_reserve,
         updated_quote_threshold,

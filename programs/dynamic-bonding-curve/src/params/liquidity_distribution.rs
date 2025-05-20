@@ -10,7 +10,7 @@ use crate::{
         get_initial_liquidity_from_delta_quote, get_next_sqrt_price_from_input,
     },
     safe_math::SafeMath,
-    state::{LiquidityDistributionConfig, MigrationOption},
+    state::{LiquidityDistributionConfig, MigrationAmount, MigrationOption, PoolConfig},
     u128x128_math::Rounding,
     PoolError,
 };
@@ -69,9 +69,12 @@ pub fn get_base_token_for_swap(
 
 pub fn get_migration_base_token(
     migration_threshold: u64,
+    migration_fee_percentage: u8,
     sqrt_migration_price: u128,
     migration_option: MigrationOption,
 ) -> Result<u64> {
+    let MigrationAmount { quote_amount, .. } =
+        PoolConfig::get_migration_quote_amount(migration_threshold, migration_fee_percentage)?;
     match migration_option {
         MigrationOption::MeteoraDamm => {
             // constant product
@@ -79,7 +82,7 @@ pub fn get_migration_base_token(
             // price = quote / base for constant-product
             // base = quote / price
             let price = sqrt_migration_price.safe_mul(sqrt_migration_price)?;
-            let quote = U256::from(migration_threshold).safe_shl(128)?;
+            let quote = U256::from(quote_amount).safe_shl(128)?;
             // round up
             let (mut base, rem) = quote.div_rem(price);
             if !rem.is_zero() {
@@ -91,7 +94,7 @@ pub fn get_migration_base_token(
         MigrationOption::DammV2 => {
             // calculate to L firsty
             let liquidity = get_initial_liquidity_from_delta_quote(
-                migration_threshold,
+                quote_amount,
                 MIN_SQRT_PRICE,
                 sqrt_migration_price,
             )?;
@@ -117,13 +120,9 @@ pub fn get_migration_base_token(
                     liquidity,
                 )?;
                 // TODO no need to validate for _initial_base_amount?
-                msg!(
-                    "debug dammv2 {} {}",
-                    initial_quote_amount,
-                    migration_threshold
-                );
+                msg!("debug dammv2 {} {}", initial_quote_amount, quote_amount);
                 require!(
-                    initial_quote_amount <= migration_threshold,
+                    initial_quote_amount <= quote_amount,
                     PoolError::InsufficientLiquidityForMigration
                 );
             }
