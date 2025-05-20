@@ -42,13 +42,13 @@ pub fn handle_transfer_pool_creator<'c: 'info, 'info>(
             let migration_option = MigrationOption::try_from(config.migration_option)
                 .map_err(|_| PoolError::InvalidMigrationOption)?;
             if migration_option == MigrationOption::MeteoraDamm {
-                // check if creator and partner has claim lp token and locked escrow
+                // Can only transfer pool creator after LP claimed + locked
                 let migration_metadata_account = ctx
                     .remaining_accounts
                     .get(0)
                     .ok_or_else(|| PoolError::InvalidAccount)?;
                 let migration_metadata_loader: AccountLoader<'_, MeteoraDammMigrationMetadata> =
-                    AccountLoader::try_from(migration_metadata_account)?; // TODO fix damm config in remaning accounts
+                    AccountLoader::try_from(migration_metadata_account)?;
                 let migration_metadata = migration_metadata_loader.load()?;
 
                 require!(
