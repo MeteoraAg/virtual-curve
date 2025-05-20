@@ -102,12 +102,12 @@ pub fn handle_withdraw_migration_fee(
             PoolError::NotPermitToDoThisAction
         );
         let mask = CREATOR_MASK;
-        // Ensure the partner has never been withdrawn
+        // Ensure the creator has never been withdrawn
         require!(
             pool.eligible_to_withdraw_migration_fee(mask),
             PoolError::MigrationFeeHasBeenWithdraw
         );
-        // update partner withdraw migration fee
+        // update creator withdraw migration fee
         pool.update_withdraw_migration_fee(mask);
         creator_migration_fee
     };
