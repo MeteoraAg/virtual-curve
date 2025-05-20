@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 use crate::{
     const_pda,
-    safe_math::SafeMath,
     state::{MigrationFeeDistribution, PoolConfig, VirtualPool, CREATOR_MASK, PARTNER_MASK},
     token::transfer_from_pool,
-    EvtCreatorWithdrawMigrationFee, PoolError,
+    EvtWithdrawMigrationFee, PoolError,
 };
 
 /// Accounts for creator withdraw migration fee
@@ -46,7 +46,28 @@ pub struct WithdrawMigrationFeeCtx<'info> {
     pub token_quote_program: Interface<'info, TokenInterface>,
 }
 
-pub fn handle_withdraw_migration_fee(ctx: Context<WithdrawMigrationFeeCtx>) -> Result<()> {
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
+    Default,
+)]
+pub enum SenderFlag {
+    #[default]
+    Partner,
+    Creator,
+}
+
+pub fn handle_withdraw_migration_fee(
+    ctx: Context<WithdrawMigrationFeeCtx>,
+    flag: u8, // 0 as partner and 1 as creator
+) -> Result<()> {
     let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.virtual_pool.load_mut()?;
 
@@ -55,46 +76,41 @@ pub fn handle_withdraw_migration_fee(ctx: Context<WithdrawMigrationFeeCtx>) -> R
         pool.is_curve_complete(config.migration_quote_threshold),
         PoolError::NotPermitToDoThisAction
     );
-
-    let is_partner = ctx.accounts.sender.key() == config.fee_claimer;
-    let is_creator = ctx.accounts.sender.key() == pool.creator;
-
     let MigrationFeeDistribution {
         creator_migration_fee,
         partner_migration_fee,
     } = config.get_migration_fee_distribution()?;
 
-    let partner_migration_fee = if is_partner {
+    let sender_flag = SenderFlag::try_from(flag).map_err(|_| PoolError::TypeCastFailed)?;
+    let fee = if sender_flag == SenderFlag::Partner {
+        require!(
+            ctx.accounts.sender.key() == config.fee_claimer,
+            PoolError::NotPermitToDoThisAction
+        );
         let mask = PARTNER_MASK;
         // Ensure the partner has never been withdrawn
         require!(
             pool.eligible_to_withdraw_migration_fee(mask),
             PoolError::MigrationFeeHasBeenWithdraw
         );
-        // update creator withdraw migration fee
+        // update partner withdraw migration fee
         pool.update_withdraw_migration_fee(mask);
-
         partner_migration_fee
     } else {
-        0
-    };
-
-    let creator_migration_fee = if is_creator {
+        require!(
+            ctx.accounts.sender.key() == pool.creator,
+            PoolError::NotPermitToDoThisAction
+        );
         let mask = CREATOR_MASK;
-        // Ensure the creator has never been withdrawn
+        // Ensure the partner has never been withdrawn
         require!(
             pool.eligible_to_withdraw_migration_fee(mask),
             PoolError::MigrationFeeHasBeenWithdraw
         );
-        // update creator withdraw migration fee
+        // update partner withdraw migration fee
         pool.update_withdraw_migration_fee(mask);
-
         creator_migration_fee
-    } else {
-        0
     };
-
-    let total_fee = partner_migration_fee.safe_add(creator_migration_fee)?;
 
     transfer_from_pool(
         ctx.accounts.pool_authority.to_account_info(),
@@ -106,12 +122,10 @@ pub fn handle_withdraw_migration_fee(ctx: Context<WithdrawMigrationFeeCtx>) -> R
         const_pda::pool_authority::BUMP,
     )?;
 
-    // update creator withdraw migration fee
-    pool.update_withdraw_migration_fee(mask);
-
-    emit_cpi!(EvtCreatorWithdrawMigrationFee {
+    emit_cpi!(EvtWithdrawMigrationFee {
         pool: ctx.accounts.virtual_pool.key(),
-        fee
+        fee,
+        flag
     });
     Ok(())
 }

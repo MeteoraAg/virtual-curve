@@ -6,5 +6,3 @@ pub mod ix_withdraw_creator_surplus;
 pub use ix_withdraw_creator_surplus::*;
 pub mod ix_transfer_pool_creator;
 pub use ix_transfer_pool_creator::*;
-pub mod ix_withdraw_creator_migration_fee;
-pub use ix_withdraw_creator_migration_fee::*;

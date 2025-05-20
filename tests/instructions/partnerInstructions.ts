@@ -412,7 +412,7 @@ export async function partnerWithdrawMigrationFee(
   }
 
   const transaction = await program.methods
-    .partnerWithdrawMigrationFee()
+    .withdrawMigrationFee(0)
     .accountsPartial({
       poolAuthority,
       config: poolState.config,
@@ -420,7 +420,7 @@ export async function partnerWithdrawMigrationFee(
       tokenQuoteAccount,
       quoteVault: poolState.quoteVault,
       quoteMint: configState.quoteMint,
-      feeClaimer: partner.publicKey,
+      sender: partner.publicKey,
       tokenQuoteProgram: getTokenProgram(configState.quoteTokenFlag),
     })
     .preInstructions(preInstructions)

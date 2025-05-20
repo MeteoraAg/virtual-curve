@@ -158,9 +158,10 @@ pub struct EvtUpdatePoolCreator {
 }
 
 #[event]
-pub struct EvtCreatorWithdrawMigrationFee {
+pub struct EvtWithdrawMigrationFee {
     pub pool: Pubkey,
     pub fee: u64,
+    pub flag: u8,
 }
 
 #[event]
