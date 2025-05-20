@@ -121,13 +121,10 @@ pub enum PoolError {
 
     #[msg("Invalid account for the instruction")]
     InvalidAccount,
-<<<<<<< HEAD
 
     #[msg("Invalid migrator fee percentage")]
     InvalidMigratorFeePercentage,
 
     #[msg("Migration fee has been withdraw")]
     MigrationFeeHasBeenWithdraw,
-=======
->>>>>>> a2e6fb8 (disable update pool creator if LP is not locked)
 }
