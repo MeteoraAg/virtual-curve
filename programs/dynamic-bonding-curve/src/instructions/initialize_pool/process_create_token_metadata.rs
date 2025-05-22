@@ -24,10 +24,11 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     let mut builder = mpl_token_metadata::instructions::CreateMetadataAccountV3CpiBuilder::new(
         &params.metadata_program,
     );
+
     builder.mint(&params.mint);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
-    if params.update_authority == TokenUpdateAuthorityOption::Mutable {
+    if params.update_authority == TokenUpdateAuthorityOption::Creator {
         builder.is_mutable(true);
         builder.update_authority(&params.creator, false);
     } else {

@@ -277,7 +277,8 @@ impl LockedVestingConfig {
 )]
 pub enum TokenUpdateAuthorityOption {
     #[default]
-    Mutable,
+    Creator,
+    Partner,
     Immutable,
 }
 

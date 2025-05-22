@@ -149,12 +149,12 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    let token_update_authority =
-        if config.get_token_update_authority()? == TokenUpdateAuthorityOption::Mutable {
-            Some(ctx.accounts.creator.key())
-        } else {
-            None
-        };
+    let token_update_authority = match config.get_token_update_authority()? {
+        TokenUpdateAuthorityOption::Creator => Some(ctx.accounts.creator.key()),
+        TokenUpdateAuthorityOption::Partner => Some(config.fee_claimer),
+        TokenUpdateAuthorityOption::Immutable => None,
+    };
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
