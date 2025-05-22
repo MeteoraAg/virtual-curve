@@ -119,7 +119,7 @@ impl LockedVestingParams {
             cliff_unlock_amount: self.cliff_unlock_amount,
             amount_per_period: self.amount_per_period,
             number_of_period: self.number_of_period,
-            update_recipient_mode: 1, // only creator
+            update_recipient_mode: 2, // only recipient
             cancel_mode: 1,           // only creator
         })
     }
