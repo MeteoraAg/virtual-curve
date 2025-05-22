@@ -18,10 +18,10 @@ use crate::{
     },
     u128x128_math::Rounding,
     utils_math::safe_mul_div_cast_u64,
-    PoolError,
+    PoolError, SwapMode,
 };
 
-use super::PartnerAndCreatorSplitFee;
+use super::{PartnerAndCreatorSplitFee, PoolFeesConfig};
 
 /// collect fee mode
 #[repr(u8)]
@@ -206,23 +206,28 @@ impl VirtualPool {
         fee_mode: &FeeMode,
         trade_direction: TradeDirection,
         current_point: u64,
-    ) -> Result<SwapResult> {
+        swap_mode: SwapMode,
+    ) -> Result<(SwapResult, u64)> {
         let mut actual_protocol_fee = 0;
         let mut actual_trading_fee = 0;
         let mut actual_referral_fee = 0;
 
-        let actual_amount_in = if fee_mode.fees_on_input {
+        let trade_fee_numerator = config.pool_fees.get_total_trading_fee(
+            &self.volatility_tracker,
+            current_point,
+            self.activation_point,
+        )?;
+
+        let mut actual_amount_in = if fee_mode.fees_on_input {
             let FeeOnAmountResult {
                 amount,
                 protocol_fee,
                 trading_fee,
                 referral_fee,
             } = config.pool_fees.get_fee_on_amount(
-                &self.volatility_tracker,
+                trade_fee_numerator,
                 amount_in,
                 fee_mode.has_referral,
-                current_point,
-                self.activation_point,
             )?;
 
             actual_protocol_fee = protocol_fee;
@@ -235,6 +240,7 @@ impl VirtualPool {
         };
 
         let SwapAmount {
+            amount_in: consumed_input_amount, // amount excluded fee
             output_amount,
             next_sqrt_price,
         } = match trade_direction {
@@ -242,9 +248,45 @@ impl VirtualPool {
                 self.get_swap_amount_from_base_to_quote(config, actual_amount_in)
             }
             TradeDirection::QuoteToBase => {
-                self.get_swap_amount_from_quote_to_base(config, actual_amount_in)
+                self.get_swap_amount_from_quote_to_base(config, actual_amount_in, swap_mode)
             }
         }?;
+
+        // check if it is partial fill
+        let user_pay_input_amount = if consumed_input_amount < actual_amount_in {
+            if fee_mode.fees_on_input {
+                let included_fee_amount_in = PoolFeesConfig::get_included_fee_amount(
+                    trade_fee_numerator,
+                    consumed_input_amount,
+                )?;
+
+                let FeeOnAmountResult {
+                    amount,
+                    protocol_fee,
+                    trading_fee,
+                    referral_fee,
+                } = config.pool_fees.get_fee_on_amount(
+                    trade_fee_numerator,
+                    included_fee_amount_in,
+                    fee_mode.has_referral,
+                )?;
+                // that should never happen
+                require!(
+                    included_fee_amount_in <= amount_in,
+                    PoolError::UndeterminedError
+                );
+                actual_amount_in = amount;
+                actual_protocol_fee = protocol_fee;
+                actual_trading_fee = trading_fee;
+                actual_referral_fee = referral_fee;
+                included_fee_amount_in
+            } else {
+                actual_amount_in = consumed_input_amount;
+                consumed_input_amount
+            }
+        } else {
+            amount_in
+        };
 
         let actual_amount_out = if fee_mode.fees_on_input {
             output_amount
@@ -255,11 +297,9 @@ impl VirtualPool {
                 trading_fee,
                 referral_fee,
             } = config.pool_fees.get_fee_on_amount(
-                &self.volatility_tracker,
+                trade_fee_numerator,
                 output_amount,
                 fee_mode.has_referral,
-                current_point,
-                self.activation_point,
             )?;
 
             actual_protocol_fee = protocol_fee;
@@ -269,14 +309,17 @@ impl VirtualPool {
             amount
         };
 
-        Ok(SwapResult {
-            actual_input_amount: actual_amount_in,
-            output_amount: actual_amount_out,
-            next_sqrt_price,
-            trading_fee: actual_trading_fee,
-            protocol_fee: actual_protocol_fee,
-            referral_fee: actual_referral_fee,
-        })
+        Ok((
+            SwapResult {
+                actual_input_amount: actual_amount_in,
+                output_amount: actual_amount_out,
+                next_sqrt_price,
+                trading_fee: actual_trading_fee,
+                protocol_fee: actual_protocol_fee,
+                referral_fee: actual_referral_fee,
+            },
+            user_pay_input_amount,
+        ))
     }
 
     fn get_swap_amount_from_base_to_quote(
@@ -355,6 +398,7 @@ impl VirtualPool {
         }
 
         Ok(SwapAmount {
+            amount_in,
             output_amount: total_output_amount,
             next_sqrt_price: current_sqrt_price,
         })
@@ -364,6 +408,7 @@ impl VirtualPool {
         &self,
         config: &PoolConfig,
         amount_in: u64,
+        swap_mode: SwapMode,
     ) -> Result<SwapAmount> {
         // finding new target price
         let mut total_output_amount = 0u64;
@@ -418,13 +463,20 @@ impl VirtualPool {
             }
         }
 
-        // allow pool swallow an extra amount
-        require!(
-            amount_left <= config.get_max_swallow_quote_amount()?,
-            PoolError::SwapAmountIsOverAThreshold
-        );
+        let amount_in = match swap_mode {
+            SwapMode::ExactIn => {
+                // allow pool swallow an extra amount
+                require!(
+                    amount_left <= config.get_max_swallow_quote_amount()?,
+                    PoolError::SwapAmountIsOverAThreshold
+                );
+                amount_in
+            }
+            SwapMode::PartialFill => amount_in.safe_sub(amount_left)?,
+        };
 
         Ok(SwapAmount {
+            amount_in,
             output_amount: total_output_amount,
             next_sqrt_price: current_sqrt_price,
         })
@@ -648,6 +700,7 @@ pub struct SwapResult {
 }
 
 pub struct SwapAmount {
+    amount_in: u64,
     output_amount: u64,
     next_sqrt_price: u128,
 }

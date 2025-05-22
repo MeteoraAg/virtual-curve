@@ -12,6 +12,7 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct SwapParameters {
@@ -82,7 +83,11 @@ impl<'info> SwapCtx<'info> {
 }
 
 // TODO impl swap exact out
-pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> {
+pub fn handle_swap(
+    ctx: Context<SwapCtx>,
+    params: SwapParameters,
+    swap_mode: SwapMode,
+) -> Result<()> {
     let SwapParameters {
         amount_in,
         minimum_amount_out,
@@ -135,8 +140,14 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let current_point = get_current_point(config.activation_type)?;
     let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
 
-    let swap_result =
-        pool.get_swap_result(&config, amount_in, fee_mode, trade_direction, current_point)?;
+    let (swap_result, user_pay_input_amount) = pool.get_swap_result(
+        &config,
+        amount_in,
+        fee_mode,
+        trade_direction,
+        current_point,
+        swap_mode,
+    )?;
 
     require!(
         swap_result.output_amount >= minimum_amount_out,
@@ -158,7 +169,7 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         &ctx.accounts.input_token_account,
         input_vault_account,
         input_program,
-        amount_in,
+        user_pay_input_amount,
     )?;
 
     // send to user
@@ -245,6 +256,56 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
             quote_reserve: pool.quote_reserve,
         })
     }
+
+    Ok(())
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct SwapParameters2 {
+    /// amount in
+    amount_in: u64,
+    /// minimum amount out
+    minimum_amount_out: u64,
+    /// swap mode, should be exact in or partial fill for now
+    swap_mode: u8,
+    // padding for future use
+    padding: [u8; 32],
+}
+
+#[repr(u8)]
+#[derive(
+    Clone,
+    Copy,
+    Debug,
+    PartialEq,
+    IntoPrimitive,
+    TryFromPrimitive,
+    AnchorDeserialize,
+    AnchorSerialize,
+)]
+pub enum SwapMode {
+    ExactIn,
+    PartialFill,
+}
+
+pub fn handle_swap2(ctx: Context<SwapCtx>, params: SwapParameters2) -> Result<()> {
+    let SwapParameters2 {
+        amount_in,
+        minimum_amount_out,
+        swap_mode,
+        ..
+    } = params;
+
+    let swap_mode = SwapMode::try_from(swap_mode).map_err(|_| PoolError::TypeCastFailed)?;
+
+    handle_swap(
+        ctx,
+        SwapParameters {
+            amount_in,
+            minimum_amount_out,
+        },
+        swap_mode,
+    )?;
 
     Ok(())
 }
