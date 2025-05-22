@@ -1,4 +1,9 @@
-import { Keypair, PublicKey, SystemProgram, TransactionInstruction } from "@solana/web3.js";
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { VirtualCurveProgram } from "../utils/types";
 import { BanksClient } from "solana-bankrun";
@@ -8,10 +13,17 @@ import {
   getOrCreateAssociatedTokenAccount,
   unwrapSOLInstruction,
   getTokenAccount,
+  deriveMigrationMetadataAddress,
+  getTokenProgram,
 } from "../utils";
 import { getConfig, getVirtualPool } from "../utils/fetcher";
-import { NATIVE_MINT, TOKEN_2022_PROGRAM_ID, TOKEN_PROGRAM_ID } from "@solana/spl-token";
-
+import {
+  getAssociatedTokenAddressSync,
+  NATIVE_MINT,
+  TOKEN_2022_PROGRAM_ID,
+  TOKEN_PROGRAM_ID,
+} from "@solana/spl-token";
+import { expect } from "chai";
 
 export type ClaimCreatorTradeFeeParams = {
   creator: Keypair;
@@ -140,6 +152,89 @@ export async function creatorWithdrawSurplus(
       quoteMint: quoteMintInfo.mint,
       creator: creator.publicKey,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
+    })
+    .preInstructions(preInstructions)
+    .postInstructions(postInstructions)
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(creator);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export async function transferCreator(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  virtualPool: PublicKey,
+  creator: Keypair,
+  newCreator: PublicKey
+): Promise<void> {
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const migrationMetadata = deriveMigrationMetadataAddress(virtualPool);
+  const transaction = await program.methods
+    .transferPoolCreator()
+    .accountsPartial({
+      virtualPool,
+      newCreator,
+      config: poolState.config,
+      creator: creator.publicKey,
+    }).remainingAccounts(
+      [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: migrationMetadata,
+        }]
+    )
+    .transaction();
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(creator);
+  await processTransactionMaybeThrow(banksClient, transaction);
+}
+
+export type CreatorWithdrawMigrationFeeParams = {
+  creator: Keypair;
+  virtualPool: PublicKey;
+};
+export async function creatorWithdrawMigrationFee(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: CreatorWithdrawMigrationFeeParams
+): Promise<void> {
+  const { creator, virtualPool } = params;
+  const poolAuthority = derivePoolAuthority();
+  const poolState = await getVirtualPool(banksClient, program, virtualPool);
+  const configState = await getConfig(banksClient, program, poolState.config);
+
+  const preInstructions: TransactionInstruction[] = [];
+  const postInstructions: TransactionInstruction[] = [];
+  const { ata: tokenQuoteAccount, ix: createQuoteTokenAccountIx } =
+    await getOrCreateAssociatedTokenAccount(
+      banksClient,
+      creator,
+      configState.quoteMint,
+      creator.publicKey,
+      getTokenProgram(configState.quoteTokenFlag)
+    );
+
+  createQuoteTokenAccountIx && preInstructions.push(createQuoteTokenAccountIx);
+
+  if (configState.quoteMint.equals(NATIVE_MINT)) {
+    const unrapSOLIx = unwrapSOLInstruction(creator.publicKey);
+    unrapSOLIx && postInstructions.push(unrapSOLIx);
+  }
+
+  const transaction = await program.methods
+    .withdrawMigrationFee(1)
+    .accountsPartial({
+      poolAuthority,
+      config: poolState.config,
+      virtualPool,
+      tokenQuoteAccount,
+      quoteVault: poolState.quoteVault,
+      quoteMint: configState.quoteMint,
+      sender: creator.publicKey,
+      tokenQuoteProgram: getTokenProgram(configState.quoteTokenFlag),
     })
     .preInstructions(preInstructions)
     .postInstructions(postInstructions)

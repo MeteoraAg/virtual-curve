@@ -1,6 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 use locker::types::CreateVestingEscrowParameters;
+use static_assertions::const_assert_eq;
 
 use crate::{
     activation_handler::ActivationType,
@@ -15,7 +16,7 @@ use crate::{
     safe_math::SafeMath,
     state::{
         CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
-        TokenType,
+        TokenType, TokenUpdateAuthorityOption,
     },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
@@ -39,10 +40,40 @@ pub struct ConfigParameters {
     pub migration_fee_option: u8,
     pub token_supply: Option<TokenSupplyParams>,
     pub creator_trading_fee_percentage: u8, // percentage of trading fee creator can share with partner
-    pub padding_0: [u8; 7],
+    pub token_update_authority: u8,
+    pub migration_fee: MigrationFee,
+    pub padding_0: [u8; 4],
     /// padding for future use
     pub padding_1: [u64; 7],
     pub curve: Vec<LiquidityDistributionParameters>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq, InitSpace)]
+pub struct MigrationFee {
+    pub fee_percentage: u8,
+    pub creator_fee_percentage: u8,
+}
+const_assert_eq!(MigrationFee::INIT_SPACE, 2);
+
+impl MigrationFee {
+    pub fn validate(&self) -> Result<()> {
+        require!(
+            self.fee_percentage <= 50,
+            PoolError::InvalidMigratorFeePercentage
+        );
+        if self.fee_percentage == 0 {
+            require!(
+                self.creator_fee_percentage == 0,
+                PoolError::InvalidMigratorFeePercentage
+            );
+        } else {
+            require!(
+                self.creator_fee_percentage <= 100,
+                PoolError::InvalidMigratorFeePercentage
+            );
+        }
+        Ok(())
+    }
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, Debug, Default, PartialEq)]
@@ -88,7 +119,7 @@ impl LockedVestingParams {
             cliff_unlock_amount: self.cliff_unlock_amount,
             amount_per_period: self.amount_per_period,
             number_of_period: self.number_of_period,
-            update_recipient_mode: 1, // only creator
+            update_recipient_mode: 2, // only recipient
             cancel_mode: 1,           // only creator
         })
     }
@@ -132,6 +163,8 @@ impl ConfigParameters {
             PoolError::InvalidCreatorTradingFeePercentage
         );
 
+        self.migration_fee.validate()?;
+
         // validate collect fee mode
         require!(
             CollectFeeMode::try_from(self.collect_fee_mode).is_ok(),
@@ -163,6 +196,12 @@ impl ConfigParameters {
         require!(
             ActivationType::try_from(self.activation_type).is_ok(),
             PoolError::InvalidActivationType
+        );
+
+        // validate token update authority
+        require!(
+            TokenUpdateAuthorityOption::try_from(self.token_update_authority).is_ok(),
+            PoolError::InvalidTokenUpdateAuthorityOption
         );
 
         // validate token decimals
@@ -275,6 +314,8 @@ pub fn handle_create_config(
         token_supply,
         curve,
         creator_trading_fee_percentage,
+        token_update_authority,
+        migration_fee,
         ..
     } = config_parameters;
 
@@ -294,6 +335,7 @@ pub fn handle_create_config(
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
+        migration_fee.fee_percentage,
         sqrt_migration_price,
         MigrationOption::try_from(migration_option)
             .map_err(|_| PoolError::InvalidMigrationOption)?,
@@ -351,6 +393,8 @@ pub fn handle_create_config(
         ctx.accounts.leftover_receiver.key,
         &pool_fees,
         creator_trading_fee_percentage,
+        token_update_authority,
+        migration_fee,
         collect_fee_mode,
         migration_option,
         activation_type,

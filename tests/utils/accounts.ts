@@ -30,7 +30,7 @@ export function getFirstKey(key1: PublicKey, key2: PublicKey) {
   return buf2;
 }
 
-export function deriveMetadatAccount(mint: PublicKey): PublicKey {
+export function deriveMetadataAccount(mint: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("metadata"), METAPLEX_PROGRAM_ID.toBuffer(), mint.toBuffer()],
     METAPLEX_PROGRAM_ID
@@ -44,14 +44,12 @@ export function derivePoolAuthority(): PublicKey {
   )[0];
 }
 
-
 export function deriveBaseKeyForLocker(virtualPool: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("base_locker"), virtualPool.toBuffer()],
     DYNAMIC_BONDING_CURVE_PROGRAM_ID
   )[0];
 }
-
 
 export function derivePartnerMetadata(feeClaimer: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
@@ -60,15 +58,12 @@ export function derivePartnerMetadata(feeClaimer: PublicKey): PublicKey {
   )[0];
 }
 
-
-
 export function deriveVirtualPoolMetadata(pool: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("virtual_pool_metadata"), pool.toBuffer()],
     DYNAMIC_BONDING_CURVE_PROGRAM_ID
   )[0];
 }
-
 
 export function deriveConfigAddress(index: BN): PublicKey {
   return PublicKey.findProgramAddressSync(
@@ -108,7 +103,6 @@ export function deriveDammPoolAddress(
   )[0];
 }
 
-
 export function deriveDammV2PoolAddress(
   config: PublicKey,
   tokenAMint: PublicKey,
@@ -124,7 +118,6 @@ export function deriveDammV2PoolAddress(
     DAMM_V2_PROGRAM_ID
   )[0];
 }
-
 
 export function deriveTokenVaultAddress(
   tokenMint: PublicKey,
@@ -197,7 +190,6 @@ export function deriveMigrationMetadataAddress(
     DYNAMIC_BONDING_CURVE_PROGRAM_ID
   )[0];
 }
-
 
 export function deriveMigrationDammV2MetadataAddress(
   virtual_pool: PublicKey

@@ -81,6 +81,7 @@ fn get_constant_product_curve(
     let migration_sqrt_price = get_sqrt_price_from_price(migration_price); //round up to reduce base token
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
+        0,
         migration_sqrt_price,
         migration_option,
     )
@@ -154,6 +155,7 @@ fn get_total_supply_from_curve(
 
     let migration_base_amount = get_migration_base_token(
         migration_quote_threshold,
+        0,
         sqrt_migration_price,
         migration_option,
     )

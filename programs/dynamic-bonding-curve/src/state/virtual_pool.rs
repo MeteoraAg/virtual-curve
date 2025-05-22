@@ -1,3 +1,5 @@
+use std::ops::{BitAnd, BitXor};
+
 use anchor_lang::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use ruint::aliases::U256;
@@ -127,8 +129,8 @@ pub struct VirtualPool {
     pub is_withdraw_leftover: u8,
     /// is creator withdraw surplus
     pub is_creator_withdraw_surplus: u8,
-    /// padding
-    pub _padding_0: [u8; 1],
+    /// migration fee withdraw status, first bit is for partner, second bit is for creator
+    pub migration_fee_withdraw_status: u8,
     /// pool metrics
     pub metrics: PoolMetrics,
     /// The time curve is finished
@@ -142,6 +144,9 @@ pub struct VirtualPool {
 }
 
 const_assert_eq!(VirtualPool::INIT_SPACE, 416);
+
+pub const PARTNER_MASK: u8 = 0b100;
+pub const CREATOR_MASK: u8 = 0b010;
 
 #[zero_copy]
 #[derive(Debug, InitSpace, Default)]
@@ -623,6 +628,13 @@ impl VirtualPool {
 
     pub fn update_withdraw_leftover(&mut self) {
         self.is_withdraw_leftover = 1;
+    }
+
+    pub fn eligible_to_withdraw_migration_fee(&self, mask: u8) -> bool {
+        self.migration_fee_withdraw_status.bitand(mask) == 0
+    }
+    pub fn update_withdraw_migration_fee(&mut self, mask: u8) {
+        self.migration_fee_withdraw_status = self.migration_fee_withdraw_status.bitxor(mask)
     }
 
     pub fn get_migration_progress(&self) -> Result<MigrationProgress> {

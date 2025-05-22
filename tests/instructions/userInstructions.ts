@@ -8,7 +8,7 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import {
-  deriveMetadatAccount,
+  deriveMetadataAccount,
   derivePoolAddress,
   derivePoolAuthority,
   deriveTokenVaultAddress,
@@ -79,7 +79,7 @@ export async function createPoolWithSplToken(
   const baseVault = deriveTokenVaultAddress(baseMintKP.publicKey, pool);
   const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
 
-  const mintMetadata = deriveMetadatAccount(baseMintKP.publicKey);
+  const mintMetadata = deriveMetadataAccount(baseMintKP.publicKey);
 
   const tokenProgram =
     configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;

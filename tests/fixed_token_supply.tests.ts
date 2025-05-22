@@ -112,6 +112,11 @@ describe("Fixed token supply", () => {
                 postMigrationTokenSupply,
             },
             creatorTradingFeePercentage: 0,
+            tokenUpdateAuthority: 0,
+            migrationFee: {
+                feePercentage: 0,
+                creatorFeePercentage: 0,
+            },
             padding0: [],
             padding: [],
             curve: curves,

@@ -17,7 +17,7 @@ import {
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { deriveMetadatAccount, fundSol, getMint, startTest } from "./utils";
+import { fundSol, getMint, startTest } from "./utils";
 import {
   createDammConfig,
   createVirtualCurveProgram,
@@ -102,7 +102,6 @@ describe("Full flow with spl-token", () => {
           liquidity: U64_MAX.shln(30 + i),
         });
       }
-
     }
 
     const instructionParams: ConfigParameters = {
@@ -131,6 +130,11 @@ describe("Full flow with spl-token", () => {
       migrationFeeOption: 0,
       tokenSupply: null,
       creatorTradingFeePercentage: 0,
+      tokenUpdateAuthority: 0,
+      migrationFee: {
+        feePercentage: 0,
+        creatorFeePercentage: 0,
+      },
       padding0: [],
       padding: [],
       curve: curves,
@@ -164,11 +168,14 @@ describe("Full flow with spl-token", () => {
     );
 
     // validate freeze authority
-    const baseMintData = (
-      await getMint(context.banksClient, virtualPoolState.baseMint)
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
     );
-    expect(baseMintData.freezeAuthority.toString()).eq(PublicKey.default.toString())
-    expect(baseMintData.mintAuthorityOption).eq(0)
+    expect(baseMintData.freezeAuthority.toString()).eq(
+      PublicKey.default.toString()
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Swap", async () => {
@@ -209,10 +216,11 @@ describe("Full flow with spl-token", () => {
     await migrateToMeteoraDamm(context.banksClient, program, migrationParams);
 
     // validate mint authority
-    const baseMintData = (
-      await getMint(context.banksClient, virtualPoolState.baseMint)
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
     );
-    expect(baseMintData.mintAuthorityOption).eq(0)
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Partner lock LP", async () => {
