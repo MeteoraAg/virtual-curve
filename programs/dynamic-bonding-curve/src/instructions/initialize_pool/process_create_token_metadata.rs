@@ -15,6 +15,7 @@ pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub uri: &'a str,
     pub pool_authority_bump: u8,
     pub update_authority: TokenUpdateAuthorityOption,
+    pub partner: Pubkey,
 }
 
 pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -> Result<()> {
@@ -28,12 +29,18 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.mint(&params.mint);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
-    if params.update_authority == TokenUpdateAuthorityOption::Creator {
-        builder.is_mutable(true);
-        builder.update_authority(&params.creator, false);
-    } else {
-        builder.is_mutable(false);
-        builder.update_authority(&params.system_program, false);
+    let is_mutable = params.update_authority != TokenUpdateAuthorityOption::Immutable;
+    builder.is_mutable(is_mutable);
+    match params.update_authority {
+        TokenUpdateAuthorityOption::Creator => {
+            builder.update_authority(&params.creator, false);
+        }
+        TokenUpdateAuthorityOption::Partner => {
+            builder.update_authority(&params.pool_authority, false);
+        }
+        TokenUpdateAuthorityOption::Immutable => {
+            builder.update_authority(&params.system_program, false);
+        }
     }
 
     builder.payer(&params.payer);
@@ -50,6 +57,19 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.data(data);
 
     builder.invoke_signed(&[&seeds[..]])?;
+
+    // update new update authority to partner
+    if params.update_authority == TokenUpdateAuthorityOption::Partner {
+        let mut update_authority_builder =
+            mpl_token_metadata::instructions::UpdateMetadataAccountV2CpiBuilder::new(
+                &params.metadata_program,
+            );
+
+        update_authority_builder.metadata(&params.mint_metadata);
+        update_authority_builder.update_authority(&params.pool_authority);
+        update_authority_builder.new_update_authority(params.partner);
+        update_authority_builder.invoke_signed(&[&seeds[..]])?;
+    }
 
     Ok(())
 }

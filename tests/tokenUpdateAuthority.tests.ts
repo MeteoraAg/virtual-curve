@@ -1,27 +1,17 @@
 import { BN } from "bn.js";
 import { ProgramTestContext } from "solana-bankrun";
-import { unpack } from "@solana/spl-token-metadata";
-import {
-  deserializeMetadata,
-  MetadataAccountData,
-} from "@metaplex-foundation/mpl-token-metadata";
+import { deserializeMetadata } from "@metaplex-foundation/mpl-token-metadata";
 import {
   BaseFee,
-  claimProtocolFee,
-  ClaimTradeFeeParams,
-  claimTradingFee,
   ConfigParameters,
-  createClaimFeeOperator,
   createConfig,
   CreateConfigParams,
   createPoolWithSplToken,
   createPoolWithToken2022,
-  swap,
-  SwapParams,
 } from "./instructions";
 import { Pool, VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { deriveMetadataAccount, fundSol, getMint, startTest } from "./utils";
+import { deriveMetadataAccount, fundSol, startTest } from "./utils";
 import {
   createVirtualCurveProgram,
   MAX_SQRT_PRICE,
@@ -34,9 +24,7 @@ import {
   ACCOUNT_TYPE_SIZE,
   ExtensionType,
   getExtensionData,
-  getMetadataPointerState,
   MetadataPointerLayout,
-  MintLayout,
   NATIVE_MINT,
 } from "@solana/spl-token";
 import { expect } from "chai";
@@ -123,10 +111,14 @@ describe("Create pool with token2022", () => {
       },
       migrationFeeOption: 0,
       tokenSupply: null,
+      migrationFee: {
+        creatorFeePercentage: 0,
+        feePercentage: 0,
+      },
       creatorTradingFeePercentage: 0,
-      tokenUpdateAuthority: 0, // mutable
+      tokenUpdateAuthority: 0, // creator
       padding0: [],
-      padding: [],
+      padding1: [],
       curve: curves,
     };
     let params: CreateConfigParams = {
@@ -144,7 +136,7 @@ describe("Create pool with token2022", () => {
       params
     );
 
-    params.instructionParams.tokenUpdateAuthority = 1; // Immutable
+    params.instructionParams.tokenUpdateAuthority = 2; // Immutable
     params.instructionParams.tokenType = 1;
     immutConfig = await createConfig(context.banksClient, program, params);
     params.instructionParams.tokenType = 0;
