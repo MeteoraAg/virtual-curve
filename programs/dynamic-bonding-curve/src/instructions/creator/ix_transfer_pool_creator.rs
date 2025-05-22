@@ -52,6 +52,11 @@ pub fn handle_transfer_pool_creator<'c: 'info, 'info>(
                 let migration_metadata = migration_metadata_loader.load()?;
 
                 require!(
+                    migration_metadata.virtual_pool == ctx.accounts.virtual_pool.key(),
+                    PoolError::InvalidAccount
+                );
+
+                require!(
                     migration_metadata.partner_locked_lp == 0
                         || migration_metadata.is_partner_lp_locked(),
                     PoolError::NotPermitToDoThisAction
