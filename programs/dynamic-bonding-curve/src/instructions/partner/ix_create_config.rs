@@ -204,16 +204,6 @@ impl ConfigParameters {
             PoolError::InvalidTokenUpdateAuthorityOption
         );
 
-        if token_type_value == TokenType::SplToken {
-            let token_update_authority =
-                TokenUpdateAuthorityOption::try_from(self.token_update_authority)
-                    .map_err(|_| PoolError::InvalidTokenUpdateAuthorityOption)?;
-            require!(
-                token_update_authority != TokenUpdateAuthorityOption::Partner,
-                PoolError::InvalidTokenUpdateAuthorityOption
-            )
-        }
-
         // validate token decimals
         require!(
             self.token_decimal >= 6 && self.token_decimal <= 9,
