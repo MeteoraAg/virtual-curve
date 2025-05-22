@@ -112,4 +112,7 @@ pub enum PoolError {
 
     #[msg("Invalid creator trading fee percentage")]
     InvalidCreatorTradingFeePercentage,
+
+    #[msg("Invalid first buy instruction")]
+    InvalidFirstBuyInstruction,
 }

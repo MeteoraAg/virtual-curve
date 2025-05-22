@@ -21,7 +21,7 @@ use crate::{
     PoolError,
 };
 
-use super::PartnerAndCreatorSplitFee;
+use super::{IntergerBoolean, PartnerAndCreatorSplitFee};
 
 /// collect fee mode
 #[repr(u8)]
@@ -127,8 +127,8 @@ pub struct VirtualPool {
     pub is_withdraw_leftover: u8,
     /// is creator withdraw surplus
     pub is_creator_withdraw_surplus: u8,
-    /// padding
-    pub _padding_0: [u8; 1],
+    /// check if pool is new or not
+    pub is_swapped: u8,
     /// pool metrics
     pub metrics: PoolMetrics,
     /// The time curve is finished
@@ -206,6 +206,7 @@ impl VirtualPool {
         fee_mode: &FeeMode,
         trade_direction: TradeDirection,
         current_point: u64,
+        is_creator_first_buy: bool,
     ) -> Result<SwapResult> {
         let mut actual_protocol_fee = 0;
         let mut actual_trading_fee = 0;
@@ -223,6 +224,7 @@ impl VirtualPool {
                 fee_mode.has_referral,
                 current_point,
                 self.activation_point,
+                is_creator_first_buy,
             )?;
 
             actual_protocol_fee = protocol_fee;
@@ -260,6 +262,7 @@ impl VirtualPool {
                 fee_mode.has_referral,
                 current_point,
                 self.activation_point,
+                is_creator_first_buy,
             )?;
 
             actual_protocol_fee = protocol_fee;
@@ -486,6 +489,7 @@ impl VirtualPool {
         }
 
         self.update_post_swap(config, old_sqrt_price, current_timestamp)?;
+        self.is_swapped = IntergerBoolean::Yes.into();
         Ok(())
     }
 

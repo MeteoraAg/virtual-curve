@@ -66,10 +66,15 @@ impl PoolFeesConfig {
         volatility_tracker: &VolatilityTracker,
         current_point: u64,
         activation_point: u64,
+        is_creator_first_buy: bool,
     ) -> Result<u64> {
-        let base_fee_numerator = self
-            .base_fee
-            .get_base_fee_numerator(current_point, activation_point)?;
+        // skip base fee if it is creator first buy
+        let base_fee_numerator = if is_creator_first_buy {
+            self.base_fee.get_min_base_fee_numerator()?
+        } else {
+            self.base_fee
+                .get_base_fee_numerator(current_point, activation_point)?
+        };
 
         let total_fee_numerator = self
             .dynamic_fee
@@ -93,9 +98,14 @@ impl PoolFeesConfig {
         has_referral: bool,
         current_point: u64,
         activation_point: u64,
+        is_creator_first_buy: bool,
     ) -> Result<FeeOnAmountResult> {
-        let trade_fee_numerator =
-            self.get_total_trading_fee(volatility_tracker, current_point, activation_point)?;
+        let trade_fee_numerator = self.get_total_trading_fee(
+            volatility_tracker,
+            current_point,
+            activation_point,
+            is_creator_first_buy,
+        )?;
 
         let trading_fee: u64 =
             safe_mul_div_cast_u64(amount, trade_fee_numerator, FEE_DENOMINATOR, Rounding::Up)?;
@@ -279,6 +289,23 @@ pub enum MigrationOption {
     DammV2,
 }
 
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    AnchorSerialize,
+    AnchorDeserialize,
+    IntoPrimitive,
+    TryFromPrimitive,
+)]
+#[repr(u8)]
+pub enum IntergerBoolean {
+    No,
+    Yes,
+}
+
 #[repr(u8)]
 #[derive(
     Clone,
@@ -380,8 +407,10 @@ pub struct PoolConfig {
     pub fixed_token_supply_flag: u8,
     /// creator trading fee percentage
     pub creator_trading_fee_percentage: u8,
+    /// skip sniper fee for creator first buy
+    pub skip_sniper_fee_for_creator_first_buy: u8,
     /// padding 0
-    pub _padding_0: [u8; 2],
+    pub _padding_0: u8,
     /// padding 1
     pub _padding_1: [u8; 8],
     /// swap base amount
@@ -437,6 +466,7 @@ impl PoolConfig {
         collect_fee_mode: u8,
         migration_option: u8,
         activation_type: u8,
+        skip_sniper_fee_for_creator_first_buy: u8,
         token_decimal: u8,
         token_type: u8,
         quote_token_flag: u8,
@@ -485,6 +515,7 @@ impl PoolConfig {
         self.fixed_token_supply_flag = fixed_token_supply_flag;
         self.pre_migration_token_supply = pre_migration_token_supply;
         self.post_migration_token_supply = post_migration_token_supply;
+        self.skip_sniper_fee_for_creator_first_buy = skip_sniper_fee_for_creator_first_buy;
 
         for i in 0..curve.len() {
             self.curve[i] = curve[i].to_liquidity_distribution_config();

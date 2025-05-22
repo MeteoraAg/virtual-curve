@@ -86,6 +86,7 @@ fn test_swap() {
             &fee_mode,
             TradeDirection::QuoteToBase,
             0,
+            false,
         )
         .unwrap();
     println!("{:?}", result);
