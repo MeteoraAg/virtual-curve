@@ -33,10 +33,10 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.is_mutable(is_mutable);
     match params.update_authority {
         TokenUpdateAuthorityOption::Creator => {
-            // temporarily use pool_authority as update authority firstly before transferring to partner
             builder.update_authority(&params.creator, false);
         }
         TokenUpdateAuthorityOption::Partner => {
+            // temporarily use pool_authority as update authority firstly before transferring to partner
             builder.update_authority(&params.pool_authority, false);
         }
         TokenUpdateAuthorityOption::Immutable => {
