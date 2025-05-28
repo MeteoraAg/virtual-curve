@@ -43,6 +43,7 @@ pub fn quote_exact_in(
         fee_mode,
         trade_direction,
         current_point,
+        false,
     )?;
 
     Ok(swap_result)

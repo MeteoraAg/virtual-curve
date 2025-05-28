@@ -3,6 +3,7 @@ import {
   Keypair,
   PublicKey,
   SystemProgram,
+  SYSVAR_INSTRUCTIONS_PUBKEY,
   SYSVAR_RENT_PUBKEY,
   Transaction,
   TransactionInstruction,
@@ -100,6 +101,107 @@ export async function createPoolWithSplToken(
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
       tokenProgram,
     })
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer, baseMintKP, poolCreator);
+
+  await processTransactionMaybeThrow(banksClient, transaction);
+
+  return pool;
+}
+
+
+export async function createPoolWithSplTokenAndBundleFirstSwap(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: CreatePoolSplTokenParams,
+  amountIn: BN,
+): Promise<PublicKey> {
+  const { payer, quoteMint, poolCreator, config, instructionParams } = params;
+  const configState = await getConfig(banksClient, program, config);
+
+  const poolAuthority = derivePoolAuthority();
+  const baseMintKP = Keypair.generate();
+  const pool = derivePoolAddress(config, baseMintKP.publicKey, quoteMint);
+  const baseVault = deriveTokenVaultAddress(baseMintKP.publicKey, pool);
+  const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
+
+  const mintMetadata = deriveMetadatAccount(baseMintKP.publicKey);
+
+  const tokenProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const preInstructions: TransactionInstruction[] = [];
+  const [
+    { ata: inputTokenAccount, ix: createInputTokenXIx },
+    { ata: outputTokenAccount, ix: createOutputTokenYIx },
+  ] = await Promise.all([
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      quoteMint,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    ),
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      baseMintKP.publicKey,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    ),
+  ]);
+  createInputTokenXIx && preInstructions.push(createInputTokenXIx);
+  createOutputTokenYIx && preInstructions.push(createOutputTokenYIx);
+  const swapInstruction = await program.methods
+    .swap({ amountIn, minimumAmountOut: new BN(0) })
+    .accountsPartial({
+      poolAuthority,
+      config,
+      pool,
+      inputTokenAccount,
+      outputTokenAccount,
+      baseVault: baseVault,
+      quoteVault: quoteVault,
+      baseMint: baseMintKP.publicKey,
+      quoteMint,
+      payer: payer.publicKey,
+      tokenBaseProgram: TOKEN_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      referralTokenAccount: null,
+    })
+    .remainingAccounts(
+      [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
+        }
+      ]
+    )
+    .instruction();
+  const transaction = await program.methods
+    .initializeVirtualPoolWithSplToken(instructionParams)
+    .accountsPartial({
+      config,
+      baseMint: baseMintKP.publicKey,
+      quoteMint,
+      pool,
+      payer: payer.publicKey,
+      creator: poolCreator.publicKey,
+      poolAuthority,
+      baseVault,
+      quoteVault,
+      mintMetadata,
+      metadataProgram: METAPLEX_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      tokenProgram,
+    })
+    .postInstructions(preInstructions)
+    .postInstructions([
+      swapInstruction,
+    ])
     .transaction();
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];

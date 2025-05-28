@@ -52,6 +52,7 @@ pub struct InitializeVirtualPoolWithToken2022Ctx<'info> {
     pub quote_mint: Box<InterfaceAccount<'info, Mint>>,
 
     /// Initialize an account to store the pool state
+    /// Altering the order of the virtual_pool account will break "min fee charges for creator first buy"
     #[account(
         init,
         seeds = [

@@ -1,3 +1,4 @@
+use crate::instruction::{InitializeVirtualPoolWithSplToken, InitializeVirtualPoolWithToken2022};
 use crate::math::safe_math::SafeMath;
 use crate::state::MigrationProgress;
 use crate::EvtCurveComplete;
@@ -11,6 +12,7 @@ use crate::{
     EvtSwap, PoolError,
 };
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::sysvar;
 use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -117,10 +119,14 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
 
     require!(amount_in > 0, PoolError::AmountIsZero);
 
-    let has_referral = ctx.accounts.referral_token_account.is_some();
-
-    let config = ctx.accounts.config.load()?;
     let mut pool = ctx.accounts.pool.load_mut()?;
+    let config = ctx.accounts.config.load()?;
+    let is_creator_first_buy = config.skip_sniper_fee_for_creator_first_buy == 1
+        && pool.is_swapped == 0
+        && ctx.accounts.payer.key() == pool.creator
+        && validate_first_buy_instruction(&ctx.accounts.pool.key(), ctx.remaining_accounts).is_ok();
+
+    let has_referral = ctx.accounts.referral_token_account.is_some();
 
     // validate if it is over threshold
     require!(
@@ -135,8 +141,14 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     let current_point = get_current_point(config.activation_type)?;
     let fee_mode = &FeeMode::get_fee_mode(config.collect_fee_mode, trade_direction, has_referral)?;
 
-    let swap_result =
-        pool.get_swap_result(&config, amount_in, fee_mode, trade_direction, current_point)?;
+    let swap_result = pool.get_swap_result(
+        &config,
+        amount_in,
+        fee_mode,
+        trade_direction,
+        current_point,
+        is_creator_first_buy,
+    )?;
 
     require!(
         swap_result.output_amount >= minimum_amount_out,
@@ -150,8 +162,6 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
         trade_direction,
         current_timestamp,
     )?;
-
-    // send to reserve
     transfer_from_user(
         &ctx.accounts.payer,
         token_in_mint,
@@ -247,4 +257,47 @@ pub fn handle_swap(ctx: Context<SwapCtx>, params: SwapParameters) -> Result<()> 
     }
 
     Ok(())
+}
+
+pub fn validate_first_buy_instruction<'c, 'info>(
+    pool: &Pubkey,
+    remaining_accounts: &'c [AccountInfo<'info>],
+) -> Result<()> {
+    if remaining_accounts.len() == 0 {
+        return Err(PoolError::InvalidFirstBuyInstruction.into());
+    }
+
+    let instruction_sysvar_account_info = remaining_accounts.get(0).unwrap();
+
+    // get current index of instruction
+    let current_index =
+        sysvar::instructions::load_current_index_checked(instruction_sysvar_account_info)?;
+    let current_instruction = sysvar::instructions::load_instruction_at_checked(
+        current_index.into(),
+        instruction_sysvar_account_info,
+    )?;
+
+    if current_instruction.program_id != crate::ID {
+        // disable CPI
+        return Err(PoolError::InvalidFirstBuyInstruction.into());
+    }
+
+    for i in 0..current_index {
+        let instruction = sysvar::instructions::load_instruction_at_checked(
+            i.into(),
+            instruction_sysvar_account_info,
+        )?;
+
+        if instruction.program_id == crate::ID
+            && (instruction.data[..8].eq(InitializeVirtualPoolWithSplToken::DISCRIMINATOR)
+                || instruction.data[..8].eq(InitializeVirtualPoolWithToken2022::DISCRIMINATOR))
+        {
+            // index 5 is virtual_pool
+            if instruction.accounts[5].pubkey.eq(pool) {
+                return Ok(());
+            }
+        }
+    }
+
+    return Err(PoolError::InvalidFirstBuyInstruction.into());
 }
