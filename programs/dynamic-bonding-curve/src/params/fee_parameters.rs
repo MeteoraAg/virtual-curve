@@ -1,4 +1,5 @@
 //! Fees module includes information about fee charges
+use crate::activation_handler::ActivationType;
 use crate::base_fee::get_base_fee_handler;
 use crate::constants::fee::{HOST_FEE_PERCENT, MAX_BASIS_POINT, PROTOCOL_FEE_PERCENT};
 use crate::constants::{BASIS_POINT_MAX, BIN_STEP_BPS_DEFAULT, BIN_STEP_BPS_U128_DEFAULT, U24_MAX};
@@ -26,7 +27,7 @@ pub struct BaseFeeParameters {
 }
 
 impl BaseFeeParameters {
-    fn validate(&self, collect_fee_mode: u8) -> Result<()> {
+    fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()> {
         let base_fee_handler = get_base_fee_handler(
             self.cliff_fee_numerator,
             self.first_factor,
@@ -34,7 +35,7 @@ impl BaseFeeParameters {
             self.third_factor,
             self.base_fee_mode,
         )?;
-        base_fee_handler.validate(collect_fee_mode)?;
+        base_fee_handler.validate(collect_fee_mode, activation_type)?;
         Ok(())
     }
 
@@ -183,8 +184,8 @@ pub fn to_numerator(bps: u128, denominator: u128) -> Result<u64> {
 
 impl PoolFeeParameters {
     /// Validate that the fees are reasonable
-    pub fn validate(&self, collect_fee_mode: u8) -> Result<()> {
-        self.base_fee.validate(collect_fee_mode)?;
+    pub fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()> {
+        self.base_fee.validate(collect_fee_mode, activation_type)?;
 
         if let Some(dynamic_fee) = self.dynamic_fee {
             dynamic_fee.validate()?;

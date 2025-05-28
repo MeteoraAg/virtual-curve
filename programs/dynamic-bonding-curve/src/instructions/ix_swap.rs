@@ -296,7 +296,9 @@ pub fn validate_single_swap_instruction<'c, 'info>(
             if sibling_instruction.program_id == crate::ID
                 && sibling_instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR)
             {
-                return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+                if sibling_instruction.accounts[2].pubkey.eq(pool) {
+                    return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+                }
             }
             sibling_index = sibling_index.safe_add(1)?;
         }
@@ -321,9 +323,11 @@ pub fn validate_single_swap_instruction<'c, 'info>(
                 }
             }
         } else if instruction.data[..8].eq(SwapInstruction::DISCRIMINATOR) {
-            // otherwise, we just need to search swap instruction discriminator, so creator can still bundle initialzing pool and swap at 1 tx
-            msg!("Multiple swaps not allowed");
-            return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+            if instruction.accounts[2].pubkey.eq(pool) {
+                // otherwise, we just need to search swap instruction discriminator, so creator can still bundle initialzing pool and swap at 1 tx
+                msg!("Multiple swaps not allowed");
+                return Err(PoolError::FailToValidateSingleSwapInstruction.into());
+            }
         }
     }
 

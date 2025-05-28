@@ -1,4 +1,5 @@
 use crate::{
+    activation_handler::ActivationType,
     constants::fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR},
     fee_math::get_fee_in_period,
     math::safe_math::SafeMath,
@@ -62,7 +63,7 @@ impl FeeScheduler {
 }
 
 impl BaseFeeHandler for FeeScheduler {
-    fn validate(&self, _collect_fee_mode: u8) -> Result<()> {
+    fn validate(&self, _collect_fee_mode: u8, _activation_type: ActivationType) -> Result<()> {
         if self.period_frequency != 0 || self.number_of_period != 0 || self.reduction_factor != 0 {
             require!(
                 self.number_of_period != 0

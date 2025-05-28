@@ -123,8 +123,12 @@ impl ConfigParameters {
             PoolError::InvalidQuoteMint
         );
 
+        let activation_type = ActivationType::try_from(self.activation_type)
+            .map_err(|_| PoolError::TypeCastFailed)?;
+
         // validate fee
-        self.pool_fees.validate(self.collect_fee_mode)?;
+        self.pool_fees
+            .validate(self.collect_fee_mode, activation_type)?;
 
         // validate creator trading fee percentage
         require!(
@@ -158,12 +162,6 @@ impl ConfigParameters {
                 // nothing to check
             }
         }
-
-        // validate activation type
-        require!(
-            ActivationType::try_from(self.activation_type).is_ok(),
-            PoolError::InvalidActivationType
-        );
 
         // validate token decimals
         require!(

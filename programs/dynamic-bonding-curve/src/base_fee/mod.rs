@@ -5,10 +5,12 @@ pub use fee_rate_limiter::*;
 
 use anchor_lang::prelude::*;
 
-use crate::{params::swap::TradeDirection, state::BaseFeeMode, PoolError};
+use crate::{
+    activation_handler::ActivationType, params::swap::TradeDirection, state::BaseFeeMode, PoolError,
+};
 
 pub trait BaseFeeHandler {
-    fn validate(&self, collect_fee_mode: u8) -> Result<()>;
+    fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()>;
     fn get_base_fee_numerator(
         &self,
         current_point: u64,

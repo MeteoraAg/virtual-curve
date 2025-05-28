@@ -1,5 +1,9 @@
 use crate::{
-    constants::fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR},
+    activation_handler::ActivationType,
+    constants::{
+        fee::{FEE_DENOMINATOR, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR},
+        MAX_RATE_LIMITER_DURATION_IN_SECONDS, MAX_RATE_LIMITER_DURATION_IN_SLOTS,
+    },
     params::{fee_parameters::to_numerator, swap::TradeDirection},
     safe_math::SafeMath,
     state::CollectFeeMode,
@@ -128,7 +132,7 @@ impl FeeRateLimiter {
 }
 
 impl BaseFeeHandler for FeeRateLimiter {
-    fn validate(&self, collect_fee_mode: u8) -> Result<()> {
+    fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()> {
         let collect_fee_mode = CollectFeeMode::try_from(collect_fee_mode)
             .map_err(|_| PoolError::InvalidCollectFeeMode)?;
         // can only be apllied in quote token collect fee mode
@@ -143,6 +147,15 @@ impl BaseFeeHandler for FeeRateLimiter {
 
         require!(
             self.is_non_zero_rate_limiter(),
+            PoolError::InvalidFeeRateLimiter
+        );
+
+        let max_limiter_duration = match activation_type {
+            ActivationType::Slot => MAX_RATE_LIMITER_DURATION_IN_SLOTS,
+            ActivationType::Timestamp => MAX_RATE_LIMITER_DURATION_IN_SECONDS,
+        };
+        require!(
+            self.max_limiter_duration <= max_limiter_duration,
             PoolError::InvalidFeeRateLimiter
         );
 
@@ -176,21 +189,10 @@ impl BaseFeeHandler for FeeRateLimiter {
         trade_direction: TradeDirection,
         input_amount: u64,
     ) -> Result<u64> {
-        if self.is_zero_rate_limiter() {
-            return Ok(self.cliff_fee_numerator);
+        if self.is_rate_limiter_applied(current_point, activation_point, trade_direction)? {
+            self.get_fee_numerator_from_amount(input_amount)
+        } else {
+            Ok(self.cliff_fee_numerator)
         }
-
-        // only handle for the case quote to base and collect fee mode in quote token
-        if trade_direction == TradeDirection::BaseToQuote {
-            return Ok(self.cliff_fee_numerator);
-        }
-
-        let last_effective_rate_limiter_point =
-            u128::from(activation_point).safe_add(self.max_limiter_duration.into())?;
-        if u128::from(current_point) > last_effective_rate_limiter_point {
-            return Ok(self.cliff_fee_numerator);
-        }
-
-        self.get_fee_numerator_from_amount(input_amount)
     }
 }
