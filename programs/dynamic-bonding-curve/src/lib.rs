@@ -23,8 +23,6 @@ pub mod tests;
 
 pub mod params;
 
-pub const CONST_PROGRAM_ID: Pubkey =
-    Pubkey::from_str_const("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 declare_id!("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 #[program]

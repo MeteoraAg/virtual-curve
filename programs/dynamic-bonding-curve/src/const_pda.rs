@@ -6,7 +6,7 @@ pub mod pool_authority {
 
     const POOL_AUTHORITY_AND_BUMP: ([u8; 32], u8) = ed25519::derive_program_address(
         &[crate::constants::seeds::POOL_AUTHORITY_PREFIX],
-        &crate::CONST_PROGRAM_ID.to_bytes(),
+        &crate::ID_CONST.to_bytes(),
     );
 
     pub const ID: Pubkey = Pubkey::new_from_array(POOL_AUTHORITY_AND_BUMP.0);
@@ -18,11 +18,6 @@ pub mod pool_authority {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_declare_program_const_program_id_equals() {
-        assert_eq!(crate::ID, crate::CONST_PROGRAM_ID);
-    }
 
     #[test]
     fn test_const_pool_authority() {
