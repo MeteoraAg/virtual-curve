@@ -30,10 +30,10 @@ import {
 
 export type BaseFee = {
   cliffFeeNumerator: BN;
-  numberOfPeriod: number;
-  periodFrequency: BN;
-  reductionFactor: BN;
-  feeSchedulerMode: number;
+  firstFactor: number;
+  secondFactor: BN;
+  thirdFactor: BN;
+  baseFeeMode: number;
 };
 
 export type DynamicFee = {

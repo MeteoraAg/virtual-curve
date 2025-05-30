@@ -28,6 +28,13 @@ static_assertions::const_assert!(PARTNER_AND_CREATOR_SURPLUS_SHARE <= 100);
 
 pub const MAX_SWALLOW_PERCENTAGE: u8 = 20; // 20 %
 
+pub const MAX_RATE_LIMITER_DURATION_IN_SECONDS: u64 = 60 * 60 * 12; // 12 hours
+pub const MAX_RATE_LIMITER_DURATION_IN_SLOTS: u64 = 108000; // 12 hours
+static_assertions::const_assert_eq!(
+    MAX_RATE_LIMITER_DURATION_IN_SECONDS * 1000 / 400,
+    MAX_RATE_LIMITER_DURATION_IN_SLOTS
+);
+
 /// Store constants related to fees
 pub mod fee {
 
@@ -35,8 +42,8 @@ pub mod fee {
     pub const FEE_DENOMINATOR: u64 = 1_000_000_000;
 
     /// Max fee BPS
-    pub const MAX_FEE_BPS: u64 = 5000; // 50%
-    pub const MAX_FEE_NUMERATOR: u64 = 500_000_000; // 50%
+    pub const MAX_FEE_BPS: u64 = 9900; // 99%
+    pub const MAX_FEE_NUMERATOR: u64 = 990_000_000; // 99%
 
     /// Max basis point. 100% in pct
     pub const MAX_BASIS_POINT: u64 = 10000;

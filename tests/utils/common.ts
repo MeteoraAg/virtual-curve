@@ -50,7 +50,7 @@ import {
   MAX_SQRT_PRICE,
   MIN_SQRT_PRICE,
 } from "./constants";
-import { BanksClient } from "solana-bankrun";
+import { BanksClient, ProgramTestContext } from "solana-bankrun";
 import { ADMIN_USDC_ATA, LOCAL_ADMIN_KEYPAIR, USDC } from "./bankrun";
 
 export type DynamicVault = IdlAccounts<Vault>["vault"];
@@ -214,6 +214,18 @@ export async function getMint(banksClient: BanksClient, mint: PublicKey) {
 export async function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
+
+
+export const getCurrentSlot = async (banksClient: BanksClient): Promise<BN> => {
+  let slot = await banksClient.getSlot();
+  return new BN(slot.toString());
+};
+
+export async function warpSlotBy(context: ProgramTestContext, slots: BN) {
+  const clock = await context.banksClient.getClock();
+  await context.warpToSlot(clock.slot + BigInt(slots.toString()));
+}
+
 
 export const SET_COMPUTE_UNIT_LIMIT_IX =
   web3.ComputeBudgetProgram.setComputeUnitLimit({
@@ -383,7 +395,7 @@ export async function createDammV2Config(
   );
   const transaction = await program.methods
     .createConfig(params)
-    .accounts({
+    .accountsPartial({
       config,
       admin: payer.publicKey,
     })
