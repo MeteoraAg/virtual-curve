@@ -18,6 +18,8 @@ pub trait BaseFeeHandler {
         trade_direction: TradeDirection,
         input_amount: u64,
     ) -> Result<u64>;
+
+    fn get_min_base_fee_numerator(&self) -> Result<u64>;
 }
 
 pub fn get_base_fee_handler(

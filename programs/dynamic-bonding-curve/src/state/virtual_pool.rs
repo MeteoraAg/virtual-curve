@@ -23,7 +23,7 @@ use crate::{
     PoolError, SwapMode,
 };
 
-use super::{PartnerAndCreatorSplitFee, PoolFeesConfig};
+use super::{IntegerBoolean, PartnerAndCreatorSplitFee, PoolFeesConfig};
 
 /// collect fee mode
 #[repr(u8)]
@@ -139,8 +139,11 @@ pub struct VirtualPool {
     pub creator_base_fee: u64,
     /// creator quote fee
     pub creator_quote_fee: u64,
+    /// check if pool is new or not
+    pub is_swapped: u8,
+    pub _padding_0: [u8; 7],
     /// Padding for further use
-    pub _padding_1: [u64; 7],
+    pub _padding_1: [u64; 6],
 }
 
 const_assert_eq!(VirtualPool::INIT_SPACE, 416);
@@ -212,6 +215,7 @@ impl VirtualPool {
         trade_direction: TradeDirection,
         current_point: u64,
         swap_mode: SwapMode,
+        is_creator_first_buy: bool,
     ) -> Result<(SwapResult, u64)> {
         let mut actual_protocol_fee = 0;
         let mut actual_trading_fee = 0;
@@ -223,6 +227,7 @@ impl VirtualPool {
             self.activation_point,
             amount_in,
             trade_direction,
+            is_creator_first_buy,
         )?;
 
         let mut actual_amount_in = if fee_mode.fees_on_input {
@@ -545,6 +550,7 @@ impl VirtualPool {
         }
 
         self.update_post_swap(config, old_sqrt_price, current_timestamp)?;
+        self.is_swapped = IntegerBoolean::Yes.into();
         Ok(())
     }
 

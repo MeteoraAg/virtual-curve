@@ -111,6 +111,102 @@ export async function createPoolWithSplToken(
   return pool;
 }
 
+export async function createPoolWithSplTokenAndBundleFirstSwap(
+  banksClient: BanksClient,
+  program: VirtualCurveProgram,
+  params: CreatePoolSplTokenParams,
+  amountIn: BN
+): Promise<PublicKey> {
+  const { payer, quoteMint, poolCreator, config, instructionParams } = params;
+  const configState = await getConfig(banksClient, program, config);
+
+  const poolAuthority = derivePoolAuthority();
+  const baseMintKP = Keypair.generate();
+  const pool = derivePoolAddress(config, baseMintKP.publicKey, quoteMint);
+  const baseVault = deriveTokenVaultAddress(baseMintKP.publicKey, pool);
+  const quoteVault = deriveTokenVaultAddress(quoteMint, pool);
+
+  const mintMetadata = deriveMetadataAccount(baseMintKP.publicKey);
+
+  const tokenProgram =
+    configState.tokenType == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
+
+  const preInstructions: TransactionInstruction[] = [];
+  const [
+    { ata: inputTokenAccount, ix: createInputTokenXIx },
+    { ata: outputTokenAccount, ix: createOutputTokenYIx },
+  ] = await Promise.all([
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      quoteMint,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    ),
+    getOrCreateAssociatedTokenAccount(
+      banksClient,
+      payer,
+      baseMintKP.publicKey,
+      payer.publicKey,
+      TOKEN_PROGRAM_ID
+    ),
+  ]);
+  createInputTokenXIx && preInstructions.push(createInputTokenXIx);
+  createOutputTokenYIx && preInstructions.push(createOutputTokenYIx);
+  const swapInstruction = await program.methods
+    .swap({ amountIn, minimumAmountOut: new BN(0) })
+    .accountsPartial({
+      poolAuthority,
+      config,
+      pool,
+      inputTokenAccount,
+      outputTokenAccount,
+      baseVault: baseVault,
+      quoteVault: quoteVault,
+      baseMint: baseMintKP.publicKey,
+      quoteMint,
+      payer: payer.publicKey,
+      tokenBaseProgram: TOKEN_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      referralTokenAccount: null,
+    })
+    .remainingAccounts([
+      {
+        isSigner: false,
+        isWritable: false,
+        pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
+      },
+    ])
+    .instruction();
+  const transaction = await program.methods
+    .initializeVirtualPoolWithSplToken(instructionParams)
+    .accountsPartial({
+      config,
+      baseMint: baseMintKP.publicKey,
+      quoteMint,
+      pool,
+      payer: payer.publicKey,
+      creator: poolCreator.publicKey,
+      poolAuthority,
+      baseVault,
+      quoteVault,
+      mintMetadata,
+      metadataProgram: METAPLEX_PROGRAM_ID,
+      tokenQuoteProgram: TOKEN_PROGRAM_ID,
+      tokenProgram,
+    })
+    .postInstructions(preInstructions)
+    .postInstructions([swapInstruction])
+    .transaction();
+
+  transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
+  transaction.sign(payer, baseMintKP, poolCreator);
+
+  await processTransactionMaybeThrow(banksClient, transaction);
+
+  return pool;
+}
+
 export async function createPoolWithToken2022(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
@@ -167,7 +263,7 @@ export type SwapParams2 = {
   outputTokenMint: PublicKey;
   amountIn: BN;
   minimumAmountOut: BN;
-  swapMode: number,
+  swapMode: number;
   referralTokenAccount: PublicKey | null;
 };
 
@@ -269,13 +365,15 @@ export async function swap(
       tokenBaseProgram,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
       referralTokenAccount,
-    }).remainingAccounts( // TODO should check condition to add this in remaning accounts
+    })
+    .remainingAccounts(
+      // TODO should check condition to add this in remaning accounts
       [
         {
           isSigner: false,
           isWritable: false,
           pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
-        }
+        },
       ]
     )
     .preInstructions(preInstructions)
@@ -354,7 +452,12 @@ export async function getSwapInstruction(
   ]);
 
   const instruction = await program.methods
-    .swap2({ amountIn, minimumAmountOut, swapMode: 0, padding: new Array(32).fill(0)  })
+    .swap2({
+      amountIn,
+      minimumAmountOut,
+      swapMode: 0,
+      padding: new Array(32).fill(0),
+    })
     .accountsPartial({
       poolAuthority,
       config,
@@ -369,15 +472,14 @@ export async function getSwapInstruction(
       tokenBaseProgram,
       tokenQuoteProgram: TOKEN_PROGRAM_ID,
       referralTokenAccount,
-    }).remainingAccounts(
-      [
-        {
-          isSigner: false,
-          isWritable: false,
-          pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
-        }
-      ]
-    )
+    })
+    .remainingAccounts([
+      {
+        isSigner: false,
+        isWritable: false,
+        pubkey: SYSVAR_INSTRUCTIONS_PUBKEY,
+      },
+    ])
     .instruction();
 
   return instruction;
@@ -467,7 +569,12 @@ export async function swap2(
   }
 
   const transaction = await program.methods
-    .swap2({ amountIn, minimumAmountOut, swapMode, padding: new Array(32).fill(0) })
+    .swap2({
+      amountIn,
+      minimumAmountOut,
+      swapMode,
+      padding: new Array(32).fill(0),
+    })
     .accountsPartial({
       poolAuthority,
       config,

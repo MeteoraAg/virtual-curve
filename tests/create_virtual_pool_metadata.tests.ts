@@ -103,8 +103,9 @@ describe("Create virtual pool metadata", () => {
                 feePercentage: 0,
                 creatorFeePercentage: 0,
             },
+            skipSniperFeeForCreatorFirstBuy: 0,
             padding0: [],
-            padding: [],
+            padding1: [],
             curve: curves,
         };
         const params: CreateConfigParams = {

@@ -76,10 +76,10 @@ describe("Create pool with token2022", () => {
   it("Partner create config", async () => {
     const baseFee: BaseFee = {
       cliffFeeNumerator: new BN(2_500_000),
-      numberOfPeriod: 0,
-      reductionFactor: new BN(0),
-      periodFrequency: new BN(0),
-      feeSchedulerMode: 0,
+      firstFactor: 0,
+      secondFactor: new BN(0),
+      thirdFactor: new BN(0),
+      baseFeeMode: 0,
     };
 
     const curves = [];
@@ -103,6 +103,10 @@ describe("Create pool with token2022", () => {
         baseFee,
         dynamicFee: null,
       },
+      migrationFee: {
+        feePercentage: 0,
+        creatorFeePercentage: 0,
+      },
       activationType: 0,
       collectFeeMode: 0,
       migrationOption: 1, // damm v2
@@ -125,10 +129,12 @@ describe("Create pool with token2022", () => {
       tokenSupply: null,
       creatorTradingFeePercentage: 0,
       tokenUpdateAuthority: 0, // mutable
+      skipSniperFeeForCreatorFirstBuy: 0,
       padding0: [],
-      padding: [],
+      padding1: [],
       curve: curves,
     };
+
     let params: CreateConfigParams = {
       payer: partner,
       leftoverReceiver: partner.publicKey,

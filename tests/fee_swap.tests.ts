@@ -106,8 +106,9 @@ describe("Fee Swap test", () => {
           feePercentage: 0,
           creatorFeePercentage: 0,
         },
+        skipSniperFeeForCreatorFirstBuy: 0,
         padding0: [],
-        padding: [],
+        padding1: [],
         curve: curves,
       };
       const params: CreateConfigParams = {
@@ -456,8 +457,9 @@ describe("Fee Swap test", () => {
           feePercentage: 0,
           creatorFeePercentage: 0,
         },
+        skipSniperFeeForCreatorFirstBuy: 0,
         padding0: [],
-        padding: [],
+        padding1: [],
         curve: curves,
       };
       const params: CreateConfigParams = {

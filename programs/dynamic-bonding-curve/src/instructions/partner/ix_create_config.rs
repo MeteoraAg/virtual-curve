@@ -15,8 +15,8 @@ use crate::{
     },
     safe_math::SafeMath,
     state::{
-        CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
-        TokenType, TokenUpdateAuthorityOption,
+        CollectFeeMode, IntegerBoolean, LockedVestingConfig, MigrationFeeOption, MigrationOption,
+        PoolConfig, TokenType, TokenUpdateAuthorityOption,
     },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
@@ -42,7 +42,8 @@ pub struct ConfigParameters {
     pub creator_trading_fee_percentage: u8, // percentage of trading fee creator can share with partner
     pub token_update_authority: u8,
     pub migration_fee: MigrationFee,
-    pub padding_0: [u8; 4],
+    pub skip_sniper_fee_for_creator_first_buy: u8,
+    pub padding_0: [u8; 3],
     /// padding for future use
     pub padding_1: [u64; 7],
     pub curve: Vec<LiquidityDistributionParameters>,
@@ -202,6 +203,11 @@ impl ConfigParameters {
             PoolError::InvalidTokenUpdateAuthorityOption
         );
 
+        require!(
+            IntegerBoolean::try_from(self.skip_sniper_fee_for_creator_first_buy).is_ok(),
+            PoolError::InvalidActivationType
+        );
+
         // validate token decimals
         require!(
             self.token_decimal >= 6 && self.token_decimal <= 9,
@@ -314,6 +320,7 @@ pub fn handle_create_config(
         creator_trading_fee_percentage,
         token_update_authority,
         migration_fee,
+        skip_sniper_fee_for_creator_first_buy,
         ..
     } = config_parameters;
 
@@ -396,6 +403,7 @@ pub fn handle_create_config(
         collect_fee_mode,
         migration_option,
         activation_type,
+        skip_sniper_fee_for_creator_first_buy,
         token_decimal,
         token_type,
         get_token_program_flags(&ctx.accounts.quote_mint).into(),

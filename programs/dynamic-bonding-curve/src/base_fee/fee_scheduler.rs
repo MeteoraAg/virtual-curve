@@ -99,4 +99,8 @@ impl BaseFeeHandler for FeeScheduler {
 
         self.get_base_fee_numerator_by_period(period)
     }
+
+    fn get_min_base_fee_numerator(&self) -> Result<u64> {
+        FeeScheduler::get_min_base_fee_numerator(&self)
+    }
 }

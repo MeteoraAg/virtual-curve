@@ -139,4 +139,7 @@ pub enum PoolError {
 
     #[msg("Undertermined error")]
     UndeterminedError,
+
+    #[msg("Invalid first buy instruction")]
+    InvalidFirstBuyInstruction,
 }

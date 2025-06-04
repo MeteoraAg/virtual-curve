@@ -85,8 +85,9 @@ describe("Simulate CU swap", () => {
           feePercentage: 0,
           creatorFeePercentage: 0,
         },
+        skipSniperFeeForCreatorFirstBuy: 0,
         padding0: [],
-        padding: [],
+        padding1: [],
         curve: curves,
       };
       const createConfigParams: CreateConfigParams = {

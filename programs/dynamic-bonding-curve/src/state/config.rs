@@ -71,13 +71,19 @@ impl PoolFeesConfig {
         activation_point: u64,
         amount: u64,
         trade_direction: TradeDirection,
+        is_creator_first_buy: bool,
     ) -> Result<u64> {
-        let base_fee_numerator = self.base_fee.get_base_fee_numerator(
-            current_point,
-            activation_point,
-            amount,
-            trade_direction,
-        )?;
+        // charge min base fee it is creator first buy
+        let base_fee_numerator = if is_creator_first_buy {
+            self.base_fee.get_min_base_fee_numerator()?
+        } else {
+            self.base_fee.get_base_fee_numerator(
+                current_point,
+                activation_point,
+                amount,
+                trade_direction,
+            )?
+        };
 
         let total_fee_numerator = self
             .dynamic_fee
@@ -199,6 +205,7 @@ impl BaseFeeConfig {
             Err(PoolError::InvalidFeeRateLimiter.into())
         }
     }
+
     pub fn get_base_fee_numerator(
         &self,
         current_point: u64,
@@ -219,6 +226,17 @@ impl BaseFeeConfig {
             trade_direction,
             amount,
         )
+    }
+
+    pub fn get_min_base_fee_numerator(&self) -> Result<u64> {
+        let base_fee_handler = get_base_fee_handler(
+            self.cliff_fee_numerator,
+            self.first_factor,
+            self.second_factor,
+            self.third_factor,
+            self.base_fee_mode,
+        )?;
+        base_fee_handler.get_min_base_fee_numerator()
     }
 }
 
@@ -328,6 +346,23 @@ pub enum MigrationOption {
     DammV2,
 }
 
+#[derive(
+    Copy,
+    Clone,
+    Debug,
+    PartialEq,
+    Eq,
+    AnchorSerialize,
+    AnchorDeserialize,
+    IntoPrimitive,
+    TryFromPrimitive,
+)]
+#[repr(u8)]
+pub enum IntegerBoolean {
+    No,
+    Yes,
+}
+
 #[repr(u8)]
 #[derive(
     Clone,
@@ -435,8 +470,10 @@ pub struct PoolConfig {
     pub migration_fee_percentage: u8,
     /// creator migration fee percentage
     pub creator_migration_fee_percentage: u8,
+    /// skip sniper fee for creator first buy
+    pub skip_sniper_fee_for_creator_first_buy: u8,
     /// padding 1
-    pub _padding_1: [u8; 7],
+    pub _padding_1: [u8; 6],
     /// swap base amount
     pub swap_base_amount: u64,
     /// migration quote threshold (in quote token)
@@ -492,6 +529,7 @@ impl PoolConfig {
         collect_fee_mode: u8,
         migration_option: u8,
         activation_type: u8,
+        skip_sniper_fee_for_creator_first_buy: u8,
         token_decimal: u8,
         token_type: u8,
         quote_token_flag: u8,
@@ -543,6 +581,7 @@ impl PoolConfig {
         self.fixed_token_supply_flag = fixed_token_supply_flag;
         self.pre_migration_token_supply = pre_migration_token_supply;
         self.post_migration_token_supply = post_migration_token_supply;
+        self.skip_sniper_fee_for_creator_first_buy = skip_sniper_fee_for_creator_first_buy;
 
         for i in 0..curve.len() {
             self.curve[i] = curve[i].to_liquidity_distribution_config();

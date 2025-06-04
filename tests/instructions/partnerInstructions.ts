@@ -89,6 +89,7 @@ export type ConfigParameters = {
     feePercentage: number;
     creatorFeePercentage: number;
   };
+  skipSniperFeeForCreatorFirstBuy: number,
   padding0: number[];
   padding1: BN[];
   curve: Array<LiquidityDistributionParameters>;

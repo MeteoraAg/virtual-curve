@@ -48,6 +48,7 @@ pub fn quote_exact_in(
         trade_direction,
         current_point,
         swap_mode,
+        false,
     )?;
 
     Ok(swap_result)
