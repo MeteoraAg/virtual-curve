@@ -32,7 +32,7 @@ pub fn get_base_fee_handler(
     match base_fee_mode {
         BaseFeeMode::FeeSchedulerLinear | BaseFeeMode::FeeSchedulerExponential => {
             let fee_scheduler = FeeScheduler {
-                cliff_fee_numerator: cliff_fee_numerator,
+                cliff_fee_numerator,
                 period_frequency: third_factor,
                 reduction_factor: second_factor,
                 number_of_period: first_factor,
@@ -42,7 +42,7 @@ pub fn get_base_fee_handler(
         }
         BaseFeeMode::RateLimiter => {
             let fee_rate_limiter = FeeRateLimiter {
-                cliff_fee_numerator: cliff_fee_numerator,
+                cliff_fee_numerator,
                 reference_amount: third_factor,
                 max_limiter_duration: second_factor,
                 fee_increment_bps: first_factor,
