@@ -33,8 +33,8 @@ pub fn get_base_fee_handler(
         BaseFeeMode::FeeSchedulerLinear | BaseFeeMode::FeeSchedulerExponential => {
             let fee_scheduler = FeeScheduler {
                 cliff_fee_numerator: cliff_fee_numerator,
-                period_frequency: third_factor,
-                reduction_factor: second_factor,
+                period_frequency: second_factor,
+                reduction_factor: third_factor,
                 number_of_period: first_factor,
                 fee_scheduler_mode: base_fee_mode.into(),
             };
