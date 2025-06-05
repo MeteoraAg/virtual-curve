@@ -15,3 +15,6 @@ mod test_total_supply;
 
 #[cfg(test)]
 mod test_migration_fee_status;
+
+#[cfg(test)]
+mod test_rate_limiter;

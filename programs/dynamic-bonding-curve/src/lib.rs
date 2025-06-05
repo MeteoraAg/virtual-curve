@@ -18,13 +18,12 @@ pub mod utils;
 pub use utils::*;
 pub mod math;
 pub use math::*;
+pub mod base_fee;
 pub mod curve;
 pub mod tests;
 
 pub mod params;
 
-pub const CONST_PROGRAM_ID: Pubkey =
-    Pubkey::from_str_const("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 declare_id!("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 #[program]

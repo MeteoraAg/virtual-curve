@@ -1,8 +1,7 @@
 //! Fees module includes information about fee charges
-use crate::constants::fee::{
-    FEE_DENOMINATOR, HOST_FEE_PERCENT, MAX_BASIS_POINT, MAX_FEE_NUMERATOR, MIN_FEE_NUMERATOR,
-    PROTOCOL_FEE_PERCENT,
-};
+use crate::activation_handler::ActivationType;
+use crate::base_fee::get_base_fee_handler;
+use crate::constants::fee::{HOST_FEE_PERCENT, MAX_BASIS_POINT, PROTOCOL_FEE_PERCENT};
 use crate::constants::{BASIS_POINT_MAX, BIN_STEP_BPS_DEFAULT, BIN_STEP_BPS_U128_DEFAULT, U24_MAX};
 use crate::error::PoolError;
 use crate::safe_math::SafeMath;
@@ -21,63 +20,32 @@ pub struct PoolFeeParameters {
 #[derive(Copy, Clone, Debug, AnchorSerialize, AnchorDeserialize, InitSpace, Default)]
 pub struct BaseFeeParameters {
     pub cliff_fee_numerator: u64,
-    pub number_of_period: u16,
-    pub period_frequency: u64,
-    pub reduction_factor: u64,
-    pub fee_scheduler_mode: u8,
-}
-
-#[derive(Default, PartialEq)]
-struct FeeSchedulerParameters {
-    pub number_of_period: u16,
-    pub period_frequency: u64,
-    pub reduction_factor: u64,
-}
-
-impl FeeSchedulerParameters {
-    fn validate_non_zero(&self) -> Result<()> {
-        require!(
-            self.number_of_period != 0 && self.period_frequency != 0 && self.reduction_factor != 0,
-            PoolError::InvalidFeeScheduler
-        );
-        Ok(())
-    }
+    pub first_factor: u16,
+    pub second_factor: u64,
+    pub third_factor: u64,
+    pub base_fee_mode: u8,
 }
 
 impl BaseFeeParameters {
-    fn validate(&self) -> Result<()> {
-        let base_fee_scheduler = self.to_base_fee_scheduler();
-        if base_fee_scheduler != FeeSchedulerParameters::default() {
-            base_fee_scheduler.validate_non_zero()?;
-        }
-        let base_fee_config = self.to_base_fee_config();
-
-        let min_fee_numerator = base_fee_config.get_min_base_fee_numerator()?;
-        let max_fee_numerator = base_fee_config.get_max_base_fee_numerator();
-        validate_fee_fraction(min_fee_numerator, FEE_DENOMINATOR)?;
-        validate_fee_fraction(max_fee_numerator, FEE_DENOMINATOR)?;
-        require!(
-            min_fee_numerator >= MIN_FEE_NUMERATOR && max_fee_numerator <= MAX_FEE_NUMERATOR,
-            PoolError::ExceedMaxFeeBps
-        );
+    fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()> {
+        let base_fee_handler = get_base_fee_handler(
+            self.cliff_fee_numerator,
+            self.first_factor,
+            self.second_factor,
+            self.third_factor,
+            self.base_fee_mode,
+        )?;
+        base_fee_handler.validate(collect_fee_mode, activation_type)?;
         Ok(())
-    }
-
-    fn to_base_fee_scheduler(&self) -> FeeSchedulerParameters {
-        FeeSchedulerParameters {
-            number_of_period: self.number_of_period,
-            period_frequency: self.period_frequency,
-            reduction_factor: self.reduction_factor,
-        }
     }
 
     pub fn to_base_fee_config(&self) -> BaseFeeConfig {
         BaseFeeConfig {
             cliff_fee_numerator: self.cliff_fee_numerator,
-            number_of_period: self.number_of_period,
-            period_frequency: self.period_frequency,
-            reduction_factor: self.reduction_factor,
-            fee_scheduler_mode: self.fee_scheduler_mode,
+            first_factor: self.first_factor,
+            second_factor: self.second_factor,
+            third_factor: self.third_factor,
+            base_fee_mode: self.base_fee_mode,
             ..Default::default()
         }
     }
@@ -207,10 +175,17 @@ pub fn to_bps(numerator: u128, denominator: u128) -> Result<u64> {
     Ok(u64::try_from(bps).map_err(|_| PoolError::TypeCastFailed)?)
 }
 
+pub fn to_numerator(bps: u128, denominator: u128) -> Result<u64> {
+    let numerator = bps
+        .safe_mul(denominator.into())?
+        .safe_div(MAX_BASIS_POINT.into())?;
+    Ok(u64::try_from(numerator).map_err(|_| PoolError::TypeCastFailed)?)
+}
+
 impl PoolFeeParameters {
     /// Validate that the fees are reasonable
-    pub fn validate(&self) -> Result<()> {
-        self.base_fee.validate()?;
+    pub fn validate(&self, collect_fee_mode: u8, activation_type: ActivationType) -> Result<()> {
+        self.base_fee.validate(collect_fee_mode, activation_type)?;
 
         if let Some(dynamic_fee) = self.dynamic_fee {
             dynamic_fee.validate()?;

@@ -12,7 +12,7 @@ The Dynamic Bonding Curve program is a launch pool protocol that allows any laun
 
 - multiple quote tokens support: SOL, USDC, etc
 - SPL Token and Token2022 support
-- fee scheduler + dynamic-fee
+- fee scheduler/rate limiter + dynamic-fee
 - flexible fee collect mode (ex: collect fee only in quote token)
 - customizable liquidity distribution (up to 20 price ranges with different liquidity curve)
 
@@ -27,10 +27,10 @@ The Dynamic Bonding Curve program is a launch pool protocol that allows any laun
 
 Partner can specify these parameters when they create a configuration on all their pools:
 
-- `pool_fees`: include `base_fee` and `dynamic_fee` (optional). Partner can add fee scheduler in `base_fee` or just a fixed fee. `pool_fees` defines the trading fee for any pool that is created from this configuration.
+- `pool_fees`: include `base_fee` and `dynamic_fee` (optional). Partner can add fee scheduler or rate limiter in `base_fee` or just a fixed fee. `pool_fees` defines the trading fee for any pool that is created from this configuration.
 - `collect_fee_mode` (`0 | 1`): `0` means the virtual pool will only collect fee in quote token, `1` means virtual pool will collect fee in both tokens.
 - `migration_option`: right now we only support migration to Meteora DAMM, so partner must set the value as `0` for this field.
-- `activation_type` (`0 | 1`): `0` means slot, `1` means timestamp, this field indicates the time unit that pool will work with, mostly in calculating fee scheduler and dynamic fee.
+- `activation_type` (`0 | 1`): `0` means slot, `1` means timestamp, this field indicates the time unit that pool will work with, mostly in calculating fee scheduler/ rate limiter and dynamic fee.
 - `token_type` (`0 | 1`): `0` means SPL Token, `1` means Token2022.
 - `token_decimal`: the token decimals that the token will use when user creates the virtual pool with this configuration, we only support token decimals from 6 to 9.
 - `partner_lp_percentage`: the percentage of LP that partner can claim after token is migrated.

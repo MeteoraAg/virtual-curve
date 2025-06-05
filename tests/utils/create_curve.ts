@@ -1,5 +1,6 @@
 import BN from "bn.js";
 import {
+  BaseFee,
   ConfigParameters,
   LiquidityDistributionParameters,
   LockedVestingParams,
@@ -443,10 +444,10 @@ export function designCurve(
     poolFees: {
       baseFee: {
         cliffFeeNumerator: new BN(2_500_000),
-        numberOfPeriod: 0,
-        reductionFactor: new BN(0),
-        periodFrequency: new BN(0),
-        feeSchedulerMode: 0,
+        firstFactor: 0,
+        secondFactor: new BN(0),
+        thirdFactor: new BN(0),
+        baseFeeMode: 0,
       },
       dynamicFee: null,
     },
@@ -491,26 +492,15 @@ export function designGraphCurve(
   collectFeeMode: number,
   lockedVesting: LockedVestingParams,
   leftOver: number,
-  kFactor: number
+  kFactor: number,
+  baseFee: BaseFee
 ): ConfigParameters {
   // 1. finding Pmax and Pmin
-  let pMin = getSqrtPriceFromMarketCap(
-    initialMarketCap,
-    totalTokenSupply,
-    tokenBaseDecimal,
-    tokenQuoteDecimal
-  );
-  let pMax = getSqrtPriceFromMarketCap(
-    migrationMarketCap,
-    totalTokenSupply,
-    tokenBaseDecimal,
-    tokenQuoteDecimal
-  );
+  let pMin = getSqrtPriceFromMarketCap(initialMarketCap, totalTokenSupply, tokenBaseDecimal, tokenQuoteDecimal);
+  let pMax = getSqrtPriceFromMarketCap(migrationMarketCap, totalTokenSupply, tokenBaseDecimal, tokenQuoteDecimal);
 
   // find q^16 = pMax / pMin
-  let priceRatio = new Decimal(pMax.toString()).div(
-    new Decimal(pMin.toString())
-  );
+  let priceRatio = new Decimal(pMax.toString()).div(new Decimal(pMin.toString()));
   let qDecimal = priceRatio.pow(new Decimal(1).div(new Decimal(16)));
 
   // finding all prices
@@ -518,22 +508,14 @@ export function designGraphCurve(
   let currentPrice = pMin;
   for (let i = 0; i < 17; i++) {
     sqrtPrices.push(currentPrice);
-    currentPrice = fromDecimalToBN(
-      qDecimal.mul(new Decimal(currentPrice.toString()))
-    );
+    currentPrice = fromDecimalToBN(qDecimal.mul(new Decimal(currentPrice.toString())));
   }
 
-  let totalSupply = new BN(totalTokenSupply).mul(
-    new BN(10).pow(new BN(tokenBaseDecimal))
-  );
-  let totalLeftover = new BN(leftOver).mul(
-    new BN(10).pow(new BN(tokenBaseDecimal))
-  );
+  let totalSupply = new BN(totalTokenSupply).mul(new BN(10).pow(new BN(tokenBaseDecimal)));
+  let totalLeftover = new BN(leftOver).mul(new BN(10).pow(new BN(tokenBaseDecimal)));
   let totalVestingAmount = getTotalVestingAmount(lockedVesting);
 
-  let totalSwapAndMigrationAmount = totalSupply
-    .sub(totalVestingAmount)
-    .sub(totalLeftover);
+  let totalSwapAndMigrationAmount = totalSupply.sub(totalVestingAmount).sub(totalLeftover);
 
   let kDecimal = new Decimal(kFactor);
   let sumFactor = new Decimal(0);
@@ -550,6 +532,7 @@ export function designGraphCurve(
 
   let l1 = new Decimal(totalSwapAndMigrationAmount.toString()).div(sumFactor);
 
+
   // construct curve
   let curve = [];
   for (let i = 0; i < 16; i++) {
@@ -559,23 +542,19 @@ export function designGraphCurve(
     curve.push({
       sqrtPrice,
       liquidity,
-    });
+    })
   }
   // reverse to calculate swap amount and migration amount
-  let swapBaseAmount = getBaseTokenForSwap(pMin, pMax, curve);
-  let swapBaseAmountBuffer = getSwapAmountWithBuffer(
-    swapBaseAmount,
-    pMin,
-    curve
-  );
+  let swapBaseAmount =
+    getBaseTokenForSwap(pMin, pMax, curve);
+  let swapBaseAmountBuffer =
+    getSwapAmountWithBuffer(swapBaseAmount, pMin, curve);
 
-  // for (let i = 0; i < 16; i++) {
-  //     console.log("sqrtPrice %d liquidity %d", curve[i].sqrtPrice.toString(), curve[i].liquidity.toString());
-  // }
   let migrationAmount = totalSwapAndMigrationAmount.sub(swapBaseAmountBuffer);
 
   // calculate migration threshold
   let migrationQuoteThreshold = migrationAmount.mul(pMax).mul(pMax).shrn(128);
+
 
   // sanity check
   let totalDynamicSupply = getTotalSupplyFromCurve(
@@ -584,7 +563,7 @@ export function designGraphCurve(
     curve,
     lockedVesting,
     migrationOption,
-    totalLeftover
+    totalLeftover,
   );
 
   if (totalDynamicSupply.gt(totalSupply)) {
@@ -593,15 +572,10 @@ export function designGraphCurve(
     assert(leftOverDelta.lt(totalLeftover));
   }
 
+
   const instructionParams: ConfigParameters = {
     poolFees: {
-      baseFee: {
-        cliffFeeNumerator: new BN(2_500_000),
-        numberOfPeriod: 0,
-        reductionFactor: new BN(0),
-        periodFrequency: new BN(0),
-        feeSchedulerMode: 0,
-      },
+      baseFee,
       dynamicFee: null,
     },
     activationType: 0,
@@ -614,10 +588,10 @@ export function designGraphCurve(
     creatorLpPercentage: 0,
     partnerLockedLpPercentage: 100,
     creatorLockedLpPercentage: 0,
-    tokenUpdateAuthority: 0,
     sqrtStartPrice: pMin,
     lockedVesting,
     migrationFeeOption: 0,
+    tokenUpdateAuthority: 0,
     tokenSupply: {
       preMigrationTokenSupply: totalSupply,
       postMigrationTokenSupply: totalSupply,
