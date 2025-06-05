@@ -31,9 +31,9 @@ use ruint::aliases::U256;
 #[derive(Debug, Default)]
 pub struct FeeRateLimiter {
     pub cliff_fee_numerator: u64,
-    pub reference_amount: u64,
-    pub max_limiter_duration: u64,
     pub fee_increment_bps: u16,
+    pub max_limiter_duration: u64,
+    pub reference_amount: u64,
 }
 
 impl FeeRateLimiter {

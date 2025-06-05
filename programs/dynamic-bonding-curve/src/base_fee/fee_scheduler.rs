@@ -24,9 +24,9 @@ pub enum FeeSchedulerMode {
 #[derive(Debug, Default)]
 pub struct FeeScheduler {
     pub cliff_fee_numerator: u64,
+    pub number_of_period: u16,
     pub period_frequency: u64,
     pub reduction_factor: u64,
-    pub number_of_period: u16,
     pub fee_scheduler_mode: u8,
 }
 
