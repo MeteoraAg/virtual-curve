@@ -26,29 +26,23 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
         &params.metadata_program,
     );
 
+    let is_mutable = params.token_authority != TokenAuthorityOption::Immutable;
+    let update_authority = match params.token_authority {
+        TokenAuthorityOption::CreatorUpdateAuthority
+        | TokenAuthorityOption::CreatorUpdateAndMintAuthority => params.creator,
+
+        // temporarily use pool_authority as update authority firstly before transferring to partner
+        TokenAuthorityOption::PartnerUpdateAuthority
+        | TokenAuthorityOption::PartnerUpdateAndMintAuthority => params.pool_authority.clone(),
+
+        TokenAuthorityOption::Immutable => params.system_program.clone(),
+    };
+
     builder.mint(&params.mint);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
-    let is_mutable = params.token_authority != TokenAuthorityOption::Immutable;
     builder.is_mutable(is_mutable);
-    match params.token_authority {
-        //
-        TokenAuthorityOption::CreatorUpdateAuthority
-        | TokenAuthorityOption::CreatorUpdateAndMintAuthority => {
-            builder.update_authority(&params.creator, false);
-        }
-
-        TokenAuthorityOption::PartnerUpdateAuthority
-        | TokenAuthorityOption::PartnerUpdateAndMintAuthority => {
-            // temporarily use pool_authority as update authority firstly before transferring to partner
-            builder.update_authority(&params.pool_authority, false);
-        }
-
-        TokenAuthorityOption::Immutable => {
-            builder.update_authority(&params.system_program, false);
-        }
-    }
-
+    builder.update_authority(&update_authority, false);
     builder.payer(&params.payer);
     builder.system_program(&params.system_program);
     let data = DataV2 {
