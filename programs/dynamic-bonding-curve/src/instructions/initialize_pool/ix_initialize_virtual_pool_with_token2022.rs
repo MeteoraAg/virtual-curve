@@ -1,6 +1,6 @@
 use super::InitializePoolParameters;
 use super::{max_key, min_key};
-use crate::state::TokenUpdateAuthorityOption;
+use crate::state::TokenAuthorityOption;
 use crate::{
     activation_handler::get_current_point,
     const_pda,
@@ -149,10 +149,13 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    let token_update_authority = match config.get_token_update_authority()? {
-        TokenUpdateAuthorityOption::Creator => Some(ctx.accounts.creator.key()),
-        TokenUpdateAuthorityOption::Partner => Some(config.fee_claimer),
-        TokenUpdateAuthorityOption::Immutable => None,
+    let token_update_authority = match config.get_token_authority()? {
+        TokenAuthorityOption::CreatorUpdateAndMintAuthority
+        | TokenAuthorityOption::CreatorUpdateAuthority => Some(ctx.accounts.creator.key()),
+
+        TokenAuthorityOption::PartnerUpdateAndMintAuthority
+        | TokenAuthorityOption::PartnerUpdateAuthority => Some(config.fee_claimer),
+        TokenAuthorityOption::Immutable => None,
     };
 
     anchor_spl::token_interface::set_authority(
@@ -186,7 +189,12 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         initial_base_supply,
     )?;
 
-    // remove mint authority
+    // update mint authority
+    let new_mint_authority = match config.get_token_authority()? {
+        TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(ctx.accounts.creator.key()),
+        TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(config.fee_claimer.key()),
+        _ => None,
+    };
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -197,7 +205,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        None,
+        new_mint_authority,
     )?;
 
     // init pool

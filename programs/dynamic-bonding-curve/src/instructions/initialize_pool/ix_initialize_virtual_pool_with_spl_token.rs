@@ -13,7 +13,9 @@ use crate::{
     const_pda,
     constants::seeds::{POOL_PREFIX, TOKEN_VAULT_PREFIX},
     process_create_token_metadata,
-    state::{fee::VolatilityTracker, PoolConfig, PoolType, TokenType, VirtualPool},
+    state::{
+        fee::VolatilityTracker, PoolConfig, PoolType, TokenAuthorityOption, TokenType, VirtualPool,
+    },
     EvtInitializePool, PoolError, ProcessCreateTokenMetadataParams,
 };
 
@@ -147,6 +149,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
 
     let InitializePoolParameters { name, symbol, uri } = params;
 
+    let token_authority = config.get_token_authority()?;
     // create token metadata
     process_create_token_metadata(ProcessCreateTokenMetadataParams {
         system_program: ctx.accounts.system_program.to_account_info(),
@@ -160,7 +163,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         symbol: &symbol,
         uri: &uri,
         pool_authority_bump: const_pda::pool_authority::BUMP,
-        update_authority: config.get_token_update_authority()?,
+        token_authority,
         partner: config.fee_claimer,
     })?;
 
@@ -179,7 +182,12 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         initial_base_supply,
     )?;
 
-    // remove mint authority
+    // update mint authority
+    let new_mint_authority = match token_authority {
+        TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(ctx.accounts.creator.key()),
+        TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(config.fee_claimer.key()),
+        _ => None,
+    };
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -190,7 +198,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        None,
+        new_mint_authority,
     )?;
 
     // init pool

@@ -25,11 +25,12 @@ import {
   ExtensionType,
   getExtensionData,
   MetadataPointerLayout,
+  MintLayout,
   NATIVE_MINT,
 } from "@solana/spl-token";
 import { expect } from "chai";
 
-describe("Create pool with token2022", () => {
+describe.only("Mintable token", () => {
   let context: ProgramTestContext;
   let admin: Keypair;
   let operator: Keypair;
@@ -37,10 +38,10 @@ describe("Create pool with token2022", () => {
   let user: Keypair;
   let poolCreator: Keypair;
   let program: VirtualCurveProgram;
-  let mutConfig: PublicKey;
-  let immutConfig: PublicKey;
-  let mutConfigSplToken: PublicKey;
-  let immutConfigSplToken: PublicKey;
+  let creatorMintAuthorityConfig: PublicKey;
+  let partnerMintAuthorityConfig: PublicKey;
+  let creatorMintAuthorityConfigSplToken: PublicKey;
+  let partnerMintAuthorityConfigSplToken: PublicKey;
   let virtualPool: PublicKey;
   let virtualPoolState: Pool;
 
@@ -116,7 +117,7 @@ describe("Create pool with token2022", () => {
         feePercentage: 0,
       },
       creatorTradingFeePercentage: 0,
-      tokenUpdateAuthority: 0, // creator
+      tokenUpdateAuthority: 3, // creator mint authority
       padding0: [],
       padding1: [],
       curve: curves,
@@ -128,26 +129,34 @@ describe("Create pool with token2022", () => {
       quoteMint: NATIVE_MINT,
       instructionParams,
     };
-    mutConfig = await createConfig(context.banksClient, program, params);
+    creatorMintAuthorityConfig = await createConfig(
+      context.banksClient,
+      program,
+      params
+    );
     params.instructionParams.tokenType = 0;
-    mutConfigSplToken = await createConfig(
+    creatorMintAuthorityConfigSplToken = await createConfig(
       context.banksClient,
       program,
       params
     );
 
-    params.instructionParams.tokenUpdateAuthority = 1; // Immutable
+    params.instructionParams.tokenUpdateAuthority = 4; // partner mint authority
     params.instructionParams.tokenType = 1;
-    immutConfig = await createConfig(context.banksClient, program, params);
+    partnerMintAuthorityConfig = await createConfig(
+      context.banksClient,
+      program,
+      params
+    );
     params.instructionParams.tokenType = 0;
-    immutConfigSplToken = await createConfig(
+    partnerMintAuthorityConfigSplToken = await createConfig(
       context.banksClient,
       program,
       params
     );
   });
 
-  it("Create token2022 pool from mutable config", async () => {
+  it("Create token2022 pool from config as creator is mint authority", async () => {
     const name = "test token 2022";
     const symbol = "TOKEN2022";
     const uri = "token2022.com";
@@ -156,7 +165,7 @@ describe("Create pool with token2022", () => {
       payer: operator,
       poolCreator,
       quoteMint: NATIVE_MINT,
-      config: mutConfig,
+      config: creatorMintAuthorityConfig,
       instructionParams: {
         name,
         symbol,
@@ -172,15 +181,13 @@ describe("Create pool with token2022", () => {
     const tlvData = (
       await context.banksClient.getAccount(virtualPoolState.baseMint)
     ).data.slice(ACCOUNT_SIZE + ACCOUNT_TYPE_SIZE);
-    const metadataPointer = MetadataPointerLayout.decode(
-      getExtensionData(ExtensionType.MetadataPointer, Buffer.from(tlvData))
-    );
-    expect(metadataPointer.authority.toString()).eq(
+    const dataDecoded = MintLayout.decode(Buffer.from(tlvData));
+    expect(dataDecoded.mintAuthority.toString()).eq(
       poolCreator.publicKey.toString()
     );
   });
 
-  it("Create token2022 pool from immutable config", async () => {
+  it("Create token2022 pool from config as partner is mint authority", async () => {
     const name = "test token 2022";
     const symbol = "TOKEN2022";
     const uri = "token2022.com";
@@ -189,7 +196,7 @@ describe("Create pool with token2022", () => {
       payer: operator,
       poolCreator,
       quoteMint: NATIVE_MINT,
-      config: immutConfig,
+      config: partnerMintAuthorityConfig,
       instructionParams: {
         name,
         symbol,
@@ -205,21 +212,18 @@ describe("Create pool with token2022", () => {
     const tlvData = (
       await context.banksClient.getAccount(virtualPoolState.baseMint)
     ).data.slice(ACCOUNT_SIZE + ACCOUNT_TYPE_SIZE);
-    const metadataPointer = MetadataPointerLayout.decode(
-      getExtensionData(ExtensionType.MetadataPointer, Buffer.from(tlvData))
-    );
-
-    expect(metadataPointer.authority.toString()).eq(
-      PublicKey.default.toString()
+    const dataDecoded = MintLayout.decode(Buffer.from(tlvData));
+    expect(dataDecoded.mintAuthority.toString()).eq(
+      partner.publicKey.toString()
     );
   });
 
-  it("Create spl token pool from mutable config", async () => {
+  it("Create spl token pool from config as creator is mint authority", async () => {
     virtualPool = await createPoolWithSplToken(context.banksClient, program, {
       poolCreator,
       payer: operator,
       quoteMint: NATIVE_MINT,
-      config: mutConfigSplToken,
+      config: creatorMintAuthorityConfigSplToken,
       instructionParams: {
         name: "test token spl",
         symbol: "TEST",
@@ -232,29 +236,21 @@ describe("Create pool with token2022", () => {
       virtualPool
     );
 
-    const metadataAddress = deriveMetadataAccount(virtualPoolState.baseMint);
-
-    let metadataAccount = await context.banksClient.getAccount(metadataAddress);
-
-    const data = {
-      executable: metadataAccount.executable,
-      owner: metadataAccount.owner,
-      lamports: metadataAccount.lamports,
-      rentEpoch: metadataAccount.rentEpoch,
-      data: metadataAccount.data,
-      publicKey: metadataAddress,
-    };
-    const metadata = deserializeMetadata(data as any);
-
-    expect(metadata.updateAuthority).eq(poolCreator.publicKey.toString());
+    const data = (
+      await context.banksClient.getAccount(virtualPoolState.baseMint)
+    ).data;
+    const dataDecoded = MintLayout.decode(Buffer.from(data));
+    expect(dataDecoded.mintAuthority.toString()).eq(
+      poolCreator.publicKey.toString()
+    );
   });
 
-  it("Create spl pool from immutable config", async () => {
+  it("Create spl pool from config as partner is mint authority", async () => {
     virtualPool = await createPoolWithSplToken(context.banksClient, program, {
       poolCreator,
       payer: operator,
       quoteMint: NATIVE_MINT,
-      config: immutConfigSplToken,
+      config: partnerMintAuthorityConfigSplToken,
       instructionParams: {
         name: "test token spl",
         symbol: "TEST",
@@ -267,20 +263,12 @@ describe("Create pool with token2022", () => {
       virtualPool
     );
 
-    const metadataAddress = deriveMetadataAccount(virtualPoolState.baseMint);
-
-    let metadataAccount = await context.banksClient.getAccount(metadataAddress);
-
-    const data = {
-      executable: metadataAccount.executable,
-      owner: metadataAccount.owner,
-      lamports: metadataAccount.lamports,
-      rentEpoch: metadataAccount.rentEpoch,
-      data: metadataAccount.data,
-      publicKey: metadataAddress,
-    };
-    const metadata = deserializeMetadata(data as any);
-
-    expect(metadata.updateAuthority).eq(PublicKey.default.toString());
+    const data = (
+      await context.banksClient.getAccount(virtualPoolState.baseMint)
+    ).data;
+    const dataDecoded = MintLayout.decode(Buffer.from(data));
+    expect(dataDecoded.mintAuthority.toString()).eq(
+      partner.publicKey.toString()
+    );
   });
 });

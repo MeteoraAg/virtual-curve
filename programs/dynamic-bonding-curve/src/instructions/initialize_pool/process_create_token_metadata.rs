@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use mpl_token_metadata::types::DataV2;
 
-use crate::state::TokenUpdateAuthorityOption;
+use crate::state::TokenAuthorityOption;
 pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub system_program: AccountInfo<'info>,
     pub payer: AccountInfo<'info>,
@@ -14,7 +14,7 @@ pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub symbol: &'a str,
     pub uri: &'a str,
     pub pool_authority_bump: u8,
-    pub update_authority: TokenUpdateAuthorityOption,
+    pub token_authority: TokenAuthorityOption,
     pub partner: Pubkey,
 }
 
@@ -29,17 +29,22 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.mint(&params.mint);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
-    let is_mutable = params.update_authority != TokenUpdateAuthorityOption::Immutable;
+    let is_mutable = params.token_authority != TokenAuthorityOption::Immutable;
     builder.is_mutable(is_mutable);
-    match params.update_authority {
-        TokenUpdateAuthorityOption::Creator => {
+    match params.token_authority {
+        //
+        TokenAuthorityOption::CreatorUpdateAuthority
+        | TokenAuthorityOption::CreatorUpdateAndMintAuthority => {
             builder.update_authority(&params.creator, false);
         }
-        TokenUpdateAuthorityOption::Partner => {
+
+        TokenAuthorityOption::PartnerUpdateAuthority
+        | TokenAuthorityOption::PartnerUpdateAndMintAuthority => {
             // temporarily use pool_authority as update authority firstly before transferring to partner
             builder.update_authority(&params.pool_authority, false);
         }
-        TokenUpdateAuthorityOption::Immutable => {
+
+        TokenAuthorityOption::Immutable => {
             builder.update_authority(&params.system_program, false);
         }
     }
@@ -60,7 +65,9 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     builder.invoke_signed(&[&seeds[..]])?;
 
     // update new update authority to partner
-    if params.update_authority == TokenUpdateAuthorityOption::Partner {
+    if params.token_authority == TokenAuthorityOption::PartnerUpdateAndMintAuthority
+        || params.token_authority == TokenAuthorityOption::PartnerUpdateAuthority
+    {
         let mut update_authority_builder =
             mpl_token_metadata::instructions::UpdateMetadataAccountV2CpiBuilder::new(
                 &params.metadata_program,

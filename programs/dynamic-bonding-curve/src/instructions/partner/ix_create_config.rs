@@ -16,7 +16,7 @@ use crate::{
     safe_math::SafeMath,
     state::{
         CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
-        TokenType, TokenUpdateAuthorityOption,
+        TokenAuthorityOption, TokenType,
     },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
@@ -200,8 +200,8 @@ impl ConfigParameters {
 
         // validate token update authority
         require!(
-            TokenUpdateAuthorityOption::try_from(self.token_update_authority).is_ok(),
-            PoolError::InvalidTokenUpdateAuthorityOption
+            TokenAuthorityOption::try_from(self.token_update_authority).is_ok(),
+            PoolError::InvalidTokenAuthorityOption
         );
 
         // validate token decimals

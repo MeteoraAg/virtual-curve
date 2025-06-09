@@ -275,11 +275,18 @@ impl LockedVestingConfig {
     AnchorSerialize,
     Default,
 )]
-pub enum TokenUpdateAuthorityOption {
+pub enum TokenAuthorityOption {
+    // creator have permission to update update_authority
     #[default]
-    Creator,
-    Partner,
+    CreatorUpdateAuthority,
+    //
     Immutable,
+    // partner have permission to update update_authority
+    PartnerUpdateAuthority,
+    // creator have permission as mint_authority and update update_authority
+    CreatorUpdateAndMintAuthority,
+    // partner have permission as mint_authority and update update_authority
+    PartnerUpdateAndMintAuthority,
 }
 
 #[repr(u8)]
@@ -519,11 +526,10 @@ impl PoolConfig {
         }
     }
 
-    pub fn get_token_update_authority(&self) -> Result<TokenUpdateAuthorityOption> {
-        let token_update_authority =
-            TokenUpdateAuthorityOption::try_from(self.token_update_authority)
-                .map_err(|_| PoolError::InvalidTokenUpdateAuthorityOption)?;
-        Ok(token_update_authority)
+    pub fn get_token_authority(&self) -> Result<TokenAuthorityOption> {
+        let token_authority = TokenAuthorityOption::try_from(self.token_update_authority)
+            .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
+        Ok(token_authority)
     }
 
     pub fn get_migration_quote_amount_for_config(&self) -> Result<MigrationAmount> {

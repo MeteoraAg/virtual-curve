@@ -105,7 +105,7 @@ describe("Update new update authority as partner", () => {
       },
       tokenSupply: null,
       creatorTradingFeePercentage: 0,
-      tokenUpdateAuthority: 1, // partner
+      tokenUpdateAuthority: 2, // partner update update_authority
       padding0: [],
       padding1: [],
       curve: curves,
