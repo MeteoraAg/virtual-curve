@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow partner to config another mode for base fee, called rate limiter. With the mode is enable, fee slope will increase if user buy with higher amount. The rate limiter mode is only available if collect fee mode is in quote token only, and when user buy token (not sell). Rate limiter doesn't allow user to send multiple swap instructions (or CPI) to the same pool in 1 transaction
 
 ### Changed
-- In base fee, we rename: `period_frequency` to `third_factor`, `reduction_factor` to `second_factor`, `number_of_period` to `first_factor`.
+- In base fee, we rename: `reduction_factor` to `third_factor`, `period_frequency` to `second_factor`, `number_of_period` to `first_factor`.
 - Add a new field `base_fee_mode` in base fee state, that indicates whether the base fee is fee scheduler or rate limiter
 
 ### Breaking Changes
