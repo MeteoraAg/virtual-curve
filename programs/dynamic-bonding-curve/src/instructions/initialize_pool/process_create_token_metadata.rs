@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use mpl_token_metadata::types::DataV2;
 
-use crate::state::TokenAuthorityOption;
+use crate::{state::TokenAuthorityOption, PoolError};
 pub struct ProcessCreateTokenMetadataParams<'a, 'info> {
     pub system_program: AccountInfo<'info>,
     pub payer: AccountInfo<'info>,
@@ -27,22 +27,12 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
     );
 
     let is_mutable = params.token_authority != TokenAuthorityOption::Immutable;
-    let update_authority = match params.token_authority {
-        TokenAuthorityOption::CreatorUpdateAuthority
-        | TokenAuthorityOption::CreatorUpdateAndMintAuthority => params.creator,
-
-        // temporarily use pool_authority as update authority firstly before transferring to partner
-        TokenAuthorityOption::PartnerUpdateAuthority
-        | TokenAuthorityOption::PartnerUpdateAndMintAuthority => params.pool_authority.clone(),
-
-        TokenAuthorityOption::Immutable => params.system_program.clone(),
-    };
 
     builder.mint(&params.mint);
+    builder.update_authority(&params.pool_authority, false);
     builder.mint_authority(&params.pool_authority);
     builder.metadata(&params.mint_metadata);
     builder.is_mutable(is_mutable);
-    builder.update_authority(&update_authority, false);
     builder.payer(&params.payer);
     builder.system_program(&params.system_program);
     let data = DataV2 {
@@ -58,20 +48,22 @@ pub fn process_create_token_metadata(params: ProcessCreateTokenMetadataParams) -
 
     builder.invoke_signed(&[&seeds[..]])?;
 
-    // update new update authority to partner
-    if params.token_authority == TokenAuthorityOption::PartnerUpdateAndMintAuthority
-        || params.token_authority == TokenAuthorityOption::PartnerUpdateAuthority
-    {
-        let mut update_authority_builder =
-            mpl_token_metadata::instructions::UpdateMetadataAccountV2CpiBuilder::new(
-                &params.metadata_program,
-            );
+    // update update_authority
+    let token_update_authority_option = TokenAuthorityOption::try_from(params.token_authority)
+        .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
+    let new_update_authority_option = token_update_authority_option
+        .get_update_authority(params.creator.key(), params.partner.key());
 
-        update_authority_builder.metadata(&params.mint_metadata);
-        update_authority_builder.update_authority(&params.pool_authority);
-        update_authority_builder.new_update_authority(params.partner);
-        update_authority_builder.invoke_signed(&[&seeds[..]])?;
-    }
+    let new_update_authority = new_update_authority_option.unwrap_or(params.system_program.key());
+
+    let mut update_authority_builder =
+        mpl_token_metadata::instructions::UpdateMetadataAccountV2CpiBuilder::new(
+            &params.metadata_program,
+        );
+    update_authority_builder.metadata(&params.mint_metadata);
+    update_authority_builder.update_authority(&params.pool_authority);
+    update_authority_builder.new_update_authority(new_update_authority);
+    update_authority_builder.invoke_signed(&[&seeds[..]])?;
 
     Ok(())
 }

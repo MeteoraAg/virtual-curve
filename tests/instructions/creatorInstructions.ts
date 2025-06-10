@@ -178,14 +178,14 @@ export async function transferCreator(
       newCreator,
       config: poolState.config,
       creator: creator.publicKey,
-    })
-    .remainingAccounts([
-      {
-        isSigner: false,
-        isWritable: false,
-        pubkey: migrationMetadata,
-      },
-    ])
+    }).remainingAccounts(
+      [
+        {
+          isSigner: false,
+          isWritable: false,
+          pubkey: migrationMetadata,
+        }]
+    )
     .transaction();
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(creator);

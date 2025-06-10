@@ -149,14 +149,12 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    let token_update_authority = match config.get_token_authority()? {
-        TokenAuthorityOption::CreatorUpdateAndMintAuthority
-        | TokenAuthorityOption::CreatorUpdateAuthority => Some(ctx.accounts.creator.key()),
+    let token_update_authority_option =
+        TokenAuthorityOption::try_from(config.get_token_authority()?)
+            .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
 
-        TokenAuthorityOption::PartnerUpdateAndMintAuthority
-        | TokenAuthorityOption::PartnerUpdateAuthority => Some(config.fee_claimer),
-        TokenAuthorityOption::Immutable => None,
-    };
+    let token_update_authority = token_update_authority_option
+        .get_update_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
 
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
@@ -190,11 +188,9 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     )?;
 
     // update mint authority
-    let new_mint_authority = match config.get_token_authority()? {
-        TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(ctx.accounts.creator.key()),
-        TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(config.fee_claimer.key()),
-        _ => None,
-    };
+    let new_mint_authority = token_update_authority_option
+        .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),

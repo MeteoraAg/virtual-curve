@@ -276,17 +276,38 @@ impl LockedVestingConfig {
     Default,
 )]
 pub enum TokenAuthorityOption {
-    // creator have permission to update update_authority
+    // Creator has permission to update update_authority
     #[default]
     CreatorUpdateAuthority,
-    //
+    // No one has permission to update the authority
     Immutable,
-    // partner have permission to update update_authority
+    // Partner has permission to update update_authority
     PartnerUpdateAuthority,
-    // creator have permission as mint_authority and update update_authority
+    // Creator has permission as mint_authority and update_authority
     CreatorUpdateAndMintAuthority,
-    // partner have permission as mint_authority and update update_authority
+    // Partner has permission as mint_authority and update_authority
     PartnerUpdateAndMintAuthority,
+}
+
+impl TokenAuthorityOption {
+    pub fn get_update_authority(&self, creator: Pubkey, partner: Pubkey) -> Option<Pubkey> {
+        match *self {
+            TokenAuthorityOption::CreatorUpdateAndMintAuthority
+            | TokenAuthorityOption::CreatorUpdateAuthority => Some(creator),
+
+            TokenAuthorityOption::PartnerUpdateAndMintAuthority
+            | TokenAuthorityOption::PartnerUpdateAuthority => Some(partner),
+            TokenAuthorityOption::Immutable => None,
+        }
+    }
+
+    pub fn get_mint_authority(&self, creator: Pubkey, partner: Pubkey) -> Option<Pubkey> {
+        match *self {
+            TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(creator),
+            TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(partner),
+            _ => None,
+        }
+    }
 }
 
 #[repr(u8)]

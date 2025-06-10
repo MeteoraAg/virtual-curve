@@ -183,11 +183,11 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
     )?;
 
     // update mint authority
-    let new_mint_authority = match token_authority {
-        TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(ctx.accounts.creator.key()),
-        TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(config.fee_claimer.key()),
-        _ => None,
-    };
+    let token_update_authority_option = TokenAuthorityOption::try_from(token_authority)
+        .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
+    let new_mint_authority = token_update_authority_option
+        .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
