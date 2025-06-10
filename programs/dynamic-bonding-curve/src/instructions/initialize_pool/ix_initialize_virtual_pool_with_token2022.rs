@@ -1,6 +1,5 @@
 use super::InitializePoolParameters;
 use super::{max_key, min_key};
-use crate::state::TokenAuthorityOption;
 use crate::{
     activation_handler::get_current_point,
     const_pda,
@@ -149,11 +148,8 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    let token_update_authority_option =
-        TokenAuthorityOption::try_from(config.get_token_authority()?)
-            .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
-
-    let token_update_authority = token_update_authority_option
+    let token_update_authority = config
+        .get_token_authority()?
         .get_update_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
 
     anchor_spl::token_interface::set_authority(
@@ -188,9 +184,10 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     )?;
 
     // update mint authority
-    let new_mint_authority = token_update_authority_option
+    let token_mint_authority = config
+        .get_token_authority()?
         .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
-
+    msg!("token_mint_authority: {:?}", token_mint_authority);
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -201,7 +198,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        new_mint_authority,
+        token_mint_authority,
     )?;
 
     // init pool

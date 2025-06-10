@@ -13,9 +13,7 @@ use crate::{
     const_pda,
     constants::seeds::{POOL_PREFIX, TOKEN_VAULT_PREFIX},
     process_create_token_metadata,
-    state::{
-        fee::VolatilityTracker, PoolConfig, PoolType, TokenAuthorityOption, TokenType, VirtualPool,
-    },
+    state::{fee::VolatilityTracker, PoolConfig, PoolType, TokenType, VirtualPool},
     EvtInitializePool, PoolError, ProcessCreateTokenMetadataParams,
 };
 
@@ -183,10 +181,8 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
     )?;
 
     // update mint authority
-    let token_update_authority_option = TokenAuthorityOption::try_from(token_authority)
-        .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
-    let new_mint_authority = token_update_authority_option
-        .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+    let token_mint_authority =
+        token_authority.get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
 
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
@@ -198,7 +194,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        new_mint_authority,
+        token_mint_authority,
     )?;
 
     // init pool
