@@ -5,9 +5,9 @@ use static_assertions::const_assert_eq;
 
 use crate::{
     activation_handler::ActivationType,
-    constants::{MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
+    constants::{fee::FEE_DENOMINATOR, MAX_CURVE_POINT, MAX_SQRT_PRICE, MIN_SQRT_PRICE},
     params::{
-        fee_parameters::PoolFeeParameters,
+        fee_parameters::{to_bps, PoolFeeParameters},
         liquidity_distribution::{
             get_base_token_for_swap, get_migration_base_token, get_migration_threshold_price,
             LiquidityDistributionParameters,
@@ -15,8 +15,8 @@ use crate::{
     },
     safe_math::SafeMath,
     state::{
-        CollectFeeMode, LockedVestingConfig, MigrationFeeOption, MigrationOption, PoolConfig,
-        TokenType, TokenUpdateAuthorityOption,
+        CollectFeeMode, DammV2MigrationPredefinedParameters, LockedVestingConfig,
+        MigrationFeeOption, MigrationOption, PoolConfig, TokenType, TokenUpdateAuthorityOption,
     },
     token::{get_token_program_flags, is_supported_quote_mint},
     EvtCreateConfig, PoolError,
@@ -81,7 +81,7 @@ pub struct TokenSupplyParams {
     /// pre migration token supply
     pub pre_migration_token_supply: u64,
     /// post migration token supply
-    /// becase DBC allow user to swap over the migration quote threshold, so in extreme case user may swap more than allowed buffer on curve
+    /// because DBC allow user to swap over the migration quote threshold, so in extreme case user may swap more than allowed buffer on curve
     /// that result the total supply in post migration may be increased a bit (between pre_migration_token_supply and post_migration_token_supply)
     pub post_migration_token_supply: u64,
 }
@@ -147,7 +147,12 @@ impl LockedVestingParams {
 }
 
 impl ConfigParameters {
-    pub fn validate<'info>(&self, quote_mint: &InterfaceAccount<'info, Mint>) -> Result<()> {
+    pub fn validate<'c, 'info>(
+        &self,
+        quote_mint: &InterfaceAccount<'info, Mint>,
+        config_address: Pubkey,
+        remaining_accounts: &'c [AccountInfo<'info>],
+    ) -> Result<()> {
         // validate quote mint
         require!(
             is_supported_quote_mint(quote_mint)?,
@@ -180,6 +185,12 @@ impl ConfigParameters {
         let token_type_value =
             TokenType::try_from(self.token_type).map_err(|_| PoolError::InvalidTokenType)?;
 
+        // validate migrate fee option
+        let Ok(migration_fee_option) = MigrationFeeOption::try_from(self.migration_fee_option)
+        else {
+            return Err(PoolError::InvalidMigrationFeeOption.into());
+        };
+
         match migration_option_value {
             MigrationOption::MeteoraDamm => {
                 require!(
@@ -193,6 +204,29 @@ impl ConfigParameters {
             }
             MigrationOption::DammV2 => {
                 // nothing to check
+            }
+            MigrationOption::DammV2WithDynamicConfig => {
+                let Some(predefined_parameters_account) = remaining_accounts.first() else {
+                    return Err(ErrorCode::AccountNotEnoughKeys.into());
+                };
+
+                let data = predefined_parameters_account.try_borrow_data()?;
+                let predefined_parameter =
+                    DammV2MigrationPredefinedParameters::try_deserialize(&mut data.as_ref())?;
+
+                require!(
+                    predefined_parameter.config == config_address,
+                    PoolError::InvalidAccount
+                );
+
+                let base_fee_bps = to_bps(
+                    predefined_parameter
+                        .base_fee_config
+                        .cliff_fee_numerator
+                        .into(),
+                    FEE_DENOMINATOR.into(), // damm v2 using the same fee denominator with virtual curve
+                )?;
+                migration_fee_option.validate_base_fee(base_fee_bps)?;
             }
         }
 
@@ -222,12 +256,6 @@ impl ConfigParameters {
 
         // validate vesting params
         self.locked_vesting.validate()?;
-
-        // validate migrate fee option
-        require!(
-            MigrationFeeOption::try_from(self.migration_fee_option).is_ok(),
-            PoolError::InvalidMigrationFeeOption
-        );
 
         // validate price and liquidity
         require!(
@@ -288,11 +316,15 @@ pub struct CreateConfigCtx<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn handle_create_config(
-    ctx: Context<CreateConfigCtx>,
+pub fn handle_create_config<'a, 'b, 'c, 'info>(
+    ctx: Context<'a, 'b, 'c, 'info, CreateConfigCtx<'info>>,
     config_parameters: ConfigParameters,
 ) -> Result<()> {
-    config_parameters.validate(&ctx.accounts.quote_mint)?;
+    config_parameters.validate(
+        &ctx.accounts.quote_mint,
+        ctx.accounts.config.key(),
+        &ctx.remaining_accounts[..],
+    )?;
 
     let ConfigParameters {
         pool_fees,
@@ -337,6 +369,7 @@ pub fn handle_create_config(
         sqrt_migration_price,
         MigrationOption::try_from(migration_option)
             .map_err(|_| PoolError::InvalidMigrationOption)?,
+        ctx.remaining_accounts,
     )?;
 
     require!(

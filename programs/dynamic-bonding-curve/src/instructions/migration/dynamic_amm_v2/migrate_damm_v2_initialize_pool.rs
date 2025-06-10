@@ -1,11 +1,12 @@
-use std::u64;
-
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::{
     token_2022::{set_authority, spl_token_2022::instruction::AuthorityType, SetAuthority},
     token_interface::{TokenAccount, TokenInterface},
 };
-use damm_v2::types::{AddLiquidityParameters, InitializePoolParameters};
+use damm_v2::types::{
+    AddLiquidityParameters, BaseFeeConfig, DynamicFeeConfig, DynamicFeeParameters,
+    InitializeCustomizablePoolParameters, InitializePoolParameters, PoolFeeParameters,
+};
 use ruint::aliases::U512;
 
 use crate::{
@@ -15,8 +16,8 @@ use crate::{
     params::fee_parameters::to_bps,
     safe_math::SafeMath,
     state::{
-        LiquidityDistribution, MigrationAmount, MigrationFeeOption, MigrationOption,
-        MigrationProgress, PoolConfig, VirtualPool,
+        DammV2MigrationPredefinedParameters, LiquidityDistribution, MigrationAmount,
+        MigrationFeeOption, MigrationOption, MigrationProgress, PoolConfig, VirtualPool,
     },
     *,
 };
@@ -120,12 +121,92 @@ pub struct MigrateDammV2Ctx<'info> {
 }
 
 impl<'info> MigrateDammV2Ctx<'info> {
-    fn validate_config_key(
+    fn validate_config_and_get_predefined_init_values<'c: 'info>(
+        &self,
+        config: &PoolConfig,
+        remaining_accounts: &'c [AccountInfo<'info>],
+    ) -> Result<Option<DammV2MigrationPredefinedParameters>> {
+        let mut remaining_account_iter = remaining_accounts.iter();
+        let Some(damm_config_account) = remaining_account_iter.next() else {
+            return Err(PoolError::MissingPoolConfigInRemainingAccount.into());
+        };
+
+        let damm_config_loader: AccountLoader<'_, damm_v2::accounts::Config> =
+            AccountLoader::try_from(damm_config_account)?;
+
+        let damm_config = damm_config_loader.load()?;
+        let damm_config_type = damm_config.config_type;
+
+        match damm_config_type {
+            0 => {
+                self.validate_static_config_key(&damm_config, config)?;
+                Ok(None)
+            }
+            1 => {
+                let Some(predefined_parameter_account) = remaining_account_iter.next() else {
+                    return Err(ErrorCode::AccountNotEnoughKeys.into());
+                };
+
+                let predefined_parameter_loader: AccountLoader<
+                    '_,
+                    DammV2MigrationPredefinedParameters,
+                > = AccountLoader::try_from(predefined_parameter_account)?;
+
+                let predefined_parameter = predefined_parameter_loader.load()?;
+
+                self.validate_dynamic_config_key(
+                    &damm_config,
+                    self.config.key(),
+                    config,
+                    &predefined_parameter,
+                )
+            }
+            _ => Err(PoolError::InvalidConfigAccount.into()),
+        }
+    }
+
+    fn validate_dynamic_config_key(
         &self,
         damm_config: &damm_v2::accounts::Config,
-        migration_fee_option: u8,
+        config_address: Pubkey,
+        config: &PoolConfig,
+        predefined_parameters: &DammV2MigrationPredefinedParameters,
+    ) -> Result<Option<DammV2MigrationPredefinedParameters>> {
+        let migration_option = MigrationOption::try_from(config.migration_option)
+            .map_err(|_| PoolError::InvalidMigrationOption)?;
+
+        require!(
+            migration_option == MigrationOption::DammV2WithDynamicConfig,
+            PoolError::InvalidMigrationOption
+        );
+
+        require!(
+            predefined_parameters.config == config_address,
+            PoolError::InvalidConfigAccount
+        );
+
+        require!(
+            damm_config.pool_creator_authority == self.pool_authority.key(),
+            PoolError::InvalidConfigAccount
+        );
+
+        Ok(Some(*predefined_parameters))
+    }
+
+    fn validate_static_config_key(
+        &self,
+        damm_config: &damm_v2::accounts::Config,
+        config: &PoolConfig,
     ) -> Result<()> {
-        let migration_fee_option = MigrationFeeOption::try_from(migration_fee_option)
+        let migration_option = MigrationOption::try_from(config.migration_option)
+            .map_err(|_| PoolError::InvalidMigrationOption)?;
+
+        require!(
+            migration_option == MigrationOption::DammV2,
+            PoolError::InvalidMigrationOption
+        );
+
+        let migration_fee_option = MigrationFeeOption::try_from(config.migration_fee_option)
             .map_err(|_| PoolError::InvalidMigrationFeeOption)?;
         let base_fee_bps = to_bps(
             damm_config.pool_fees.base_fee.cliff_fee_numerator.into(),
@@ -152,6 +233,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
             damm_config.pool_creator_authority == self.pool_authority.key(),
             PoolError::InvalidConfigAccount
         );
+
         require!(
             damm_config.pool_fees.partner_fee_percent == 0,
             PoolError::InvalidConfigAccount
@@ -174,15 +256,7 @@ impl<'info> MigrateDammV2Ctx<'info> {
         Ok(())
     }
 
-    fn create_pool(
-        &self,
-        pool_config: AccountInfo<'info>,
-        liquidity: u128,
-        sqrt_price: u128,
-        bump: u8,
-    ) -> Result<()> {
-        let pool_authority_seeds = pool_authority_seeds!(bump);
-
+    fn fund_pool_creator_authority(&self) -> Result<()> {
         // Send some lamport to pool authority to pay rent fee?
         msg!("transfer lamport to pool_authority");
         invoke(
@@ -197,6 +271,135 @@ impl<'info> MigrateDammV2Ctx<'info> {
                 self.system_program.to_account_info(),
             ],
         )?;
+        Ok(())
+    }
+
+    fn create_pool_with_dynamic_config(
+        &self,
+        pool_config: AccountInfo<'info>,
+        liquidity: u128,
+        sqrt_price: u128,
+        bump: u8,
+        predefined_parameters: DammV2MigrationPredefinedParameters,
+    ) -> Result<()> {
+        let pool_authority_seeds = pool_authority_seeds!(bump);
+
+        let DammV2MigrationPredefinedParameters {
+            base_fee_config,
+            dynamic_fee_config,
+            sqrt_min_price,
+            sqrt_max_price,
+            collect_fee_mode,
+            ..
+        } = predefined_parameters;
+
+        let BaseFeeConfig {
+            cliff_fee_numerator,
+            fee_scheduler_mode,
+            number_of_period,
+            period_frequency,
+            reduction_factor,
+            ..
+        } = base_fee_config;
+
+        let base_fee = damm_v2::types::BaseFeeParameters {
+            cliff_fee_numerator,
+            fee_scheduler_mode,
+            number_of_period,
+            period_frequency,
+            reduction_factor,
+        };
+
+        let DynamicFeeConfig {
+            initialized,
+            max_volatility_accumulator,
+            variable_fee_control,
+            bin_step,
+            filter_period,
+            decay_period,
+            reduction_factor,
+            bin_step_u128,
+            ..
+        } = dynamic_fee_config;
+
+        let dynamic_fee = if initialized == 1 {
+            Some(DynamicFeeParameters {
+                max_volatility_accumulator,
+                variable_fee_control,
+                bin_step,
+                filter_period,
+                decay_period,
+                reduction_factor,
+                bin_step_u128,
+            })
+        } else {
+            None
+        };
+
+        let pool_fees = PoolFeeParameters {
+            base_fee,
+            dynamic_fee,
+            protocol_fee_percent: crate::constants::damm_v2::CUSTOMIZABLE_PROTOCOL_FEE_PERCENT,
+            partner_fee_percent: 0,
+            referral_fee_percent: crate::constants::damm_v2::CUSTOMIZABLE_HOST_FEE_PERCENT,
+        };
+
+        self.fund_pool_creator_authority()?;
+
+        damm_v2::cpi::initialize_pool_with_dynamic_config(
+            CpiContext::new_with_signer(
+                self.amm_program.to_account_info(),
+                damm_v2::cpi::accounts::InitializePoolWithDynamicConfig {
+                    creator: self.pool_authority.to_account_info(),
+                    position_nft_mint: self.first_position_nft_mint.to_account_info(),
+                    position_nft_account: self.first_position_nft_account.to_account_info(),
+                    payer: self.pool_authority.to_account_info(),
+                    config: pool_config.to_account_info(),
+                    pool_authority: self.damm_pool_authority.to_account_info(),
+                    pool: self.pool.to_account_info(),
+                    position: self.first_position.to_account_info(),
+                    token_a_mint: self.base_mint.to_account_info(),
+                    token_b_mint: self.quote_mint.to_account_info(),
+                    token_a_vault: self.token_a_vault.to_account_info(),
+                    token_b_vault: self.token_b_vault.to_account_info(),
+                    payer_token_a: self.base_vault.to_account_info(),
+                    payer_token_b: self.quote_vault.to_account_info(),
+                    token_a_program: self.token_base_program.to_account_info(),
+                    token_b_program: self.token_quote_program.to_account_info(),
+                    token_2022_program: self.token_2022_program.to_account_info(),
+                    system_program: self.system_program.to_account_info(),
+                    event_authority: self.damm_event_authority.to_account_info(),
+                    program: self.amm_program.to_account_info(),
+                    pool_creator_authority: self.pool_authority.to_account_info(),
+                },
+                &[&pool_authority_seeds[..]],
+            ),
+            InitializeCustomizablePoolParameters {
+                liquidity,
+                sqrt_price,
+                activation_point: None,
+                pool_fees,
+                sqrt_max_price,
+                sqrt_min_price,
+                has_alpha_vault: false,
+                activation_type: 0,
+                collect_fee_mode,
+            },
+        )?;
+
+        Ok(())
+    }
+
+    fn create_pool_with_static_config(
+        &self,
+        pool_config: AccountInfo<'info>,
+        liquidity: u128,
+        sqrt_price: u128,
+        bump: u8,
+    ) -> Result<()> {
+        let pool_authority_seeds = pool_authority_seeds!(bump);
+
+        self.fund_pool_creator_authority()?;
 
         damm_v2::cpi::initialize_pool(
             CpiContext::new_with_signer(
@@ -393,17 +596,10 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
     ctx: Context<'_, '_, 'c, 'info, MigrateDammV2Ctx<'info>>,
 ) -> Result<()> {
     let config = ctx.accounts.config.load()?;
-    {
-        require!(
-            ctx.remaining_accounts.len() == 1,
-            PoolError::MissingPoolConfigInRemainingAccount
-        );
-        let damm_config_loader: AccountLoader<'_, damm_v2::accounts::Config> =
-            AccountLoader::try_from(&ctx.remaining_accounts[0])?; // TODO fix damm config in remaning accounts
-        let damm_config = damm_config_loader.load()?;
-        ctx.accounts
-            .validate_config_key(&damm_config, config.migration_fee_option)?;
-    }
+
+    let predefined_init_values = ctx
+        .accounts
+        .validate_config_and_get_predefined_init_values(&config, ctx.remaining_accounts)?;
 
     let mut virtual_pool = ctx.accounts.virtual_pool.load_mut()?;
 
@@ -421,10 +617,16 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     let migration_option = MigrationOption::try_from(config.migration_option)
         .map_err(|_| PoolError::InvalidMigrationOption)?;
-    require!(
-        migration_option == MigrationOption::DammV2,
-        PoolError::InvalidMigrationOption
-    );
+
+    match migration_option {
+        MigrationOption::DammV2 | MigrationOption::DammV2WithDynamicConfig => {
+            // Allowed
+        }
+        _ => {
+            return Err(PoolError::InvalidMigrationOption.into());
+        }
+    }
+
     let initial_quote_vault_amount = ctx.accounts.quote_vault.amount;
     let initial_base_vault_amount = ctx.accounts.base_vault.amount;
 
@@ -472,12 +674,27 @@ pub fn handle_migrate_damm_v2<'c: 'info, 'info>(
 
     // create pool
     msg!("create pool");
-    ctx.accounts.create_pool(
-        ctx.remaining_accounts[0].clone(),
-        first_position_liquidity_distribution.get_total_liquidity()?,
-        config.migration_sqrt_price,
-        const_pda::pool_authority::BUMP,
-    )?;
+    let damm_v2_pool_config_account = ctx.remaining_accounts[0].clone();
+    match predefined_init_values {
+        Some(value) => {
+            ctx.accounts.create_pool_with_dynamic_config(
+                damm_v2_pool_config_account,
+                first_position_liquidity_distribution.get_total_liquidity()?,
+                config.migration_sqrt_price,
+                const_pda::pool_authority::BUMP,
+                value,
+            )?;
+        }
+        None => {
+            ctx.accounts.create_pool_with_static_config(
+                damm_v2_pool_config_account,
+                first_position_liquidity_distribution.get_total_liquidity()?,
+                config.migration_sqrt_price,
+                const_pda::pool_authority::BUMP,
+            )?;
+        }
+    }
+
     // lock permanent liquidity
     if first_position_liquidity_distribution.locked_liquidity > 0 {
         msg!("lock permanent liquidity for first position");

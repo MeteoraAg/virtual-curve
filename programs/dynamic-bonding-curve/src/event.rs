@@ -1,5 +1,6 @@
 //! Event module includes information about events of the program
 use anchor_lang::prelude::*;
+use damm_v2::types::{BaseFeeParameters, DynamicFeeParameters};
 
 use crate::{
     params::{
@@ -168,4 +169,15 @@ pub struct EvtWithdrawMigrationFee {
 pub struct EvtPartnerWithdrawMigrationFee {
     pub pool: Pubkey,
     pub fee: u64,
+}
+
+#[event]
+pub struct EvtCreateDammV2MigrationPredefinedParameters {
+    pub config: Pubkey,
+    pub predefined_parameters: Pubkey,
+    pub base_fee: BaseFeeParameters,
+    pub sqrt_min_price: u128,
+    pub sqrt_max_price: u128,
+    pub collect_fee_mode: u8,
+    pub dynamic_fee: Option<DynamicFeeParameters>,
 }

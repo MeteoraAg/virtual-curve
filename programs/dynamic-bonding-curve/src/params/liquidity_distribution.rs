@@ -10,7 +10,10 @@ use crate::{
         get_initial_liquidity_from_delta_quote, get_next_sqrt_price_from_input,
     },
     safe_math::SafeMath,
-    state::{LiquidityDistributionConfig, MigrationAmount, MigrationOption, PoolConfig},
+    state::{
+        DammV2MigrationPredefinedParameters, LiquidityDistributionConfig, MigrationAmount,
+        MigrationOption, PoolConfig,
+    },
     u128x128_math::Rounding,
     PoolError,
 };
@@ -67,11 +70,12 @@ pub fn get_base_token_for_swap(
     Ok(total_amount)
 }
 
-pub fn get_migration_base_token(
+pub fn get_migration_base_token<'c, 'info>(
     migration_threshold: u64,
     migration_fee_percentage: u8,
     sqrt_migration_price: u128,
     migration_option: MigrationOption,
+    remaining_accounts: &'c [AccountInfo<'info>],
 ) -> Result<u64> {
     let MigrationAmount { quote_amount, .. } =
         PoolConfig::get_migration_quote_amount(migration_threshold, migration_fee_percentage)?;
@@ -126,6 +130,42 @@ pub fn get_migration_base_token(
                     PoolError::InsufficientLiquidityForMigration
                 );
             }
+            Ok(base_amount)
+        }
+        MigrationOption::DammV2WithDynamicConfig => {
+            // Remaining accounts already validated
+            let Some(account) = remaining_accounts.first() else {
+                return Err(ErrorCode::AccountNotEnoughKeys.into());
+            };
+
+            let data = account.try_borrow_data()?;
+            let predefined_parameter =
+                DammV2MigrationPredefinedParameters::try_deserialize(&mut data.as_ref())?;
+
+            require!(
+                sqrt_migration_price > predefined_parameter.sqrt_min_price
+                    && sqrt_migration_price < predefined_parameter.sqrt_max_price,
+                PoolError::InvalidInput
+            );
+
+            // calculate to L firstly
+            let liquidity = get_initial_liquidity_from_delta_quote(
+                quote_amount,
+                predefined_parameter.sqrt_min_price,
+                sqrt_migration_price,
+            )?;
+            // calculate base threshold
+            let base_amount = get_delta_amount_base_unsigned_256(
+                sqrt_migration_price,
+                predefined_parameter.sqrt_max_price,
+                liquidity,
+                Rounding::Up,
+            )?;
+            require!(base_amount <= U256::from(u64::MAX), PoolError::MathOverflow);
+            let base_amount = base_amount
+                .try_into()
+                .map_err(|_| PoolError::TypeCastFailed)?;
+
             Ok(base_amount)
         }
     }

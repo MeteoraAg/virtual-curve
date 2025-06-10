@@ -305,6 +305,7 @@ pub enum TokenUpdateAuthorityOption {
 pub enum MigrationOption {
     MeteoraDamm,
     DammV2,
+    DammV2WithDynamicConfig,
 }
 
 #[repr(u8)]

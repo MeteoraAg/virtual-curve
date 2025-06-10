@@ -5,7 +5,10 @@ import {
   TransactionInstruction,
 } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import { VirtualCurveProgram } from "../utils/types";
+import {
+  CreateDammV2DynamicConfigPredefinedParametersIxArgs,
+  VirtualCurveProgram,
+} from "../utils/types";
 import { BanksClient } from "solana-bankrun";
 import {
   derivePoolAuthority,
@@ -15,6 +18,7 @@ import {
   getTokenAccount,
   derivePartnerMetadata,
   getTokenProgram,
+  deriveDammV2DynamicConfigPredefinedParameters,
 } from "../utils";
 import {
   getConfig,
@@ -105,11 +109,49 @@ export type CreateConfigParams = {
 export async function createConfig(
   banksClient: BanksClient,
   program: VirtualCurveProgram,
-  params: CreateConfigParams
+  params: CreateConfigParams,
+  createMigrationPredefinedValuesParameters?: Omit<
+    CreateDammV2DynamicConfigPredefinedParametersIxArgs,
+    "config"
+  >
 ): Promise<PublicKey> {
   const { payer, leftoverReceiver, feeClaimer, quoteMint, instructionParams } =
     params;
   const config = Keypair.generate();
+
+  const preInstructions = [];
+  const remainingAccounts = [];
+
+  if (createMigrationPredefinedValuesParameters) {
+    const { sqrtMaxPrice, sqrtMinPrice, collectFeeMode, baseFee, dynamicFee } =
+      createMigrationPredefinedValuesParameters;
+
+    const dammV2DynamicConfigPredefinedParameters =
+      deriveDammV2DynamicConfigPredefinedParameters(config.publicKey);
+
+    const ix = await program.methods
+      .createConfigMigrationPredefinedParameters({
+        config: config.publicKey,
+        sqrtMaxPrice,
+        sqrtMinPrice,
+        collectFeeMode,
+        baseFee,
+        dynamicFee,
+      })
+      .accountsPartial({
+        dammV2DynamicConfigPredefinedParameters,
+        payer: payer.publicKey,
+      })
+      .instruction();
+
+    preInstructions.push(ix);
+
+    remainingAccounts.push({
+      pubkey: dammV2DynamicConfigPredefinedParameters,
+      isWritable: false,
+      isSigner: false,
+    });
+  }
 
   const transaction = await program.methods
     .createConfig(instructionParams)
@@ -120,6 +162,8 @@ export async function createConfig(
       quoteMint,
       payer: payer.publicKey,
     })
+    .preInstructions(preInstructions)
+    .remainingAccounts(remainingAccounts)
     .transaction();
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];

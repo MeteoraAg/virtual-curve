@@ -215,7 +215,6 @@ export async function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
 }
 
-
 export const getCurrentSlot = async (banksClient: BanksClient): Promise<BN> => {
   let slot = await banksClient.getSlot();
   return new BN(slot.toString());
@@ -225,7 +224,6 @@ export async function warpSlotBy(context: ProgramTestContext, slots: BN) {
   const clock = await context.banksClient.getClock();
   await context.warpToSlot(clock.slot + BigInt(slots.toString()));
 }
-
 
 export const SET_COMPUTE_UNIT_LIMIT_IX =
   web3.ComputeBudgetProgram.setComputeUnitLimit({
@@ -361,14 +359,62 @@ export async function createDammConfig(
   return config;
 }
 
+export async function createDammV2DynamicConfig(
+  banksClient: BanksClient,
+  payer: Keypair,
+  poolCreatorAuthority: PublicKey
+): Promise<PublicKey> {
+  const program = createDammV2Program();
+  const index = new BN(10_000);
+  const params = {
+    poolFees: {
+      baseFee: {
+        cliffFeeNumerator: new BN(0),
+        numberOfPeriod: 0,
+        reductionFactor: new BN(0),
+        periodFrequency: new BN(0),
+        feeSchedulerMode: 0,
+      },
+      protocolFeePercent: 0,
+      partnerFeePercent: 0,
+      referralFeePercent: 0,
+      dynamicFee: null,
+    },
+    sqrtMinPrice: new BN(MIN_SQRT_PRICE),
+    sqrtMaxPrice: new BN(MAX_SQRT_PRICE),
+    vaultConfigKey: PublicKey.default,
+    poolCreatorAuthority,
+    activationType: 0,
+    collectFeeMode: 0,
+  };
+  const [config] = PublicKey.findProgramAddressSync(
+    [Buffer.from("config"), index.toBuffer("le", 8)],
+    DAMM_V2_PROGRAM_ID
+  );
+  const transaction = await program.methods
+    .createDynamicConfig(index, params)
+    .accountsPartial({
+      config,
+      admin: payer.publicKey,
+    })
+    .transaction();
+
+  const [recentBlockhash] = await banksClient.getLatestBlockhash();
+  transaction.recentBlockhash = recentBlockhash;
+  transaction.sign(payer);
+  await banksClient.processTransaction(transaction);
+
+  return config;
+}
+
 export async function createDammV2Config(
   banksClient: BanksClient,
   payer: Keypair,
   poolCreatorAuthority: PublicKey
 ): Promise<PublicKey> {
   const program = createDammV2Program();
+  const index = new BN(0);
   const params = {
-    index: new BN(0),
     poolFees: {
       baseFee: {
         cliffFeeNumerator: new BN(2_500_000),
@@ -390,11 +436,11 @@ export async function createDammV2Config(
     collectFeeMode: 0,
   };
   const [config] = PublicKey.findProgramAddressSync(
-    [Buffer.from("config"), params.index.toBuffer("le", 8)],
+    [Buffer.from("config"), index.toBuffer("le", 8)],
     DAMM_V2_PROGRAM_ID
   );
   const transaction = await program.methods
-    .createConfig(params)
+    .createConfig(index, params)
     .accountsPartial({
       config,
       admin: payer.publicKey,
