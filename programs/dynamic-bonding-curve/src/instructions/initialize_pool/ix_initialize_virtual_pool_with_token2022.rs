@@ -148,9 +148,10 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
-    let token_update_authority = config
-        .get_token_authority()?
-        .get_update_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+    let token_authority = config.get_token_authority()?;
+
+    let token_update_authority =
+        token_authority.get_update_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
 
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
@@ -184,9 +185,8 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     )?;
 
     // update mint authority
-    let token_mint_authority = config
-        .get_token_authority()?
-        .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+    let token_mint_authority =
+        token_authority.get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
 
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
