@@ -14,7 +14,7 @@ import {
 } from "./instructions";
 import { VirtualCurveProgram } from "./utils/types";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
-import { deriveMetadataAccount, fundSol, startTest } from "./utils";
+import { deriveMetadataAccount, fundSol, getMint, startTest } from "./utils";
 import {
   createVirtualCurveProgram,
   MAX_SQRT_PRICE,
@@ -83,10 +83,19 @@ describe("Token authority with token2022", () => {
     const metadataPointer = MetadataPointerLayout.decode(
       getExtensionData(ExtensionType.MetadataPointer, Buffer.from(tlvData))
     );
+
     expect(metadataPointer.authority.toString()).eq(
       poolCreator.publicKey.toString()
     );
+    
+   // validate mint authority
+    const baseMintData = await getMint(
+         context.banksClient,
+         virtualPoolState.baseMint
+       );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
+
 
   it("Token2022: immutable", async () => {
     const tokenUpdateAuthority = 1;
@@ -115,6 +124,13 @@ describe("Token authority with token2022", () => {
     expect(metadataPointer.authority.toString()).eq(
       PublicKey.default.toString()
     );
+    
+    // validate mint authority
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Token2022: partner can update update_authority", async () => {
@@ -144,6 +160,13 @@ describe("Token authority with token2022", () => {
     expect(metadataPointer.authority.toString()).eq(
       partner.publicKey.toString()
     );
+
+    // validate mint authority
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Token2022: Creator can update update_authority and as mint authority", async () => {
@@ -275,6 +298,13 @@ describe("Token authority with spl token", () => {
     const metadata = deserializeMetadata(data as any);
 
     expect(metadata.updateAuthority).eq(poolCreator.publicKey.toString());
+
+    // validate mint authority
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Spl token: immutable", async () => {
@@ -310,6 +340,13 @@ describe("Token authority with spl token", () => {
     const metadata = deserializeMetadata(data as any);
 
     expect(metadata.updateAuthority).eq(PublicKey.default.toString());
+
+    // validate mint authority
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Spl token: partner can update update_authority", async () => {
@@ -345,6 +382,12 @@ describe("Token authority with spl token", () => {
     const metadata = deserializeMetadata(data as any);
 
     expect(metadata.updateAuthority).eq(partner.publicKey.toString());
+    // validate mint authority
+    const baseMintData = await getMint(
+      context.banksClient,
+      virtualPoolState.baseMint
+    );
+    expect(baseMintData.mintAuthorityOption).eq(0);
   });
 
   it("Spl token: creator can update update_authority and mint authority", async () => {
@@ -473,8 +516,8 @@ async function createPool(
     },
     activationType: 0,
     collectFeeMode: 0,
-    migrationOption: 1, // damm v2
-    tokenType: 1, // token 2022
+    migrationOption: 1,
+    tokenType: tokenType,
     tokenDecimal: 6,
     migrationQuoteThreshold: new BN(LAMPORTS_PER_SOL * 5),
     partnerLpPercentage: 0,
@@ -496,12 +539,12 @@ async function createPool(
       feePercentage: 0,
     },
     creatorTradingFeePercentage: 0,
-    tokenUpdateAuthority: 0, // creator
+    tokenUpdateAuthority: tokenUpdateAuthority,
     padding0: [],
     padding1: [],
     curve: curves,
   };
-  let params: CreateConfigParams = {
+  const params: CreateConfigParams = {
     payer: partner,
     leftoverReceiver: partner.publicKey,
     feeClaimer: partner.publicKey,
@@ -509,10 +552,6 @@ async function createPool(
     instructionParams,
   };
 
-  // spl token
-  params.instructionParams.tokenType = tokenType;
-  // creator update authority
-  params.instructionParams.tokenUpdateAuthority = tokenUpdateAuthority;
   const config = await createConfig(banksClient, program, params);
 
   let virtualPool: PublicKey;

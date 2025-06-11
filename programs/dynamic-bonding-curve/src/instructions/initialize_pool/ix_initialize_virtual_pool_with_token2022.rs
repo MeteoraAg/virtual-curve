@@ -187,7 +187,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
     let token_mint_authority = config
         .get_token_authority()?
         .get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
-    msg!("token_mint_authority: {:?}", token_mint_authority);
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
