@@ -1,6 +1,5 @@
 use super::InitializePoolParameters;
 use super::{max_key, min_key};
-use crate::state::TokenUpdateAuthorityOption;
 use crate::{
     activation_handler::get_current_point,
     const_pda,
@@ -149,12 +148,11 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         ctx.accounts.system_program.to_account_info(),
     )?;
 
+    let token_authority = config.get_token_authority()?;
+
     let token_update_authority =
-        if config.get_token_update_authority()? == TokenUpdateAuthorityOption::Mutable {
-            Some(ctx.accounts.creator.key())
-        } else {
-            None
-        };
+        token_authority.get_update_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -186,7 +184,10 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
         initial_base_supply,
     )?;
 
-    // remove mint authority
+    // update mint authority
+    let token_mint_authority =
+        token_authority.get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -197,7 +198,7 @@ pub fn handle_initialize_virtual_pool_with_token2022<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        None,
+        token_mint_authority,
     )?;
 
     // init pool

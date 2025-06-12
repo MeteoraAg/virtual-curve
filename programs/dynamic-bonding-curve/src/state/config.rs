@@ -285,10 +285,39 @@ impl LockedVestingConfig {
     AnchorSerialize,
     Default,
 )]
-pub enum TokenUpdateAuthorityOption {
+pub enum TokenAuthorityOption {
+    // Creator has permission to update update_authority
     #[default]
-    Mutable,
+    CreatorUpdateAuthority,
+    // No one has permission to update the authority
     Immutable,
+    // Partner has permission to update update_authority
+    PartnerUpdateAuthority,
+    // Creator has permission as mint_authority and update_authority
+    CreatorUpdateAndMintAuthority,
+    // Partner has permission as mint_authority and update_authority
+    PartnerUpdateAndMintAuthority,
+}
+
+impl TokenAuthorityOption {
+    pub fn get_update_authority(&self, creator: Pubkey, partner: Pubkey) -> Option<Pubkey> {
+        match *self {
+            TokenAuthorityOption::CreatorUpdateAndMintAuthority
+            | TokenAuthorityOption::CreatorUpdateAuthority => Some(creator),
+
+            TokenAuthorityOption::PartnerUpdateAndMintAuthority
+            | TokenAuthorityOption::PartnerUpdateAuthority => Some(partner),
+            TokenAuthorityOption::Immutable => None,
+        }
+    }
+
+    pub fn get_mint_authority(&self, creator: Pubkey, partner: Pubkey) -> Option<Pubkey> {
+        match *self {
+            TokenAuthorityOption::CreatorUpdateAndMintAuthority => Some(creator),
+            TokenAuthorityOption::PartnerUpdateAndMintAuthority => Some(partner),
+            _ => None,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -528,11 +557,10 @@ impl PoolConfig {
         }
     }
 
-    pub fn get_token_update_authority(&self) -> Result<TokenUpdateAuthorityOption> {
-        let token_update_authority =
-            TokenUpdateAuthorityOption::try_from(self.token_update_authority)
-                .map_err(|_| PoolError::InvalidTokenUpdateAuthorityOption)?;
-        Ok(token_update_authority)
+    pub fn get_token_authority(&self) -> Result<TokenAuthorityOption> {
+        let token_authority = TokenAuthorityOption::try_from(self.token_update_authority)
+            .map_err(|_| PoolError::InvalidTokenAuthorityOption)?;
+        Ok(token_authority)
     }
 
     pub fn get_migration_quote_amount_for_config(&self) -> Result<MigrationAmount> {

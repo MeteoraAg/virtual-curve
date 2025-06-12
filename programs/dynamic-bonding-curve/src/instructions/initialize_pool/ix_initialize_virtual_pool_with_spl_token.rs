@@ -147,6 +147,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
 
     let InitializePoolParameters { name, symbol, uri } = params;
 
+    let token_authority = config.get_token_authority()?;
     // create token metadata
     process_create_token_metadata(ProcessCreateTokenMetadataParams {
         system_program: ctx.accounts.system_program.to_account_info(),
@@ -160,7 +161,8 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         symbol: &symbol,
         uri: &uri,
         pool_authority_bump: const_pda::pool_authority::BUMP,
-        update_authority: config.get_token_update_authority()?,
+        token_authority,
+        partner: config.fee_claimer,
     })?;
 
     // mint token
@@ -178,7 +180,10 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
         initial_base_supply,
     )?;
 
-    // remove mint authority
+    // update mint authority
+    let token_mint_authority =
+        token_authority.get_mint_authority(ctx.accounts.creator.key(), config.fee_claimer.key());
+
     anchor_spl::token_interface::set_authority(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
@@ -189,7 +194,7 @@ pub fn handle_initialize_virtual_pool_with_spl_token<'c: 'info, 'info>(
             &[&seeds[..]],
         ),
         AuthorityType::MintTokens,
-        None,
+        token_mint_authority,
     )?;
 
     // init pool

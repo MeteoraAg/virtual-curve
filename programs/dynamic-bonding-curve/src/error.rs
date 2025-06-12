@@ -116,8 +116,8 @@ pub enum PoolError {
     #[msg("Invalid new creator")]
     InvalidNewCreator,
 
-    #[msg("Invalid token update authority option")]
-    InvalidTokenUpdateAuthorityOption,
+    #[msg("Invalid token authority option")]
+    InvalidTokenAuthorityOption,
 
     #[msg("Invalid account for the instruction")]
     InvalidAccount,

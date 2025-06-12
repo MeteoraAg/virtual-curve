@@ -102,10 +102,14 @@ export async function createPoolWithSplToken(
       tokenProgram,
     })
     .transaction();
-
+    transaction.add(
+      ComputeBudgetProgram.setComputeUnitLimit({
+        units: 400_000,
+      })
+    );
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer, baseMintKP, poolCreator);
-
+    
   await processTransactionMaybeThrow(banksClient, transaction);
 
   return pool;
@@ -139,6 +143,12 @@ export async function createPoolWithToken2022(
       tokenProgram: TOKEN_2022_PROGRAM_ID,
     })
     .transaction();
+  
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 400_000,
+    })
+  );
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer, baseMintKP, poolCreator);
@@ -269,6 +279,12 @@ export async function swap(
     .preInstructions(preInstructions)
     .postInstructions(postInstructions)
     .transaction();
+
+  transaction.add(
+    ComputeBudgetProgram.setComputeUnitLimit({
+      units: 400_000,
+    })
+  );
 
   transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
   transaction.sign(payer);

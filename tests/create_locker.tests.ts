@@ -114,7 +114,7 @@ describe("Create locker", () => {
                     creatorFeePercentage: 0,
                 },
                 padding0: [],
-                padding: [],
+                padding1: [],
                 curve: curves,
             };
             const params: CreateConfigParams = {
@@ -280,7 +280,7 @@ describe("Create locker", () => {
                     creatorFeePercentage: 0,
                 },
                 padding0: [],
-                padding: [],
+                padding1: [],
                 curve: curves,
             };
             const params: CreateConfigParams = {
