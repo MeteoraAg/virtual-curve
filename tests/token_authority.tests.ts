@@ -194,6 +194,7 @@ describe("Token authority with token2022", () => {
     expect(dataDecoded.mintAuthority.toString()).eq(
       poolCreator.publicKey.toString()
     );
+    expect(dataDecoded.mintAuthorityOption).not.eq(0);
 
     const metadataPointer = MetadataPointerLayout.decode(
       getExtensionData(ExtensionType.MetadataPointer, Buffer.from(tlvData))
@@ -228,6 +229,7 @@ describe("Token authority with token2022", () => {
     expect(dataDecoded.mintAuthority.toString()).eq(
       partner.publicKey.toString()
     );
+    expect(dataDecoded.mintAuthorityOption).not.eq(0);
 
     const metadataPointer = MetadataPointerLayout.decode(
       getExtensionData(ExtensionType.MetadataPointer, Buffer.from(tlvData))
@@ -415,6 +417,7 @@ describe("Token authority with spl token", () => {
     expect(dataDecoded.mintAuthority.toString()).eq(
       poolCreator.publicKey.toString()
     );
+    expect(dataDecoded.mintAuthorityOption).not.eq(0);
 
     const metadataAddress = deriveMetadataAccount(virtualPoolState.baseMint);
 
@@ -458,6 +461,7 @@ describe("Token authority with spl token", () => {
     expect(dataDecoded.mintAuthority.toString()).eq(
       partner.publicKey.toString()
     );
+    expect(dataDecoded.mintAuthorityOption).not.eq(0);
 
     const metadataAddress = deriveMetadataAccount(virtualPoolState.baseMint);
 
