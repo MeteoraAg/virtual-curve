@@ -82,4 +82,14 @@ pub mod seeds {
     pub const PARTNER_METADATA_PREFIX: &[u8] = b"partner_metadata";
     pub const VIRTUAL_POOL_METADATA_PREFIX: &[u8] = b"virtual_pool_metadata";
     pub const BASE_LOCKER_PREFIX: &[u8] = b"base_locker";
+    pub const DAMM_V2_WITH_DYNAMIC_CONFIG_PREDEFINED_PARAMETERS_PREFIX: &[u8] =
+        b"damm_v2_param_value";
+}
+
+pub mod damm_v2 {
+    // Copied from: https://github.com/MeteoraAg/cp-amm/blob/main/programs/cp-amm/src/constants.rs
+    pub const MAX_FEE_NUMERATOR: u64 = 500_000_000;
+    pub const MIN_FEE_NUMERATOR: u64 = 100_000;
+    pub const CUSTOMIZABLE_PROTOCOL_FEE_PERCENT: u8 = 20; // 20%
+    pub const CUSTOMIZABLE_HOST_FEE_PERCENT: u8 = 20; // 20%
 }

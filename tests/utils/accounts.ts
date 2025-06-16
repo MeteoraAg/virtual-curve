@@ -58,6 +58,15 @@ export function derivePartnerMetadata(feeClaimer: PublicKey): PublicKey {
   )[0];
 }
 
+export function deriveDammV2DynamicConfigPredefinedParameters(
+  config: PublicKey
+): PublicKey {
+  return PublicKey.findProgramAddressSync(
+    [Buffer.from("damm_v2_param_value"), config.toBuffer()],
+    DYNAMIC_BONDING_CURVE_PROGRAM_ID
+  )[0];
+}
+
 export function deriveVirtualPoolMetadata(pool: PublicKey): PublicKey {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("virtual_pool_metadata"), pool.toBuffer()],

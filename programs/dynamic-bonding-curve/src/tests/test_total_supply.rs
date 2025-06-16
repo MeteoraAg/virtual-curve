@@ -10,6 +10,7 @@ use crate::{
     state::{MigrationOption, PoolConfig},
     LockedVestingParams,
 };
+use anchor_lang::prelude::Pubkey;
 use proptest::prelude::*;
 
 fn get_sqrt_price_from_price(price: f64) -> u128 {
@@ -84,6 +85,7 @@ fn get_constant_product_curve(
         0,
         migration_sqrt_price,
         migration_option,
+        &[],
     )
     .unwrap();
 
@@ -158,6 +160,7 @@ fn get_total_supply_from_curve(
         0,
         sqrt_migration_price,
         migration_option,
+        &[],
     )
     .unwrap();
 

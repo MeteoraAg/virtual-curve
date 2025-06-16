@@ -26,7 +26,7 @@ import { NATIVE_MINT } from "@solana/spl-token";
 import { createMeteoraDammV2Metadata, MigrateMeteoraDammV2Params, migrateToDammV2 } from "./instructions/dammV2Migration";
 import { expect } from "chai";
 
-describe("Migrate to damm v2", () => {
+describe("Migrate to damm v2 static config", () => {
     let context: ProgramTestContext;
     let admin: Keypair;
     let operator: Keypair;

@@ -41,10 +41,16 @@ pub fn handle_migration_damm_v2_create_metadata(
     let config = ctx.accounts.config.load()?;
     let migration_option = MigrationOption::try_from(config.migration_option)
         .map_err(|_| PoolError::InvalidMigrationOption)?;
-    require!(
-        migration_option == MigrationOption::DammV2,
-        PoolError::InvalidMigrationOption
-    );
+
+    match migration_option {
+        MigrationOption::DammV2 | MigrationOption::DammV2WithDynamicConfig => {
+            // Allowed
+        }
+        _ => {
+            return Err(PoolError::InvalidMigrationOption.into());
+        }
+    }
+
     let mut migration_metadata = ctx.accounts.migration_metadata.load_init()?;
     migration_metadata.virtual_pool = ctx.accounts.virtual_pool.key();
     migration_metadata.partner = config.fee_claimer;

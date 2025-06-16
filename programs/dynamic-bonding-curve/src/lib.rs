@@ -28,6 +28,7 @@ declare_id!("dbcij3LWUppWqq96dh6gJWwBifmcGfLSB5D4DuSMaqN");
 
 #[program]
 pub mod dynamic_bonding_curve {
+
     use super::*;
 
     /// ADMIN FUNCTIONS ///
@@ -54,8 +55,8 @@ pub mod dynamic_bonding_curve {
     ) -> Result<()> {
         instructions::handle_create_partner_metadata(ctx, metadata)
     }
-    pub fn create_config(
-        ctx: Context<CreateConfigCtx>,
+    pub fn create_config<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateConfigCtx<'info>>,
         config_parameters: ConfigParameters,
     ) -> Result<()> {
         instructions::handle_create_config(ctx, config_parameters)
@@ -66,6 +67,12 @@ pub mod dynamic_bonding_curve {
         max_amount_b: u64,
     ) -> Result<()> {
         instructions::handle_claim_trading_fee(ctx, max_amount_a, max_amount_b)
+    }
+    pub fn create_config_migration_predefined_parameters(
+        ctx: Context<CreateDammV2DynamicConfigPredefinedParameters>,
+        args: CreateDammV2DynamicConfigPredefinedParametersArgs,
+    ) -> Result<()> {
+        instructions::handle_create_damm_v2_dynamic_config_predefined_parameters(ctx, args)
     }
 
     // withdraw surplus on quote token

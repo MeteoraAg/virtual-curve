@@ -13,6 +13,7 @@ import {
     DAMM_V2_PROGRAM_ID,
     deriveMigrationDammV2MetadataAddress,
     derivePoolAuthority,
+    deriveDammV2DynamicConfigPredefinedParameters,
 } from "../utils";
 import { BanksClient } from "solana-bankrun";
 import {
@@ -101,6 +102,26 @@ export async function migrateToDammV2(
     const tokenQuoteProgram =
         configState.quoteTokenFlag == 0 ? TOKEN_PROGRAM_ID : TOKEN_2022_PROGRAM_ID;
 
+    const remainingAccounts = [
+        {
+            isSigner: false,
+            isWritable: false,
+            pubkey: dammConfig,
+        },
+    ];
+
+    if (configState.migrationOption == 2) {
+        const predefinedParameters = deriveDammV2DynamicConfigPredefinedParameters(
+            virtualPoolState.config
+        );
+
+        remainingAccounts.push({
+            isSigner: false,
+            isWritable: false,
+            pubkey: predefinedParameters,
+        });
+    }
+
     const transaction = await program.methods
         .migrationDammV2()
         .accountsStrict({
@@ -129,13 +150,7 @@ export async function migrateToDammV2(
             token2022Program: TOKEN_2022_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             dammEventAuthority: deriveDammV2EventAuthority(),
-        }).remainingAccounts([
-            {
-                isSigner: false,
-                isWritable: false,
-                pubkey: dammConfig,
-            }
-        ])
+        }).remainingAccounts(remainingAccounts)
         .transaction();
     transaction.add(
         ComputeBudgetProgram.setComputeUnitLimit({
@@ -145,6 +160,8 @@ export async function migrateToDammV2(
     transaction.recentBlockhash = (await banksClient.getLatestBlockhash())[0];
     transaction.sign(payer, firstPositionNftKP, secondPositionNftKP);
     await processTransactionMaybeThrow(banksClient, transaction);
+
+    return dammPool;
 }
 
 export function deriveDammV2EventAuthority() {

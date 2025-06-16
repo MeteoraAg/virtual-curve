@@ -58,6 +58,7 @@ fn test_swap() {
         0,
         sqrt_migration_price,
         MigrationOption::MeteoraDamm,
+        &[],
     )
     .unwrap();
     println!(
